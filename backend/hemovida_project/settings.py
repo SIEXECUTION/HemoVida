@@ -118,15 +118,17 @@ elif DATABASE_URL:
     else:
         clean_db_url = raw_url
 
+    os.environ['DATABASE_URL'] = clean_db_url
     try:
         DATABASES = {
-            'default': dj_database_url.config(
-                default=clean_db_url,
+            'default': dj_database_url.parse(
+                clean_db_url,
                 conn_max_age=600,
                 conn_health_checks=True,
                 ssl_require=True
             )
         }
+
     except Exception as e:
         print(f"[WARN] Error al configurar DATABASE_URL: {e}. Activando fallback a SQLite.")
         DATABASES = {
