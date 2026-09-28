@@ -15,6 +15,9 @@ def health_check(request):
     })
 
 urlpatterns = [
+    # Health Check raíz para Render (evita 404 en HEAD /)
+    path('', health_check, name='root_health_check'),
+    
     # Health Check para Render Keep-Alive / Uptime Monitors
     path('health/', health_check, name='health_check'),
     path('api/health/', health_check, name='api_health_check'),

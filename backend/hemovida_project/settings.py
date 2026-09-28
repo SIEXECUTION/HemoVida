@@ -101,9 +101,23 @@ elif USE_SQLITE:
     }
 elif DATABASE_URL:
     import re
-    # Conexión directa a Supabase Cloud via URI de conexión (sanitiza comillas, espacios y corchetes [ref])
-    clean_db_url = DATABASE_URL.strip().strip('"\'')
-    clean_db_url = re.sub(r'\[([^\]]+)\]', r'\1', clean_db_url)
+    import urllib.parse
+    
+    # Sanitización exhaustiva de DATABASE_URL (remueve comillas, corchetes y urlencodea contraseñas con caracteres especiales)
+    raw_url = DATABASE_URL.strip().strip('"\'')
+    raw_url = raw_url.replace('[', '').replace(']', '')
+    
+    # Expresión regular para separar y codificar credenciales
+    m = re.match(r'^(postgres(?:ql)?:\/\/)([^:]+):(.*)@([^@\/:]+)(?::(\d+))?(\/.*)?$', raw_url)
+    if m:
+        scheme, user, password, host, port, rest = m.groups()
+        encoded_pass = urllib.parse.quote(urllib.parse.unquote(password))
+        port_str = f":{port}" if port else ""
+        rest_str = rest if rest else ""
+        clean_db_url = f"{scheme}{user}:{encoded_pass}@{host}{port_str}{rest_str}"
+    else:
+        clean_db_url = raw_url
+
     try:
         DATABASES = {
             'default': dj_database_url.config(
@@ -121,6 +135,7 @@ elif DATABASE_URL:
                 'NAME': BASE_DIR / 'db.sqlite3',
             }
         }
+
 
 
 else:
