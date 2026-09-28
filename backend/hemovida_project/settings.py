@@ -100,15 +100,17 @@ elif USE_SQLITE:
         }
     }
 elif DATABASE_URL:
-    # Conexión directa a Supabase Cloud via URI de conexión
+    # Conexión directa a Supabase Cloud via URI de conexión (sanitiza comillas y espacios)
+    clean_db_url = DATABASE_URL.strip().strip('"\'')
     DATABASES = {
         'default': dj_database_url.config(
-            default=DATABASE_URL,
+            default=clean_db_url,
             conn_max_age=600,
             conn_health_checks=True,
             ssl_require=True
         )
     }
+
 else:
     # Conexión estándar por parámetros individuales (PostgreSQL Local o Remoto)
     DB_ENGINE = os.getenv('DB_ENGINE', 'django.db.backends.postgresql')
@@ -202,7 +204,7 @@ USE_TZ = True
 # Archivos estáticos y WhiteNoise para Koyeb
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
