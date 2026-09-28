@@ -1,0 +1,194 @@
+"""
+Django settings for hemovida_project.
+Configurado para el Sistema de Banco de Sangre "HemoVida"
+Integración con PostgreSQL, JWT, CORS y Apps modulares.
+"""
+
+from pathlib import Path
+import os
+from datetime import timedelta
+from dotenv import load_dotenv
+
+# Build paths inside the project like this: BASE_DIR / 'subdir'.
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Cargar variables de entorno desde el archivo .env
+load_dotenv(BASE_DIR / '.env')
+
+# Clave secreta
+SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-hemovida-bloodbank-secret-key-2025-secure-token-xyz789')
+
+# Modo depuración
+DEBUG = os.getenv('DEBUG', 'True').lower() in ('true', '1', 't')
+
+# Hosts permitidos
+ALLOWED_HOSTS = [host.strip() for host in os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',') if host.strip()]
+
+# Aplicaciones instaladas
+INSTALLED_APPS = [
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+
+    # Librerías de terceros
+    'corsheaders',
+    'rest_framework',
+    'rest_framework_simplejwt',
+
+    # Aplicaciones del dominio HemoVida
+    'apps.seguridad',
+    'apps.donantes',
+    'apps.inventario',
+]
+
+# Middlewares
+MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',  # Debe estar lo más arriba posible
+    'django.middleware.security.SecurityMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.common.CommonMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+]
+
+ROOT_URLCONF = 'hemovida_project.urls'
+
+TEMPLATES = [
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS': [],
+        'APP_DIRS': True,
+        'OPTIONS': {
+            'context_processors': [
+                'django.template.context_processors.debug',
+                'django.template.context_processors.request',
+                'django.contrib.auth.context_processors.auth',
+                'django.contrib.messages.context_processors.messages',
+            ],
+        },
+    },
+]
+
+WSGI_APPLICATION = 'hemovida_project.wsgi.application'
+
+# Configuración de Base de Datos PostgreSQL existente (con fallback a SQLite en memoria durante ejecución de tests)
+DB_ENGINE = os.getenv('DB_ENGINE', 'django.db.backends.postgresql')
+DB_NAME = os.getenv('DB_NAME', 'hemovida_db')
+DB_USER = os.getenv('DB_USER', 'postgres')
+DB_PASSWORD = os.getenv('DB_PASSWORD', 'postgres')
+DB_HOST = os.getenv('DB_HOST', 'localhost')
+DB_PORT = os.getenv('DB_PORT', '5432')
+
+import sys
+USE_SQLITE = os.getenv('USE_SQLITE', 'False').lower() in ('true', '1')
+
+if 'test' in sys.argv:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': ':memory:',
+        }
+    }
+elif USE_SQLITE:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': DB_ENGINE,
+            'NAME': DB_NAME,
+            'USER': DB_USER,
+            'PASSWORD': DB_PASSWORD,
+            'HOST': DB_HOST,
+            'PORT': DB_PORT,
+        }
+    }
+
+
+
+# Validación de Contraseñas (incluye el validador estricto con la política del trigger SQL)
+AUTH_PASSWORD_VALIDATORS = [
+    {
+        'NAME': 'apps.seguridad.validators.SecurePasswordValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'OPTIONS': {'min_length': 8},
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+    },
+]
+
+# Configuración de Django REST Framework
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'apps.seguridad.authentication.CustomJWTAuthentication',
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
+    ),
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 20,
+}
+
+# Configuración de Simple JWT
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'ROTATE_REFRESH_TOKENS': False,
+    'BLACKLIST_AFTER_ROTATION': False,
+    'AUTH_HEADER_TYPES': ('Bearer',),
+    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
+}
+
+# Configuración de CORS para Frontend React
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^http://localhost:(3000|5173)$",
+    r"^http://127\.0\.0\.1:(3000|5173)$",
+]
+
+env_cors = os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:3000,http://localhost:5173')
+CORS_ALLOWED_ORIGINS = [origin.strip() for origin in env_cors.split(',') if origin.strip()]
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
+
+# Internacionalización y Zona Horaria
+LANGUAGE_CODE = 'es-bo'
+TIME_ZONE = 'America/La_Paz'
+USE_I18N = True
+USE_TZ = True
+
+# Archivos estáticos
+STATIC_URL = 'static/'
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Runner para pruebas con modelos managed=False
+TEST_RUNNER = 'apps.test_runner.UnmanagedModelTestRunner'
+
