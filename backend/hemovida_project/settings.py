@@ -189,6 +189,7 @@ SIMPLE_JWT = {
 # Configuración de CORS para Frontend React y Vercel
 CORS_ALLOW_ALL_ORIGINS = True  # Permite que el frontend en Vercel se comunique sin bloqueos
 CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^https?://.*\.pages\.dev$",
     r"^https?://.*\.vercel\.app$",
     r"^https?://.*\.koyeb\.app$",
     r"^http://localhost:(3000|5173)$",
