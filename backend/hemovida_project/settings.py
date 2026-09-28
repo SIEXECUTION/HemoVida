@@ -100,16 +100,28 @@ elif USE_SQLITE:
         }
     }
 elif DATABASE_URL:
-    # Conexión directa a Supabase Cloud via URI de conexión (sanitiza comillas y espacios)
+    import re
+    # Conexión directa a Supabase Cloud via URI de conexión (sanitiza comillas, espacios y corchetes [ref])
     clean_db_url = DATABASE_URL.strip().strip('"\'')
-    DATABASES = {
-        'default': dj_database_url.config(
-            default=clean_db_url,
-            conn_max_age=600,
-            conn_health_checks=True,
-            ssl_require=True
-        )
-    }
+    clean_db_url = re.sub(r'\[([^\]]+)\]', r'\1', clean_db_url)
+    try:
+        DATABASES = {
+            'default': dj_database_url.config(
+                default=clean_db_url,
+                conn_max_age=600,
+                conn_health_checks=True,
+                ssl_require=True
+            )
+        }
+    except Exception as e:
+        print(f"[WARN] Error al configurar DATABASE_URL: {e}. Activando fallback a SQLite.")
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.sqlite3',
+                'NAME': BASE_DIR / 'db.sqlite3',
+            }
+        }
+
 
 else:
     # Conexión estándar por parámetros individuales (PostgreSQL Local o Remoto)
