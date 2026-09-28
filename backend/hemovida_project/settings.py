@@ -1,13 +1,14 @@
 """
 Django settings for hemovida_project.
 Configurado para el Sistema de Banco de Sangre "HemoVida"
-Integración con PostgreSQL, JWT, CORS y Apps modulares.
+Integración con PostgreSQL (Local y Supabase Cloud), JWT, CORS, Koyeb y Vercel.
 """
 
 from pathlib import Path
 import os
 from datetime import timedelta
 from dotenv import load_dotenv
+import dj_database_url
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -21,8 +22,8 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-hemovida-bloodbank-secret-
 # Modo depuración
 DEBUG = os.getenv('DEBUG', 'True').lower() in ('true', '1', 't')
 
-# Hosts permitidos
-ALLOWED_HOSTS = [host.strip() for host in os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',') if host.strip()]
+# Hosts permitidos (Permite Koyeb, localhost y cualquier dominio en producción)
+ALLOWED_HOSTS = ['*']
 
 # Aplicaciones instaladas
 INSTALLED_APPS = [
@@ -46,8 +47,9 @@ INSTALLED_APPS = [
 
 # Middlewares
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',  # Debe estar lo más arriba posible
+    'corsheaders.middleware.CorsMiddleware',  # Debe estar arriba de todo
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',  # Soporte para servir archivos estáticos en Koyeb
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -76,16 +78,12 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'hemovida_project.wsgi.application'
 
-# Configuración de Base de Datos PostgreSQL existente (con fallback a SQLite en memoria durante ejecución de tests)
-DB_ENGINE = os.getenv('DB_ENGINE', 'django.db.backends.postgresql')
-DB_NAME = os.getenv('DB_NAME', 'hemovida_db')
-DB_USER = os.getenv('DB_USER', 'postgres')
-DB_PASSWORD = os.getenv('DB_PASSWORD', 'postgres')
-DB_HOST = os.getenv('DB_HOST', 'localhost')
-DB_PORT = os.getenv('DB_PORT', '5432')
-
+# ============================================================================
+# CONFIGURACIÓN DE BASE DE DATOS (Soporta Supabase, PostgreSQL local y SQLite)
+# ============================================================================
 import sys
 USE_SQLITE = os.getenv('USE_SQLITE', 'False').lower() in ('true', '1')
+DATABASE_URL = os.getenv('DATABASE_URL')
 
 if 'test' in sys.argv:
     DATABASES = {
@@ -101,7 +99,25 @@ elif USE_SQLITE:
             'NAME': BASE_DIR / 'db.sqlite3',
         }
     }
+elif DATABASE_URL:
+    # Conexión directa a Supabase Cloud via URI de conexión
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=DATABASE_URL,
+            conn_max_age=600,
+            conn_health_checks=True,
+            ssl_require=True
+        )
+    }
 else:
+    # Conexión estándar por parámetros individuales (PostgreSQL Local o Remoto)
+    DB_ENGINE = os.getenv('DB_ENGINE', 'django.db.backends.postgresql')
+    DB_NAME = os.getenv('DB_NAME', 'Hemovida')
+    DB_USER = os.getenv('DB_USER', 'postgres')
+    DB_PASSWORD = os.getenv('DB_PASSWORD', 'postgres')
+    DB_HOST = os.getenv('DB_HOST', 'localhost')
+    DB_PORT = os.getenv('DB_PORT', '5432')
+
     DATABASES = {
         'default': {
             'ENGINE': DB_ENGINE,
@@ -112,8 +128,6 @@ else:
             'PORT': DB_PORT,
         }
     }
-
-
 
 # Validación de Contraseñas (incluye el validador estricto con la política del trigger SQL)
 AUTH_PASSWORD_VALIDATORS = [
@@ -158,14 +172,14 @@ SIMPLE_JWT = {
     'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
 }
 
-# Configuración de CORS para Frontend React
+# Configuración de CORS para Frontend React y Vercel
+CORS_ALLOW_ALL_ORIGINS = True  # Permite que el frontend en Vercel se comunique sin bloqueos
 CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^https?://.*\.vercel\.app$",
+    r"^https?://.*\.koyeb\.app$",
     r"^http://localhost:(3000|5173)$",
     r"^http://127\.0\.0\.1:(3000|5173)$",
 ]
-
-env_cors = os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:3000,http://localhost:5173')
-CORS_ALLOWED_ORIGINS = [origin.strip() for origin in env_cors.split(',') if origin.strip()]
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_HEADERS = [
     'accept',
@@ -185,10 +199,12 @@ TIME_ZONE = 'America/La_Paz'
 USE_I18N = True
 USE_TZ = True
 
-# Archivos estáticos
-STATIC_URL = 'static/'
+# Archivos estáticos y WhiteNoise para Koyeb
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Runner para pruebas con modelos managed=False
 TEST_RUNNER = 'apps.test_runner.UnmanagedModelTestRunner'
-
