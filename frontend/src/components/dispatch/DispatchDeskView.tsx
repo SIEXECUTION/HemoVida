@@ -34,6 +34,7 @@ interface DispatchDeskViewProps {
   setReplacements: React.Dispatch<React.SetStateAction<PatientReplacementRecord[]>>;
   staffAccount?: StaffAccount;
   onOpenChangePassword?: () => void;
+  onRecordAudit?: (entry: { accion: string; tablaAfectada: string; idRegistroAfectado?: number; detalles: string }) => void;
 }
 
 export type DispatchTab = 'inventario' | 'despachos' | 'distribucion';
@@ -46,7 +47,8 @@ export const DispatchDeskView: React.FC<DispatchDeskViewProps> = ({
   replacements,
   setReplacements,
   staffAccount,
-  onOpenChangePassword
+  onOpenChangePassword,
+  onRecordAudit
 }) => {
   const [activeTab, setActiveTab] = useState<DispatchTab>('inventario');
   const [isDispatchModalOpen, setIsDispatchModalOpen] = useState(false);
@@ -78,6 +80,14 @@ export const DispatchDeskView: React.FC<DispatchDeskViewProps> = ({
     setDispatches(prev => [dispatchRecord, ...prev]);
     setInventory(updatedInventory);
     setReplacements(updatedReplacements);
+
+    if (onRecordAudit) {
+      onRecordAudit({
+        accion: `Despacho Transfusional Emitido: ${dispatchRecord.codigoComprobante}`,
+        tablaAfectada: 'ComprobanteDespacho',
+        detalles: `Despacho de ${dispatchRecord.unidadesDespachadas.length} unidades para paciente ${dispatchRecord.pacienteNombre} (C.I. ${dispatchRecord.pacienteCi}) en ${dispatchRecord.hospitalDestino}. Estado de Cobro: ${dispatchRecord.cobroServicio.estadoPago}.`
+      });
+    }
   };
 
   // Hospital distribution stats

@@ -240,13 +240,19 @@ export default function App() {
     try {
       const data = await apiService.getAuditoria();
       if (data && Array.isArray(data.eventos) && data.eventos.length > 0) {
-        const normalized = data.eventos.map(normalizeAuditEntry);
-        setAuditLogs(normalized);
-        localStorage.setItem('hemovida_audit_logs', JSON.stringify(normalized));
+        const normalizedRemote = data.eventos.map(normalizeAuditEntry);
+        setAuditLogs(prev => {
+          // Mantener los eventos generados en vivo en la sesión actual que aún no están en la BD remota
+          const localOnly = prev.filter(localLog => 
+            !localLog.idAuditoria && !normalizedRemote.some(r => r.idAuditoria === localLog.idAuditoria || (r.idEvento && r.idEvento === localLog.idEvento))
+          );
+          const combined = [...localOnly, ...normalizedRemote];
+          localStorage.setItem('hemovida_audit_logs', JSON.stringify(combined));
+          return combined;
+        });
       }
     } catch (err: any) {
       console.warn('Carga inicial de auditoría remota:', err);
-      // No vaciamos los datos existentes para preservar la visibilidad de la bitácora
     } finally {
       setIsLoadingAudit(false);
     }
@@ -1309,6 +1315,22 @@ export default function App() {
             setReplacements={setReplacements}
             staffAccount={session.staff || dispatchStaff}
             onOpenChangePassword={() => setIsChangePasswordOpen(true)}
+            onRecordAudit={(entry) => {
+              const auditEntry: BitacoraAuditoria = {
+                idEvento: `EVT-${Date.now()}`,
+                timestamp: new Date().toISOString(),
+                actorNombre: (session.staff || dispatchStaff).nombre,
+                actorRol: 'TEC_LOGISTICA',
+                actorCi: (session.staff || dispatchStaff).ci,
+                ipSimulada: generateForensicIp(),
+                tipoEvento: 'DESPACHO_TRANSFUSIONAL',
+                accion: entry.accion,
+                detalles: entry.detalles,
+                tablaAfectada: entry.tablaAfectada,
+                idRegistroAfectado: entry.idRegistroAfectado
+              };
+              setAuditLogs(prev => [auditEntry, ...prev]);
+            }}
           />
         )}
 
