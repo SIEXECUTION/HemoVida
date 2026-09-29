@@ -6,7 +6,7 @@ from rest_framework import serializers
 from django.db import connection, transaction
 from .models import Usuario, Rol, UsuarioRol, Persona, PersonalSalud, BitacoraAuditoria
 from .validators import validate_password_complexity
-from .utils import generate_tokens_for_usuario, get_client_ip, registrar_auditoria
+from .utils import generate_tokens_for_usuario, get_client_ip, registrar_auditoria, sincronizar_secuencias_seguridad
 
 class LoginSerializer(serializers.Serializer):
     """
@@ -135,6 +135,9 @@ class AutoRegistroPosibleDonadorSerializer(serializers.Serializer):
         email = validated_data['email']
         password = validated_data['password']
 
+        # Sincronización preventiva de secuencias de clave primaria (evita duplicate key por datos semilla)
+        sincronizar_secuencias_seguridad()
+
         # Intentar llamada directa al Stored Procedure en PostgreSQL/Supabase
         try:
             with connection.cursor() as cursor:
@@ -149,6 +152,14 @@ class AutoRegistroPosibleDonadorSerializer(serializers.Serializer):
             usuario = Usuario.objects.select_related('persona').prefetch_related('roles').get(username=username)
             return usuario
         except Exception as e:
+            # En caso de error, limpiar estado de transacción abortada en PostgreSQL
+            if connection.vendor == 'postgresql':
+                try:
+                    connection.rollback()
+                except Exception:
+                    pass
+            sincronizar_secuencias_seguridad()
+
             # Fallback ORM equivalente en caso de entornos de desarrollo/test
             with transaction.atomic():
                 persona = Persona.objects.create(
@@ -256,6 +267,9 @@ class CrearPersonalSaludSerializer(serializers.Serializer):
         password = validated_data['password']
         cod_rol = validated_data['codigoRolAsignar']
 
+        # Sincronización preventiva de secuencias de clave primaria (evita duplicate key por datos semilla)
+        sincronizar_secuencias_seguridad()
+
         # Intentar ejecutar el Stored Procedure en Supabase/PostgreSQL
         try:
             with connection.cursor() as cursor:
@@ -273,6 +287,14 @@ class CrearPersonalSaludSerializer(serializers.Serializer):
             nuevo_usuario = Usuario.objects.select_related('persona').prefetch_related('roles').get(username=username)
             return nuevo_usuario
         except Exception as e:
+            # En caso de error, limpiar estado de transacción abortada en PostgreSQL
+            if connection.vendor == 'postgresql':
+                try:
+                    connection.rollback()
+                except Exception:
+                    pass
+            sincronizar_secuencias_seguridad()
+
             # Fallback ORM equivalente en caso de entornos de test
             with transaction.atomic():
                 persona = Persona.objects.create(

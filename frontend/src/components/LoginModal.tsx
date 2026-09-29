@@ -522,8 +522,10 @@ export const LoginModal: React.FC<LoginModalProps> = ({
       return;
     }
 
-    if (!regPassword.trim() || regPassword.length < 6) {
-      setRegisterError('Por favor ingrese una contraseña de al menos 6 caracteres.');
+    if (!regPasswordRules.isValid) {
+      const alerts = getPasswordMissingAlerts(regPassword, regConfirmPassword);
+      setRegisterError('La contraseña no cumple con la política de seguridad de 5 requisitos.');
+      setRegisterValidationAlerts(alerts);
       return;
     }
 

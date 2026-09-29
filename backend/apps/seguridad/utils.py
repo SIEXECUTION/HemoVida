@@ -76,3 +76,33 @@ def generate_tokens_for_usuario(usuario: Usuario, rol_activo: str = None) -> dic
         'refresh': str(refresh),
         'access': str(refresh.access_token),
     }
+
+
+def sincronizar_secuencias_seguridad():
+    """
+    Sincroniza preventivamente las secuencias auto-incrementales (SERIAL) de PostgreSQL
+    con el valor máximo actual de las tablas Persona, Usuario y BitacoraAuditoria.
+    Esto previene el error 'duplicate key value violates unique constraint' cuando
+    la base de datos fue inicializada con IDs manuales (data seeding).
+    """
+    from django.db import connection
+    if connection.vendor == 'postgresql':
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    DO $$
+                    BEGIN
+                        IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'persona_idpersona_seq') THEN
+                            PERFORM setval('persona_idpersona_seq', COALESCE((SELECT MAX(idpersona) FROM persona), 1));
+                        END IF;
+                        IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'usuario_idusuario_seq') THEN
+                            PERFORM setval('usuario_idusuario_seq', COALESCE((SELECT MAX(idusuario) FROM usuario), 1));
+                        END IF;
+                        IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'bitacoraauditoria_idauditoria_seq') THEN
+                            PERFORM setval('bitacoraauditoria_idauditoria_seq', COALESCE((SELECT MAX(idauditoria) FROM bitacoraauditoria), 1));
+                        END IF;
+                    END $$;
+                """)
+        except Exception:
+            pass
+

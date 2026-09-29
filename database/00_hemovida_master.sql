@@ -699,6 +699,17 @@ BEGIN
         RAISE EXCEPTION 'La contraseña debe tener al menos 8 caracteres, 1 mayúscula, 1 minúscula, 1 número y 1 símbolo especial.';
     END IF;
 
+    -- Sincronizar secuencias para prevenir 'duplicate key' por datos semilla cargados con IDs fijos
+    IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'persona_idpersona_seq') THEN
+        PERFORM setval('persona_idpersona_seq', COALESCE((SELECT MAX(idpersona) FROM persona), 1));
+    END IF;
+    IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'usuario_idusuario_seq') THEN
+        PERFORM setval('usuario_idusuario_seq', COALESCE((SELECT MAX(idusuario) FROM usuario), 1));
+    END IF;
+    IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'bitacoraauditoria_idauditoria_seq') THEN
+        PERFORM setval('bitacoraauditoria_idauditoria_seq', COALESCE((SELECT MAX(idauditoria) FROM bitacoraauditoria), 1));
+    END IF;
+
     -- 1. Crear Persona
     INSERT INTO Persona (ci, nombres, apellidos, sexo, fechaNacimiento, direccion, celular, ocupacion, nacionalidad)
     VALUES (p_ci, p_nombres, p_apellidos, p_sexo, p_fechaNacimiento, p_direccion, p_celular, p_ocupacion, 'Boliviana')
@@ -764,6 +775,17 @@ BEGIN
     SELECT idRol INTO v_idRol FROM Rol WHERE codigoRol = p_codigoRolAsignar;
     IF v_idRol IS NULL OR p_codigoRolAsignar IN ('POSIBLE_DONADOR', 'DONANTE') THEN
         RAISE EXCEPTION 'El rol especificado (%) no es un rol de personal operativo/salud válido.', p_codigoRolAsignar;
+    END IF;
+
+    -- Sincronizar secuencias para prevenir 'duplicate key' por datos semilla cargados con IDs fijos
+    IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'persona_idpersona_seq') THEN
+        PERFORM setval('persona_idpersona_seq', COALESCE((SELECT MAX(idpersona) FROM persona), 1));
+    END IF;
+    IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'usuario_idusuario_seq') THEN
+        PERFORM setval('usuario_idusuario_seq', COALESCE((SELECT MAX(idusuario) FROM usuario), 1));
+    END IF;
+    IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'bitacoraauditoria_idauditoria_seq') THEN
+        PERFORM setval('bitacoraauditoria_idauditoria_seq', COALESCE((SELECT MAX(idauditoria) FROM bitacoraauditoria), 1));
     END IF;
 
     -- 3. Crear Persona

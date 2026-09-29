@@ -350,6 +350,38 @@ INSERT INTO BitacoraAuditoria (idAuditoria, idUsuario, accionRealizada, tablaAfe
 (7, 4, 'Auditoría nocturna de validación de reactivos de quimioluminiscencia', 'AnalisisInmunoSerologico', 4, '2026-09-20 21:45:00', '192.168.1.25');
 
 -- ============================================================================
+-- 17. SINCRONIZACIÓN DE SECUENCIAS SERIAL (Evita errores de clave primaria duplicada)
+-- ============================================================================
+SELECT setval(pg_get_serial_sequence('gruposanguineo', 'idgrupo'), COALESCE((SELECT MAX(idgrupo) FROM gruposanguineo), 1));
+SELECT setval(pg_get_serial_sequence('rol', 'idrol'), COALESCE((SELECT MAX(idrol) FROM rol), 1));
+SELECT setval(pg_get_serial_sequence('persona', 'idpersona'), COALESCE((SELECT MAX(idpersona) FROM persona), 1));
+SELECT setval(pg_get_serial_sequence('usuario', 'idusuario'), COALESCE((SELECT MAX(idusuario) FROM usuario), 1));
+SELECT setval(pg_get_serial_sequence('bitacoraauditoria', 'idauditoria'), COALESCE((SELECT MAX(idauditoria) FROM bitacoraauditoria), 1));
+SELECT setval(pg_get_serial_sequence('requisitodonacion', 'idrequisito'), COALESCE((SELECT MAX(idrequisito) FROM requisitodonacion), 1));
+SELECT setval(pg_get_serial_sequence('citadonacion', 'idcita'), COALESCE((SELECT MAX(idcita) FROM citadonacion), 1));
+SELECT setval(pg_get_serial_sequence('detallecitarequisito', 'iddetallecita'), COALESCE((SELECT MAX(iddetallecita) FROM detallecitarequisito), 1));
+SELECT setval(pg_get_serial_sequence('triajeclinico', 'idtriaje'), COALESCE((SELECT MAX(idtriaje) FROM triajeclinico), 1));
+SELECT setval(pg_get_serial_sequence('diferimiento', 'iddiferimiento'), COALESCE((SELECT MAX(iddiferimiento) FROM diferimiento), 1));
+SELECT setval(pg_get_serial_sequence('extracciondonacion', 'idextraccion'), COALESCE((SELECT MAX(idextraccion) FROM extracciondonacion), 1));
+SELECT setval(pg_get_serial_sequence('incentivoentrega', 'idincentivo'), COALESCE((SELECT MAX(idincentivo) FROM incentivoentrega), 1));
+SELECT setval(pg_get_serial_sequence('unidadsangretotal', 'idunidadmadre'), COALESCE((SELECT MAX(idunidadmadre) FROM unidadsangretotal), 1));
+SELECT setval(pg_get_serial_sequence('analisinmunoserologico', 'idanalisis'), COALESCE((SELECT MAX(idanalisis) FROM analisinmunoserologico), 1));
+SELECT setval(pg_get_serial_sequence('pruebainmunohematologica', 'idpruebainmuno'), COALESCE((SELECT MAX(idpruebainmuno) FROM pruebainmunohematologica), 1));
+SELECT setval(pg_get_serial_sequence('ubicacionalmacen', 'idubicacion'), COALESCE((SELECT MAX(idubicacion) FROM ubicacionalmacen), 1));
+SELECT setval(pg_get_serial_sequence('parametrostockminimo', 'idparametro'), COALESCE((SELECT MAX(idparametro) FROM parametrostockminimo), 1));
+SELECT setval(pg_get_serial_sequence('ejemplarbolsa', 'idejemplarbolsa'), COALESCE((SELECT MAX(idejemplarbolsa) FROM ejemplarbolsa), 1));
+SELECT setval(pg_get_serial_sequence('bajainventario', 'idbaja'), COALESCE((SELECT MAX(idbaja) FROM bajainventario), 1));
+SELECT setval(pg_get_serial_sequence('institucionsalud', 'idinstitucion'), COALESCE((SELECT MAX(idinstitucion) FROM institucionsalud), 1));
+SELECT setval(pg_get_serial_sequence('citalaboratorio', 'idcitalab'), COALESCE((SELECT MAX(idcitalab) FROM citalaboratorio), 1));
+SELECT setval(pg_get_serial_sequence('solicitudhospitalaria', 'idsolicitud'), COALESCE((SELECT MAX(idsolicitud) FROM solicitudhospitalaria), 1));
+SELECT setval(pg_get_serial_sequence('pruebacompatibilidad', 'idpruebacompatibilidad'), COALESCE((SELECT MAX(idpruebacompatibilidad) FROM pruebacompatibilidad), 1));
+SELECT setval(pg_get_serial_sequence('comprobantedespacho', 'iddespacho'), COALESCE((SELECT MAX(iddespacho) FROM comprobantedespacho), 1));
+SELECT setval(pg_get_serial_sequence('detalledespacho', 'iddetalledespacho'), COALESCE((SELECT MAX(iddetalledespacho) FROM detalledespacho), 1));
+SELECT setval(pg_get_serial_sequence('comprobantepago', 'idcomprobante'), COALESCE((SELECT MAX(idcomprobante) FROM comprobantepago), 1));
+SELECT setval(pg_get_serial_sequence('reposicionpendiente', 'idreposicion'), COALESCE((SELECT MAX(idreposicion) FROM reposicionpendiente), 1));
+SELECT setval(pg_get_serial_sequence('compromisodonacion', 'idcompromiso'), COALESCE((SELECT MAX(idcompromiso) FROM compromisodonacion), 1));
+
+-- ============================================================================
 -- VERIFICACIÓN INMEDIATA DE INTEGRIDAD DE DATOS POBLADOS
 -- ============================================================================
 SELECT 'Personas Registradas' AS entidad, COUNT(*) AS total FROM Persona
