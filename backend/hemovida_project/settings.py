@@ -58,6 +58,8 @@ INSTALLED_APPS = [
     'apps.inventario',
 ]
 
+SILENCED_SYSTEM_CHECKS = ['fields.W342']
+
 # Middlewares
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',  # Debe estar arriba de todo

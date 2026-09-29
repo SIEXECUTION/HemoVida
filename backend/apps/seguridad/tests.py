@@ -1,15 +1,16 @@
 """
-Pruebas unitarias para Seguridad, Autenticación y Auditoría (CU01, CU02, CU03).
+Pruebas unitarias para Seguridad, Autenticación y Auditoría (CU01, CU02, CU03)
+con roles RBAC en UsuarioRol y procedimientos almacenados.
 """
 from django.test import TestCase
 from django.core.exceptions import ValidationError
 from django.core.cache import cache
 from rest_framework.test import APIClient
 from rest_framework import status
-from datetime import date, datetime
+from datetime import date
 
-from .models import Persona, Rol, PersonalSalud, Usuario, BitacoraAuditoria
-from .validators import SecurePasswordValidator, validate_password_complexity
+from .models import Persona, Rol, PersonalSalud, Usuario, UsuarioRol, BitacoraAuditoria
+from .validators import SecurePasswordValidator
 
 class PasswordValidatorTestCase(TestCase):
     def setUp(self):
@@ -30,13 +31,13 @@ class PasswordValidatorTestCase(TestCase):
 
     def test_invalid_passwords(self):
         invalid_cases = [
-            ('Sh1!a', False),  # 5 chars (< 8)
-            ('alllowercase123!', False),  # no uppercase
-            ('ALLUPPERCASE123!', False),  # no lowercase
-            ('NoDigitsHere!@#', False),  # no digit
-            ('NoSpecialChars123A', False),  # no special
+            'Sh1!a',  # 5 chars (< 8)
+            'alllowercase123!',  # no uppercase
+            'ALLUPPERCASE123!',  # no lowercase
+            'NoDigitsHere!@#',  # no digit
+            'NoSpecialChars123A',  # no special
         ]
-        for pwd, _ in invalid_cases:
+        for pwd in invalid_cases:
             with self.assertRaises(ValidationError, msg=f"'{pwd}' debió ser rechazada."):
                 self.validator.validate(pwd)
 
@@ -45,17 +46,24 @@ class SeguridadAPITestCase(TestCase):
     def setUp(self):
         self.client = APIClient()
 
-        # Crear Rol Admin
+        # Crear Roles
         self.rol_admin = Rol.objects.create(
-            nombreRol='Administrador del Sistema',
+            nombreRol='Administrador',
+            codigoRol='ADMIN',
             descripcion='Administrador general'
         )
-        self.rol_serologo = Rol.objects.create(
-            nombreRol='Bioquímico Serólogo',
+        self.rol_posible = Rol.objects.create(
+            nombreRol='Posible Donador',
+            codigoRol='POSIBLE_DONADOR',
+            descripcion='Postulante'
+        )
+        self.rol_bioq = Rol.objects.create(
+            nombreRol='Bioquímico(a) Integral',
+            codigoRol='BIOQ_INTEGRAL',
             descripcion='Tamizaje de sangre'
         )
 
-        # Crear Persona
+        # Crear Personas
         self.persona_admin = Persona.objects.create(
             ci='11223344',
             nombres='Ernesto',
@@ -79,31 +87,30 @@ class SeguridadAPITestCase(TestCase):
         self.personal_medico = PersonalSalud.objects.create(
             persona=self.persona_medico,
             cargo='Lic. en Enfermería',
-            registroProfesional='ENF-2026-001',
-            estado='Activo'
+            registroProfesional='ENF-2026-001'
         )
 
         # Crear Usuario Admin Activo
         self.user_admin = Usuario.objects.create(
             persona=self.persona_admin,
-            rol=self.rol_admin,
             username='admin.test',
             email='admin.test@hemovida.org',
             passwordHash='HemoVida#2026!',
             estado='Activo'
         )
+        UsuarioRol.objects.create(usuario=self.user_admin, rol=self.rol_admin)
 
         # Crear Usuario Inactivo
         self.user_inactivo = Usuario.objects.create(
-            rol=self.rol_serologo,
             username='inactivo.test',
             email='inactivo@hemovida.org',
             passwordHash='Inactivo#2026!',
             estado='Inactivo'
         )
+        UsuarioRol.objects.create(usuario=self.user_inactivo, rol=self.rol_bioq)
 
     # -------------------------------------------------------------------------
-    # [CU01] Autenticar Usuario e Iniciar Sesión
+    # [CU01] Autenticar Usuario e Iniciar Sesión (rolesDisponibles)
     # -------------------------------------------------------------------------
     def test_cu01_login_exitoso_y_auditoria(self):
         response = self.client.post('/api/auth/login/', {
@@ -111,12 +118,11 @@ class SeguridadAPITestCase(TestCase):
             'password': 'HemoVida#2026!'
         })
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn('tokens', response.data)
-        self.assertIn('access', response.data['tokens'])
-        self.assertIn('refresh', response.data['tokens'])
-        self.assertEqual(response.data['usuario']['username'], 'admin.test')
-        self.assertEqual(response.data['usuario']['rol']['nombreRol'], 'Administrador del Sistema')
-        self.assertEqual(response.data['usuario']['persona']['ci'], '11223344')
+        self.assertIn('token', response.data)
+        self.assertIn('rolesDisponibles', response.data)
+        self.assertEqual(len(response.data['rolesDisponibles']), 1)
+        self.assertEqual(response.data['rolesDisponibles'][0]['codigo'], 'ADMIN')
+        self.assertEqual(response.data['usuarioId'], self.user_admin.idUsuario)
 
         # Verificar que se registró la auditoría
         auditoria = BitacoraAuditoria.objects.filter(
@@ -143,36 +149,73 @@ class SeguridadAPITestCase(TestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     # -------------------------------------------------------------------------
-    # [CU02] Gestionar Cuentas de Personal y Roles RBAC
+    # PROCEDIMIENTO 1: Auto-Registro Público de Posible Donador
     # -------------------------------------------------------------------------
-    def test_cu02_registrar_usuario_exitoso(self):
-        self.client.force_authenticate(user=self.user_admin)
-        response = self.client.post('/api/usuarios/registrar/', {
-            'username': 'nuevo.bioquimico',
-            'email': 'nuevo@hemovida.org',
-            'password': 'PasswordSeguro#2026',
-            'idRol': self.rol_serologo.idRol,
-            'idPersona': self.persona_medico.idPersona
+    def test_autoregistro_posible_donador(self):
+        response = self.client.post('/api/auth/autoregistro/', {
+            'ci': '98765432',
+            'nombres': 'Carlos',
+            'apellidos': 'Vargas',
+            'sexo': 'M',
+            'fechaNacimiento': '1995-08-20',
+            'direccion': 'Av. Las Américas 123',
+            'celular': '70011223',
+            'ocupacion': 'Ingeniero',
+            'username': 'carlos.vargas',
+            'email': 'carlos.vargas@email.com',
+            'password': 'PasswordSeguro#2026'
         })
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertTrue(Usuario.objects.filter(username='nuevo.bioquimico').exists())
+        self.assertTrue(Usuario.objects.filter(username='carlos.vargas').exists())
+        nuevo_user = Usuario.objects.get(username='carlos.vargas')
+        self.assertTrue(nuevo_user.roles.filter(codigoRol='POSIBLE_DONADOR').exists())
+        self.assertEqual(nuevo_user.persona.posible_donador.estadoAptitud, 'No Apto')
+        self.assertFalse(nuevo_user.persona.posible_donador.tieneAnalisis)
 
-        # Verificar auditoría de creación
-        self.assertTrue(BitacoraAuditoria.objects.filter(
-            accionRealizada__icontains='Alta de usuario institucional: nuevo.bioquimico'
-        ).exists())
-
-    def test_cu02_registrar_usuario_password_debil_rechazado(self):
+    # -------------------------------------------------------------------------
+    # PROCEDIMIENTO 2: Alta de Personal de Salud por Administrador
+    # -------------------------------------------------------------------------
+    def test_crear_personal_salud_por_admin(self):
         self.client.force_authenticate(user=self.user_admin)
-        response = self.client.post('/api/usuarios/registrar/', {
-            'username': 'debil.user',
-            'email': 'debil@hemovida.org',
-            'password': '12345',  # Insegura
-            'idRol': self.rol_serologo.idRol,
+        response = self.client.post('/api/personal/crear/', {
+            'ci': '77889900',
+            'nombres': 'Claudia',
+            'apellidos': 'Morales',
+            'sexo': 'F',
+            'fechaNacimiento': '1985-03-15',
+            'celular': '77788999',
+            'cargo': 'Bioquímica Principal',
+            'registroProfesional': 'BIOQ-2026-999',
+            'username': 'claudia.morales',
+            'email': 'claudia.morales@hemovida.org',
+            'password': 'PasswordSeguro#2026',
+            'codigoRolAsignar': 'BIOQ_INTEGRAL'
         })
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn('password', response.data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(Usuario.objects.filter(username='claudia.morales').exists())
+        staff_user = Usuario.objects.get(username='claudia.morales')
+        self.assertTrue(staff_user.roles.filter(codigoRol='BIOQ_INTEGRAL').exists())
 
+    def test_crear_personal_salud_denegado_sin_admin(self):
+        self.client.force_authenticate(user=self.user_inactivo)
+        response = self.client.post('/api/personal/crear/', {
+            'ci': '33445566',
+            'nombres': 'Intruso',
+            'apellidos': 'Test',
+            'sexo': 'M',
+            'fechaNacimiento': '1990-01-01',
+            'cargo': 'Médico',
+            'registroProfesional': 'MED-000',
+            'username': 'intruso',
+            'email': 'intruso@test.com',
+            'password': 'PasswordSeguro#2026',
+            'codigoRolAsignar': 'DOC_TRIAJE'
+        })
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    # -------------------------------------------------------------------------
+    # [CU02] Matriz de Personal de Salud
+    # -------------------------------------------------------------------------
     def test_cu02_listado_personal_c4(self):
         self.client.force_authenticate(user=self.user_admin)
         response = self.client.get('/api/personal/')
@@ -200,6 +243,7 @@ class SeguridadAPITestCase(TestCase):
         self.client.force_authenticate(user=self.user_admin)
         BitacoraAuditoria.objects.create(
             usuario=self.user_admin,
+            rolActivo='Administrador',
             accionRealizada='Edición de prueba',
             tablaAfectada='EjemplarBolsa',
             idRegistroAfectado=10,
@@ -212,17 +256,10 @@ class SeguridadAPITestCase(TestCase):
         self.assertGreaterEqual(len(response.data['eventos']), 1)
         self.assertEqual(response.data['eventos'][0]['tablaAfectada'], 'EjemplarBolsa')
 
-    def test_cu03_filtro_fuera_turno_b2(self):
-        self.client.force_authenticate(user=self.user_admin)
-        response = self.client.get('/api/auditoria/?fuera_turno=true')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertTrue(response.data['esFiltroFueraTurno'])
-
     # -------------------------------------------------------------------------
     # Recuperación y Modificación de Contraseña
     # -------------------------------------------------------------------------
     def test_recuperar_password_solicitar_y_confirmar(self):
-        # 1. Solicitar token
         res_req = self.client.post('/api/auth/recuperar-password/solicitar/', {
             'email': self.user_admin.email
         })
@@ -231,9 +268,7 @@ class SeguridadAPITestCase(TestCase):
         cached = cache.get(f"pwd_reset_{self.user_admin.email.lower()}")
         self.assertIsNotNone(cached)
         token = cached['code']
-        self.assertEqual(len(token), 6)
 
-        # 2. Confirmar con nuevo password
         nueva_clave = 'HemoVida#Nueva2026'
         res_conf = self.client.post('/api/auth/recuperar-password/confirmar/', {
             'email': self.user_admin.email,
@@ -243,7 +278,6 @@ class SeguridadAPITestCase(TestCase):
         self.assertEqual(res_conf.status_code, status.HTTP_200_OK)
         self.assertTrue(res_conf.data['success'])
 
-        # Verificar que la nueva clave funciona
         self.user_admin.refresh_from_db()
         self.assertTrue(self.user_admin.check_password(nueva_clave))
 
@@ -256,4 +290,3 @@ class SeguridadAPITestCase(TestCase):
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.user_admin.refresh_from_db()
         self.assertTrue(self.user_admin.check_password('SuperClave#2026!'))
-

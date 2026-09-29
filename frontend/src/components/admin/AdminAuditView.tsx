@@ -25,7 +25,8 @@ import {
   Database,
   RefreshCw,
   Moon,
-  Globe
+  Globe,
+  UserPlus
 } from 'lucide-react';
 import { 
   StaffAccount, 
@@ -33,8 +34,10 @@ import {
   StockThresholdConfig, 
   BloodInventoryItem, 
   BloodGroup, 
-  RhFactor 
+  RhFactor,
+  RoleCode
 } from '../../types';
+import { apiService } from '../../services/api';
 
 interface AdminAuditViewProps {
   staffAccount?: StaffAccount;
@@ -67,11 +70,80 @@ export const AdminAuditView: React.FC<AdminAuditViewProps> = ({
   isLoadingAudit = false,
   auditError = null
 }) => {
-  const [activeTab, setActiveTab] = useState<'bitacora' | 'umbrales' | 'solicitudes' | 'rbac'>('bitacora');
+  const [activeTab, setActiveTab] = useState<'bitacora' | 'umbrales' | 'solicitudes' | 'alta_personal' | 'rbac'>('bitacora');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTable, setSelectedTable] = useState<string>('all');
   const [nightShiftOnly, setNightShiftOnly] = useState<boolean>(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Form State para Procedimiento 2: sp_crear_usuario_personal_salud
+  const [staffCi, setStaffCi] = useState('');
+  const [staffNombres, setStaffNombres] = useState('');
+  const [staffApellidos, setStaffApellidos] = useState('');
+  const [staffSexo, setStaffSexo] = useState<'M' | 'F' | 'O'>('M');
+  const [staffFechaNacimiento, setStaffFechaNacimiento] = useState('1988-05-12');
+  const [staffCelular, setStaffCelular] = useState('');
+  const [staffCargo, setStaffCargo] = useState('Médico Hemoterapeuta de Triaje Clínico');
+  const [staffRegistroProfesional, setStaffRegistroProfesional] = useState('');
+  const [staffRol, setStaffRol] = useState<RoleCode>('DOC_TRIAJE');
+  const [staffUsername, setStaffUsername] = useState('');
+  const [staffEmail, setStaffEmail] = useState('');
+  const [staffPassword, setStaffPassword] = useState('');
+  const [staffLoading, setStaffLoading] = useState(false);
+  const [staffSuccessMsg, setStaffSuccessMsg] = useState<string | null>(null);
+  const [staffErrorMsg, setStaffErrorMsg] = useState<string | null>(null);
+
+  const handleCrearPersonal = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setStaffErrorMsg(null);
+    setStaffSuccessMsg(null);
+
+    const token = localStorage.getItem('hemovida_jwt_token') || '';
+    if (!token) {
+      setStaffErrorMsg('Se requiere una sesión activa de Administrador con token JWT válido.');
+      return;
+    }
+
+    if (!staffCi.trim() || !staffNombres.trim() || !staffApellidos.trim() || !staffRegistroProfesional.trim() || !staffUsername.trim() || !staffEmail.trim() || !staffPassword.trim()) {
+      setStaffErrorMsg('Todos los campos son obligatorios para el alta en PersonalSalud.');
+      return;
+    }
+
+    setStaffLoading(true);
+    try {
+      const res = await apiService.crearPersonalSalud(token, {
+        ci: staffCi.trim(),
+        nombres: staffNombres.trim(),
+        apellidos: staffApellidos.trim(),
+        sexo: staffSexo,
+        fechaNacimiento: staffFechaNacimiento,
+        celular: staffCelular.trim(),
+        cargo: staffCargo.trim(),
+        registroProfesional: staffRegistroProfesional.trim(),
+        username: staffUsername.trim().toLowerCase(),
+        email: staffEmail.trim().toLowerCase(),
+        password: staffPassword,
+        codigoRolAsignar: staffRol
+      });
+
+      setStaffSuccessMsg(res.message || 'Personal de salud registrado y acreditado satisfactoriamente.');
+      setStaffCi('');
+      setStaffNombres('');
+      setStaffApellidos('');
+      setStaffCelular('');
+      setStaffRegistroProfesional('');
+      setStaffUsername('');
+      setStaffEmail('');
+      setStaffPassword('');
+      if (onRefreshAuditLogs) {
+        await onRefreshAuditLogs();
+      }
+    } catch (err: any) {
+      setStaffErrorMsg(err?.message || 'Error al ejecutar sp_crear_usuario_personal_salud.');
+    } finally {
+      setStaffLoading(false);
+    }
+  };
 
   // Filter audit logs according to real database schema
   const filteredLogs = auditLogs.filter(log => {
@@ -201,6 +273,16 @@ export const AdminAuditView: React.FC<AdminAuditViewProps> = ({
                   {pendingStaffRequests.length}
                 </span>
               )}
+            </button>
+
+            <button
+              onClick={() => setActiveTab('alta_personal')}
+              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                activeTab === 'alta_personal' ? 'bg-rose-600 text-white shadow-md' : 'bg-white/10 text-white/80 hover:bg-white/20'
+              }`}
+            >
+              <UserPlus className="w-3.5 h-3.5 text-rose-300" />
+              <span>Alta Médica (SP)</span>
             </button>
 
             <button
@@ -750,6 +832,206 @@ export const AdminAuditView: React.FC<AdminAuditViewProps> = ({
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* TAB 3.5: ALTA DE PERSONAL DE SALUD (PROCEDIMIENTO ALMACENADO sp_crear_usuario_personal_salud) */}
+      {activeTab === 'alta_personal' && (
+        <div className="bg-white rounded-3xl border border-slate-200 shadow-xs p-6 sm:p-8 space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+            <div>
+              <div className="inline-flex items-center gap-2 bg-rose-50 border border-rose-200 px-3 py-1 rounded-full text-xs font-bold text-rose-800 mb-2">
+                <ShieldCheck className="w-3.5 h-3.5 text-rose-600" />
+                <span>Procedimiento Almacenado Seguro • sp_crear_usuario_personal_salud</span>
+              </div>
+              <h2 className="text-xl sm:text-2xl font-black text-slate-900 font-['Outfit',sans-serif]">
+                Alta Médica y Creación Restringida de Personal de Salud
+              </h2>
+              <p className="text-xs text-slate-500 mt-1 max-w-2xl leading-relaxed">
+                Solo el rol Administrador puede crear cuentas para el personal operativo (Doctores de Triaje, Personal de Colecta, Bioquímicos Integrales y Técnicos de Logística). Esta acción inserta la persona, el registro profesional, la cuenta y asigna el rol en UsuarioRol con auditoría forense inmediata.
+              </p>
+            </div>
+          </div>
+
+          {staffSuccessMsg && (
+            <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2.5 animate-fadeIn">
+              <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+              <span>{staffSuccessMsg}</span>
+            </div>
+          )}
+
+          {staffErrorMsg && (
+            <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-bold flex items-center gap-2.5 animate-fadeIn">
+              <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0" />
+              <span>{staffErrorMsg}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleCrearPersonal} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Cédula de Identidad (C.I.) *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ej. 5190422 SC"
+                  value={staffCi}
+                  onChange={(e) => setStaffCi(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Nombres *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ej. Claudia"
+                  value={staffNombres}
+                  onChange={(e) => setStaffNombres(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Apellidos *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ej. Morales"
+                  value={staffApellidos}
+                  onChange={(e) => setStaffApellidos(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Sexo Biológico *</label>
+                <select
+                  value={staffSexo}
+                  onChange={(e) => setStaffSexo(e.target.value as any)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 bg-white"
+                >
+                  <option value="M">Masculino (M)</option>
+                  <option value="F">Femenino (F)</option>
+                  <option value="O">Otro (O)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Fecha de Nacimiento *</label>
+                <input
+                  type="date"
+                  required
+                  value={staffFechaNacimiento}
+                  onChange={(e) => setStaffFechaNacimiento(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 bg-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Teléfono / Celular</label>
+                <input
+                  type="tel"
+                  placeholder="+591 700-00000"
+                  value={staffCelular}
+                  onChange={(e) => setStaffCelular(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500"
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-xs font-bold text-slate-700 mb-1">Cargo Clínico / Funcional *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ej. Bioquímico(a) Especialista en Inmunoserología"
+                  value={staffCargo}
+                  onChange={(e) => setStaffCargo(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Registro Profesional / Matrícula *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ej. BIOQ-2026-081"
+                  value={staffRegistroProfesional}
+                  onChange={(e) => setStaffRegistroProfesional(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-mono font-bold focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 text-rose-700"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Rol Operativo a Asignar *</label>
+                <select
+                  value={staffRol}
+                  onChange={(e) => setStaffRol(e.target.value as RoleCode)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-rose-300 text-xs font-bold text-rose-900 bg-rose-50/50 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500"
+                >
+                  <option value="DOC_TRIAJE">Doctor(a) de Triaje (DOC_TRIAJE)</option>
+                  <option value="PERS_COLECTA">Personal de Colecta (PERS_COLECTA)</option>
+                  <option value="BIOQ_INTEGRAL">Bioquímico(a) Integral (BIOQ_INTEGRAL)</option>
+                  <option value="TEC_LOGISTICA">Técnico(a) de Logística (TEC_LOGISTICA)</option>
+                  <option value="MED_SOLICITANTE">Médico(a) Solicitante (MED_SOLICITANTE)</option>
+                  <option value="ADMIN">Administrador del Sistema (ADMIN)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Nombre de Usuario (Username) *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ej. claudia.morales"
+                  value={staffUsername}
+                  onChange={(e) => setStaffUsername(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Correo Institucional *</label>
+                <input
+                  type="email"
+                  required
+                  placeholder="claudia.morales@hemovida.org"
+                  value={staffEmail}
+                  onChange={(e) => setStaffEmail(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500"
+                />
+              </div>
+
+              <div className="md:col-span-3">
+                <label className="block text-xs font-bold text-slate-700 mb-1">Contraseña Inicial Segura *</label>
+                <input
+                  type="password"
+                  required
+                  placeholder="Mínimo 8 caracteres, 1 mayúscula, 1 número y 1 carácter especial (ej. HemoVida#2026!)"
+                  value={staffPassword}
+                  onChange={(e) => setStaffPassword(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-mono font-semibold focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+              <button
+                type="submit"
+                disabled={staffLoading}
+                className="px-6 py-3 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                {staffLoading ? (
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                ) : (
+                  <UserPlus className="w-4 h-4" />
+                )}
+                <span>{staffLoading ? 'Ejecutando sp_crear_usuario_personal_salud...' : 'Registrar y Dar de Alta en PersonalSalud'}</span>
+              </button>
+            </div>
+          </form>
         </div>
       )}
 

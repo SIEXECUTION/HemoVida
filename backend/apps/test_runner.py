@@ -6,13 +6,13 @@ from django.test.runner import DiscoverRunner
 
 class UnmanagedModelTestRunner(DiscoverRunner):
     def setup_databases(self, **kwargs):
-        from apps.seguridad.models import Persona, Rol, PersonalSalud, Usuario, BitacoraAuditoria
-        from apps.donantes.models import Donante, ExtraccionDonacion
+        from apps.seguridad.models import Persona, Rol, PersonalSalud, Usuario, UsuarioRol, BitacoraAuditoria
+        from apps.donantes.models import Donante, PosibleDonador, ExtraccionDonacion
         from apps.inventario.models import GrupoSanguineo, ParametroStockMinimo, EjemplarBolsa
 
         unmanaged_models = [
-            Persona, Rol, PersonalSalud, Usuario, BitacoraAuditoria,
-            Donante, ExtraccionDonacion,
+            Persona, Rol, PersonalSalud, Usuario, UsuarioRol, BitacoraAuditoria,
+            Donante, PosibleDonador, ExtraccionDonacion,
             GrupoSanguineo, ParametroStockMinimo, EjemplarBolsa
         ]
 

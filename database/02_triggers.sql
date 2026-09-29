@@ -1,28 +1,124 @@
--- SECCIÓN 4: TRIGGERS AUTOMATIZADOS DE NEGOCIO (REGLAS OPERATIVAS Y CLÍNICAS)
+-- ============================================================================
+-- BANCO DE SANGRE "HEMOVIDA" - TRIGGERS DE NEGOCIO (PostgreSQL 14+)
 -- ============================================================================
 
--- Trigger T1 [CU01 / CU02]: Política de contraseña segura en la creación o actualización de cuentas.
--- Regla: Mínimo 8 caracteres, al menos 1 mayúscula, 1 minúscula, 1 número y 1 símbolo especial.
-CREATE OR REPLACE FUNCTION fn_trg_validar_password_seguro()
+-- A. Exclusión Mutua entre Posible Donador y Donante
+-- Impide que una misma cuenta tenga asignados ambos roles al mismo tiempo
+CREATE OR REPLACE FUNCTION fn_trg_validar_exclusion_roles()
 RETURNS TRIGGER AS $$
+DECLARE
+    v_codRolInsertado VARCHAR(30);
+    v_tieneOpuesto BOOLEAN := FALSE;
 BEGIN
-    IF NEW.passwordHash !~ '^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};'':"\\|,.<>\/?`~]).{8,}$' THEN
-        RAISE EXCEPTION 'La contraseña no cumple la política de seguridad: Mínimo 8 caracteres, al menos 1 mayúscula, 1 minúscula, 1 número y 1 carácter especial.';
+    SELECT codigoRol INTO v_codRolInsertado FROM Rol WHERE idRol = NEW.idRol;
+    
+    IF v_codRolInsertado = 'POSIBLE_DONADOR' THEN
+        SELECT EXISTS (
+            SELECT 1 FROM UsuarioRol ur
+            JOIN Rol r ON ur.idRol = r.idRol
+            WHERE ur.idUsuario = NEW.idUsuario AND r.codigoRol = 'DONANTE'
+        ) INTO v_tieneOpuesto;
+        
+        IF v_tieneOpuesto THEN
+            RAISE EXCEPTION 'Inconsistencia de Negocio: Un usuario no puede ser Posible Donador y Donante simultáneamente.';
+        END IF;
+    ELSIF v_codRolInsertado = 'DONANTE' THEN
+        SELECT EXISTS (
+            SELECT 1 FROM UsuarioRol ur
+            JOIN Rol r ON ur.idRol = r.idRol
+            WHERE ur.idUsuario = NEW.idUsuario AND r.codigoRol = 'POSIBLE_DONADOR'
+        ) INTO v_tieneOpuesto;
+        
+        IF v_tieneOpuesto THEN
+            RAISE EXCEPTION 'Inconsistencia de Negocio: Un usuario no puede ser Donante y Posible Donador al mismo tiempo.';
+        END IF;
     END IF;
+    
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
-DROP TRIGGER IF EXISTS trg_validar_password_seguro ON Usuario;
-CREATE TRIGGER trg_validar_password_seguro
-BEFORE INSERT OR UPDATE OF passwordHash ON Usuario
+DROP TRIGGER IF EXISTS trg_validar_exclusion_roles ON UsuarioRol;
+CREATE TRIGGER trg_validar_exclusion_roles
+BEFORE INSERT OR UPDATE ON UsuarioRol
 FOR EACH ROW
-EXECUTE FUNCTION fn_trg_validar_password_seguro();
+EXECUTE FUNCTION fn_trg_validar_exclusion_roles();
 
 
--- Trigger T2 [CU13 / CU14 / CU15]: Barrera de liberación y descarte automático de hemocomponentes.
--- Regla: Si el tamizaje serológico resulta 'Apto', libera las bolsas derivadas en cuarentena a 'Disponible'.
--- Si resulta 'No Apto' (Reactivo), bloquea el lote a 'Baja' y genera automáticamente la orden en BajaInventario.
+-- B. Ascenso a Donante Condicionado al Análisis Inmunoserológico
+-- Cuando el bioquímico registra el dictamen Apto en AnalisisInmunoSerologico,
+-- se actualiza la aptitud del postulante, se crea su carnet digital en Donante,
+-- se le remueve de PosibleDonador y se migra su rol en el sistema.
+CREATE OR REPLACE FUNCTION fn_trg_ascenso_donante_serologia()
+RETURNS TRIGGER AS $$
+DECLARE
+    v_idPersona INT;
+    v_idUsuario INT;
+    v_idRolPosible INT;
+    v_idRolDonante INT;
+    v_carnet VARCHAR(30);
+BEGIN
+    -- Obtener la persona a partir de la extracción vinculada a la bolsa madre
+    SELECT ed.idPersonaDonante INTO v_idPersona
+    FROM UnidadSangreTotal ust
+    JOIN ExtraccionDonacion ed ON ust.idExtraccion = ed.idExtraccion
+    WHERE ust.idUnidadMadre = NEW.idUnidadMadre;
+
+    SELECT idRol INTO v_idRolPosible FROM Rol WHERE codigoRol = 'POSIBLE_DONADOR';
+    SELECT idRol INTO v_idRolDonante FROM Rol WHERE codigoRol = 'DONANTE';
+    SELECT idUsuario INTO v_idUsuario FROM Usuario WHERE idPersona = v_idPersona;
+
+    -- Marcar que la persona ya cuenta con análisis serológico
+    UPDATE PosibleDonador
+    SET tieneAnalisis = TRUE
+    WHERE idPersona = v_idPersona;
+
+    IF NEW.dictamenFinal = 'Apto' THEN
+        -- 1. Actualizar estado en PosibleDonador
+        UPDATE PosibleDonador
+        SET estadoAptitud = 'Apto'
+        WHERE idPersona = v_idPersona;
+
+        -- 2. Insertar en Donante si aún no existe
+        v_carnet := CONCAT('HEMO-', TO_CHAR(CURRENT_DATE, 'YYYY'), '-', v_idPersona);
+        IF NOT EXISTS (SELECT 1 FROM Donante WHERE idPersona = v_idPersona) THEN
+            INSERT INTO Donante (idPersona, carnetDigitalCodigo, tipoDonante, estadoHabilitacion, fechaUltimaDonacion)
+            VALUES (v_idPersona, v_carnet, 'Voluntario Altruista', 'Apto', CURRENT_DATE);
+        ELSE
+            UPDATE Donante
+            SET estadoHabilitacion = 'Apto', fechaUltimaDonacion = CURRENT_DATE
+            WHERE idPersona = v_idPersona;
+        END IF;
+
+        -- 3. Transición de Roles: Remover Posible Donador y Asignar Donante
+        IF v_idUsuario IS NOT NULL THEN
+            DELETE FROM UsuarioRol WHERE idUsuario = v_idUsuario AND idRol = v_idRolPosible;
+            INSERT INTO UsuarioRol (idUsuario, idRol)
+            VALUES (v_idUsuario, v_idRolDonante)
+            ON CONFLICT DO NOTHING;
+        END IF;
+
+        -- 4. Retirar de PosibleDonador
+        DELETE FROM PosibleDonador WHERE idPersona = v_idPersona;
+
+    ELSIF NEW.dictamenFinal = 'No Apto' THEN
+        UPDATE PosibleDonador
+        SET estadoAptitud = 'No Apto'
+        WHERE idPersona = v_idPersona;
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_ascenso_donante_serologia ON AnalisisInmunoSerologico;
+CREATE TRIGGER trg_ascenso_donante_serologia
+AFTER INSERT OR UPDATE OF dictamenFinal ON AnalisisInmunoSerologico
+FOR EACH ROW
+EXECUTE FUNCTION fn_trg_ascenso_donante_serologia();
+
+
+-- C. Barrera de liberación y descarte automático de bolsas en laboratorio
 CREATE OR REPLACE FUNCTION fn_trg_barrera_liberacion_serologica()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -68,97 +164,3 @@ CREATE TRIGGER trg_barrera_liberacion_serologica
 AFTER INSERT OR UPDATE OF dictamenFinal ON AnalisisInmunoSerologico
 FOR EACH ROW
 EXECUTE FUNCTION fn_trg_barrera_liberacion_serologica();
-
-
--- Trigger T3 [CU18]: Retorno automático de unidad a stock disponible tras incompatibilidad cruzada.
--- Regla: Si una prueba cruzada resulta 'Incompatible', la bolsa no se descarta; se desbloquea a 'Disponible'.
-CREATE OR REPLACE FUNCTION fn_trg_liberar_bolsa_incompatible()
-RETURNS TRIGGER AS $$
-BEGIN
-    IF NEW.resultadoCompatibilidad = 'Incompatible' THEN
-        UPDATE EjemplarBolsa
-        SET estadoBolsaK = 'Disponible'
-        WHERE idEjemplarBolsa = NEW.idEjemplarBolsa
-          AND estadoBolsaK = 'Reservada';
-    END IF;
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-DROP TRIGGER IF EXISTS trg_liberar_bolsa_incompatible ON PruebaCompatibilidad;
-CREATE TRIGGER trg_liberar_bolsa_incompatible
-AFTER INSERT ON PruebaCompatibilidad
-FOR EACH ROW
-EXECUTE FUNCTION fn_trg_liberar_bolsa_incompatible();
-
-
--- Trigger T4 [CU17 / CU19]: Apertura automática de reposición pendiente al despachar sangre.
--- Regla: Al despacharse una solicitud clínica, genera automáticamente el registro de deuda biológica.
-CREATE OR REPLACE FUNCTION fn_trg_apertura_deuda_biologica()
-RETURNS TRIGGER AS $$
-BEGIN
-    IF NEW.estadoSolicitud = 'Despachada' AND (OLD IS NULL OR OLD.estadoSolicitud != 'Despachada') THEN
-        IF NOT EXISTS (SELECT 1 FROM ReposicionPendiente WHERE idSolicitud = NEW.idSolicitud) THEN
-            INSERT INTO ReposicionPendiente (
-                idSolicitud,
-                cantidadBolsasAReponer,
-                cantidadRecuperada,
-                fechaLimiteReposicion,
-                estadoReposicion
-            ) VALUES (
-                NEW.idSolicitud,
-                NEW.cantidadBolsasSolicitadas,
-                0,
-                CURRENT_DATE + INTERVAL '7 days',
-                'Pendiente'
-            );
-        END IF;
-    END IF;
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-DROP TRIGGER IF EXISTS trg_apertura_deuda_biologica ON SolicitudHospitalaria;
-CREATE TRIGGER trg_apertura_deuda_biologica
-AFTER UPDATE OF estadoSolicitud ON SolicitudHospitalaria
-FOR EACH ROW
-EXECUTE FUNCTION fn_trg_apertura_deuda_biologica();
-
-
--- Trigger T5 [CU20]: Amortización cuantitativa (1 a 1) y liquidación de deuda biológica.
--- Regla: Cada donación efectiva de reposición incrementa el saldo recuperado y liquida al completar la cuota.
-CREATE OR REPLACE FUNCTION fn_trg_amortizar_reposicion_familiar()
-RETURNS TRIGGER AS $$
-DECLARE
-    v_requeridas INT;
-    v_recuperadas INT;
-BEGIN
-    IF NEW.donacionConcretada = TRUE AND (OLD IS NULL OR OLD.donacionConcretada = FALSE) THEN
-        UPDATE ReposicionPendiente
-        SET cantidadRecuperada = cantidadRecuperada + 1
-        WHERE idReposicion = NEW.idReposicion;
-        
-        SELECT cantidadBolsasAReponer, cantidadRecuperada 
-        INTO v_requeridas, v_recuperadas
-        FROM ReposicionPendiente
-        WHERE idReposicion = NEW.idReposicion;
-        
-        IF v_recuperadas >= v_requeridas THEN
-            UPDATE ReposicionPendiente
-            SET estadoReposicion = 'Liquidada'
-            WHERE idReposicion = NEW.idReposicion;
-        ELSE
-            UPDATE ReposicionPendiente
-            SET estadoReposicion = 'Parcial'
-            WHERE idReposicion = NEW.idReposicion;
-        END IF;
-    END IF;
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-DROP TRIGGER IF EXISTS trg_amortizar_reposicion_familiar ON CompromisoDonacion;
-CREATE TRIGGER trg_amortizar_reposicion_familiar
-AFTER INSERT OR UPDATE OF donacionConcretada ON CompromisoDonacion
-FOR EACH ROW
-EXECUTE FUNCTION fn_trg_amortizar_reposicion_familiar();

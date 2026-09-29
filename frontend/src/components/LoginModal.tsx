@@ -30,7 +30,7 @@ import {
   Send,
   UserCheck
 } from 'lucide-react';
-import { UserDonor, StaffAccount, AppRole, StaffRole, BloodGroup, RhFactor } from '../types';
+import { UserDonor, StaffAccount, AppRole, StaffRole, BloodGroup, RhFactor, RoleCode, RolDisponible, UserSession } from '../types';
 import { evaluatePassword, getPasswordMissingAlerts } from '../utils/security';
 import { PasswordSecurityIndicator } from './PasswordSecurityIndicator';
 import { apiService } from '../services/api';
@@ -41,7 +41,8 @@ export type AccountLoginSelection =
   | { type: 'despacho'; staff: StaffAccount }
   | { type: 'administrador'; staff: StaffAccount }
   | { type: 'medico'; staff: StaffAccount }
-  | { type: 'bioquimico'; staff: StaffAccount };
+  | { type: 'bioquimico'; staff: StaffAccount }
+  | { type: 'session'; session: UserSession };
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -92,6 +93,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
         setRegisterAccountType(initialRegisterType);
       }
       setLoginError(null);
+      setPendingMultiRoleData(null);
       // Los campos de inicio de sesión SIEMPRE inician vacíos sin autorrelleno
       setLoginEmail('');
       setLoginPassword('');
@@ -166,6 +168,12 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   const [submittedStaffName, setSubmittedStaffName] = useState('');
   const [submittedStaffRole, setSubmittedStaffRole] = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
+  const [registerLoading, setRegisterLoading] = useState(false);
+  const [pendingMultiRoleData, setPendingMultiRoleData] = useState<{
+    apiRes: any;
+    cleanEmail: string;
+    cleanPwd: string;
+  } | null>(null);
 
   if (!isOpen) return null;
 
@@ -227,6 +235,155 @@ export const LoginModal: React.FC<LoginModalProps> = ({
     setRegStaffValidationAlerts([]);
   };
 
+  // Helper para construir la sesión autorizada con el rol activo seleccionado (Criterio Multi-Rol y Selector de Perfil Págs 20-21)
+  const executeSessionLogin = (roleCode: RoleCode, res: any, email: string, pwd: string) => {
+    const persona = res.usuario?.persona;
+    const rolesDisp: RolDisponible[] = res.rolesDisponibles || [];
+    const token = res.token || res.tokens?.access || '';
+    const usuarioId = res.usuarioId || res.usuario?.idUsuario || Date.now();
+    const nombreCompleto = res.nombreCompleto || persona?.nombreCompleto || `${persona?.nombres || ''} ${persona?.apellidos || ''}`.trim() || res.usuario?.username || 'Usuario HemoVida';
+
+    if (roleCode === 'POSIBLE_DONADOR') {
+      const donorObj: UserDonor = availableUsers.find(u => u.email.toLowerCase() === email) || {
+        id: usuarioId,
+        ci: persona?.ci || '0000000',
+        nombres: persona?.nombres || nombreCompleto,
+        apellidos: persona?.apellidos || '',
+        email: email,
+        celular: persona?.celular || '+591 700-00000',
+        sexo: (persona?.sexo as any) || 'M',
+        fechaNacimiento: persona?.fechaNacimiento || '1998-01-01',
+        nacionalidad: 'Boliviana',
+        direccion: persona?.direccion || 'Santa Cruz',
+        ocupacion: persona?.ocupacion || 'Postulante a Donante',
+        tipoDonante: 'Voluntario Altruista',
+        carnetDigitalCodigo: '',
+        grupoSanguineo: 'O',
+        factorRh: 'Positivo',
+        fechaUltimaDonacion: null,
+        estadoHabilitacion: 'Diferido Temporal',
+        totalDonaciones: 0,
+        volumenHistoricoMl: 0
+      };
+      donorObj.password = pwd;
+
+      const userSession: UserSession = {
+        role: 'POSIBLE_DONADOR',
+        activeRole: 'POSIBLE_DONADOR',
+        usuarioId,
+        nombreCompleto,
+        username: res.usuario?.username || email,
+        email,
+        token,
+        rolesDisponibles: rolesDisp,
+        user: donorObj,
+        posibleDonador: {
+          estadoAptitud: 'No Apto',
+          tieneAnalisis: false
+        }
+      };
+
+      onSelectAccount({ type: 'session', session: userSession });
+      onClose();
+      return;
+    }
+
+    if (roleCode === 'DONANTE') {
+      const donorObj: UserDonor = availableUsers.find(u => u.email.toLowerCase() === email) || {
+        id: usuarioId,
+        ci: persona?.ci || '0000000',
+        nombres: persona?.nombres || nombreCompleto,
+        apellidos: persona?.apellidos || '',
+        email: email,
+        celular: persona?.celular || '+591 700-00000',
+        sexo: (persona?.sexo as any) || 'M',
+        fechaNacimiento: persona?.fechaNacimiento || '1995-01-01',
+        nacionalidad: 'Boliviana',
+        direccion: persona?.direccion || 'Santa Cruz',
+        ocupacion: persona?.ocupacion || 'Donante',
+        tipoDonante: 'Voluntario Altruista',
+        carnetDigitalCodigo: `HV-DON-${usuarioId}`,
+        grupoSanguineo: 'O',
+        factorRh: 'Positivo',
+        fechaUltimaDonacion: null,
+        estadoHabilitacion: 'Apto',
+        totalDonaciones: 1,
+        volumenHistoricoMl: 450
+      };
+      donorObj.password = pwd;
+
+      const userSession: UserSession = {
+        role: 'donante',
+        activeRole: 'DONANTE',
+        usuarioId,
+        nombreCompleto,
+        username: res.usuario?.username || email,
+        email,
+        token,
+        rolesDisponibles: rolesDisp,
+        user: donorObj
+      };
+
+      onSelectAccount({ type: 'session', session: userSession });
+      onClose();
+      return;
+    }
+
+    // Roles de Personal de Salud
+    const staffRoleMap: Record<RoleCode, StaffRole> = {
+      'ADMIN': 'administrador',
+      'DOC_TRIAJE': 'medico',
+      'PERS_COLECTA': 'recepcion',
+      'BIOQ_INTEGRAL': 'bioquimico',
+      'TEC_LOGISTICA': 'despacho',
+      'POSIBLE_DONADOR': 'donante',
+      'DONANTE': 'donante',
+      'RECEPTOR': 'donante',
+      'MED_SOLICITANTE': 'medico'
+    };
+
+    const targetStaffRole: StaffRole = staffRoleMap[roleCode] || 'administrador';
+    const staffCargoMap: Record<RoleCode, string> = {
+      'ADMIN': 'Administrador del Sistema & Auditor RBAC',
+      'DOC_TRIAJE': 'Médico de Triaje Clínico & Hemoterapeuta',
+      'PERS_COLECTA': 'Personal de Admisión, Registro y Colecta',
+      'BIOQ_INTEGRAL': 'Bioquímico Integral de Laboratorio',
+      'TEC_LOGISTICA': 'Técnico de Logística, Almacén y Despacho',
+      'POSIBLE_DONADOR': 'Posible Donador',
+      'DONANTE': 'Donante Calificado',
+      'RECEPTOR': 'Receptor',
+      'MED_SOLICITANTE': 'Médico Solicitante'
+    };
+
+    const staffObj: StaffAccount = availableStaff.find(s => s.rol === targetStaffRole) || {
+      id: `staff-${usuarioId}`,
+      rol: targetStaffRole,
+      nombre: nombreCompleto,
+      cargo: staffCargoMap[roleCode] || res.usuario?.rol?.nombreRol || 'Personal de Salud',
+      ci: persona?.ci || '0000000',
+      email: email,
+      turno: 'Turno Mañana (07:00 - 15:00)',
+      credencial: `HV-${roleCode}-01`,
+      sede: 'Banco de Sangre Central'
+    };
+    staffObj.password = pwd;
+
+    const userSession: UserSession = {
+      role: targetStaffRole,
+      activeRole: roleCode,
+      usuarioId,
+      nombreCompleto,
+      username: res.usuario?.username || email,
+      email,
+      token,
+      rolesDisponibles: rolesDisp,
+      staff: staffObj
+    };
+
+    onSelectAccount({ type: 'session', session: userSession });
+    onClose();
+  };
+
   // 1. INICIAR SESIÓN ESTRICTAMENTE CON CORREO ELECTRÓNICO Y CONTRASEÑA
   const handleEmailPasswordLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -252,68 +409,30 @@ export const LoginModal: React.FC<LoginModalProps> = ({
 
     setLoginLoading(true);
 
-    // 1. Intentar autenticar contra el backend en Render
+    // Intentar autenticar contra el backend en Render / Supabase
     try {
       const apiRes = await apiService.login(cleanEmail, cleanPwd);
-      if (apiRes && apiRes.tokens) {
-        localStorage.setItem('hemovida_jwt_token', apiRes.tokens.access);
-        if (apiRes.usuario) {
-          const userRol = apiRes.usuario.rol.nombreRol.toLowerCase();
-          const persona = apiRes.usuario.persona;
-          if (userRol === 'donante') {
-            const donorObj: UserDonor = availableUsers.find(u => u.email.toLowerCase() === cleanEmail) || {
-              id: apiRes.usuario.idUsuario,
-              ci: persona?.ci || '0000000',
-              nombres: persona?.nombres || apiRes.usuario.username,
-              apellidos: persona?.apellidos || '',
-              email: cleanEmail,
-              celular: '+591 700-00000',
-              sexo: 'M',
-              fechaNacimiento: '1995-01-01',
-              nacionalidad: 'Boliviana',
-              direccion: 'Santa Cruz',
-              ocupacion: 'Donante',
-              tipoDonante: 'Voluntario Altruista',
-              carnetDigitalCodigo: `HV-DON-${apiRes.usuario.idUsuario}`,
-              grupoSanguineo: 'O',
-              factorRh: 'Positivo',
-              fechaUltimaDonacion: null,
-              estadoHabilitacion: 'Apto',
-              totalDonaciones: 1,
-              volumenHistoricoMl: 450
-            };
-            donorObj.password = cleanPwd;
-            onSelectAccount({ type: 'donante', user: donorObj });
-            onClose();
-            return;
-          } else {
-            const staffRoleMap: Record<string, StaffRole> = {
-              'administrador': 'administrador',
-              'médico': 'medico',
-              'medico': 'medico',
-              'bioquímico': 'bioquimico',
-              'bioquimico': 'bioquimico',
-              'recepcionista': 'recepcion',
-              'recepcion': 'recepcion',
-              'despacho': 'despacho'
-            };
-            const targetRole: StaffRole = staffRoleMap[userRol] || 'administrador';
-            const staffObj: StaffAccount = availableStaff.find(s => s.rol === targetRole) || {
-              id: `staff-${apiRes.usuario.idUsuario}`,
-              rol: targetRole,
-              nombre: persona?.nombreCompleto || apiRes.usuario.username,
-              cargo: apiRes.usuario.rol.nombreRol,
-              ci: persona?.ci || '0000000',
-              email: cleanEmail,
-              turno: 'Turno Mañana (07:00 - 15:00)',
-              credencial: `HV-${targetRole.toUpperCase()}-01`,
-              sede: 'Banco de Sangre Central'
-            };
-            staffObj.password = cleanPwd;
-            onSelectAccount({ type: targetRole, staff: staffObj } as any);
-            onClose();
-            return;
-          }
+      if (apiRes && (apiRes.token || apiRes.tokens)) {
+        localStorage.setItem('hemovida_jwt_token', apiRes.token || apiRes.tokens?.access);
+
+        const rolesDisp: RolDisponible[] = apiRes.rolesDisponibles || [];
+
+        // Criterio de Selección de Perfil Inicial (Págs 20-21 del documento):
+        // Si el usuario posee múltiples roles asignados en UsuarioRol, mostrar diálogo de selección inicial
+        if (rolesDisp.length > 1) {
+          setPendingMultiRoleData({ apiRes, cleanEmail, cleanPwd });
+          return;
+        } else if (rolesDisp.length === 1) {
+          executeSessionLogin(rolesDisp[0].codigo, apiRes, cleanEmail, cleanPwd);
+          return;
+        } else {
+          // Fallback en caso de que no tenga roles parametrizados
+          const legacyRol = (apiRes.usuario?.rol?.codigoRol || apiRes.usuario?.rol?.nombreRol || 'DONANTE').toUpperCase();
+          const targetCode: RoleCode = (['ADMIN', 'POSIBLE_DONADOR', 'DONANTE', 'DOC_TRIAJE', 'PERS_COLECTA', 'BIOQ_INTEGRAL', 'TEC_LOGISTICA'] as RoleCode[]).includes(legacyRol as any)
+            ? (legacyRol as RoleCode)
+            : 'DONANTE';
+          executeSessionLogin(targetCode, apiRes, cleanEmail, cleanPwd);
+          return;
         }
       }
     } catch (apiErr: any) {
@@ -382,8 +501,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({
     }
   };
 
-  // 3. CREAR CUENTA SENCILLA PARA DONANTE
-  const handleRegisterSubmit = (e: React.FormEvent) => {
+  // 3. AUTO-REGISTRO OFICIAL PARA POSIBLE DONADOR (sp_autoregistro_posible_donador)
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setRegisterError(null);
     setRegisterValidationAlerts([]);
@@ -394,7 +513,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
     }
 
     if (!regCi.trim()) {
-      setRegisterError('La Cédula de Identidad (C.I.) es obligatoria para su carnet de donante.');
+      setRegisterError('La Cédula de Identidad (C.I.) es obligatoria para el registro.');
       return;
     }
 
@@ -413,31 +532,46 @@ export const LoginModal: React.FC<LoginModalProps> = ({
       return;
     }
 
-    const registeredUser: UserDonor = {
-      id: Date.now(),
-      ci: regCi.trim(),
-      nombres: regNombres.trim(),
-      apellidos: regApellidos.trim(),
-      email: regEmail.trim().toLowerCase(),
-      celular: regCelular.trim() || '+591 700-00000',
-      sexo: regSexo,
-      fechaNacimiento: regFechaNacimiento || '1998-05-15',
-      nacionalidad: regNacionalidad.trim() || 'Boliviana',
-      direccion: regDireccion.trim() || 'Santa Cruz de la Sierra',
-      ocupacion: regOcupacion.trim() || 'Profesional Independiente',
-      tipoDonante: regTipoDonante,
-      carnetDigitalCodigo: `HV-DON-2026-${Math.floor(1000 + Math.random() * 9000)}`,
-      grupoSanguineo: regGrupo,
-      factorRh: regRh,
-      fechaUltimaDonacion: null,
-      estadoHabilitacion: 'Apto',
-      totalDonaciones: 0,
-      volumenHistoricoMl: 0,
-      password: regPassword
-    };
+    setRegisterLoading(true);
 
-    onSelectAccount({ type: 'donante', user: registeredUser });
-    onClose();
+    const cleanEmail = regEmail.trim().toLowerCase();
+    const cleanCi = regCi.trim();
+    const cleanNombres = regNombres.trim();
+    const cleanApellidos = regApellidos.trim();
+
+    try {
+      const generatedUsername = cleanEmail.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '') + '_' + Math.floor(100 + Math.random() * 900);
+
+      const payload = {
+        ci: cleanCi,
+        nombres: cleanNombres,
+        apellidos: cleanApellidos,
+        sexo: regSexo as 'M' | 'F' | 'O',
+        fechaNacimiento: regFechaNacimiento || '1998-05-15',
+        celular: regCelular.trim() || '+591 70000000',
+        direccion: regDireccion.trim() || 'Santa Cruz de la Sierra',
+        ocupacion: regOcupacion.trim() || 'Postulante Voluntario',
+        username: generatedUsername,
+        email: cleanEmail,
+        password: regPassword
+      };
+
+      await apiService.autoRegistroPosibleDonador(payload);
+
+      // Iniciar sesión inmediatamente con las credenciales registradas
+      const loginRes = await apiService.login(cleanEmail, regPassword);
+      if (loginRes && (loginRes.token || loginRes.tokens)) {
+        localStorage.setItem('hemovida_jwt_token', loginRes.token || loginRes.tokens.access);
+        executeSessionLogin('POSIBLE_DONADOR', loginRes, cleanEmail, regPassword);
+        return;
+      }
+    } catch (err: any) {
+      console.warn('Error en auto-registro con backend:', err);
+      setRegisterError(err?.message || 'Error al comunicarse con el servidor de HemoVida en Render/Supabase.');
+      return;
+    } finally {
+      setRegisterLoading(false);
+    }
   };
 
   // 4. CREAR SOLICITUD DE CUENTA PARA PERSONAL DE SALUD (REQUIERE APROBACIÓN DE ADMINISTRADOR)
@@ -548,37 +682,105 @@ export const LoginModal: React.FC<LoginModalProps> = ({
           </div>
 
           {/* Primary View Switcher: [ Iniciar Sesión ] [ Crear Cuenta ] */}
-          <div className="grid grid-cols-2 gap-1.5 mt-5 p-1 bg-white/10 backdrop-blur rounded-2xl border border-white/15 text-xs font-bold">
-            <button
-              onClick={() => { setModalMode('login'); setLoginError(null); }}
-              className={`py-2 px-3 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                modalMode === 'login' ? 'bg-rose-600 text-white shadow-md' : 'text-white/80 hover:bg-white/10 hover:text-white'
-              }`}
-              id="tab-mode-login"
-            >
-              <Mail className="w-3.5 h-3.5" />
-              <span>Iniciar Sesión (Correo & Contraseña)</span>
-            </button>
+          {!pendingMultiRoleData ? (
+            <div className="grid grid-cols-2 gap-1.5 mt-5 p-1 bg-white/10 backdrop-blur rounded-2xl border border-white/15 text-xs font-bold">
+              <button
+                onClick={() => { setModalMode('login'); setLoginError(null); }}
+                className={`py-2 px-3 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                  modalMode === 'login' ? 'bg-rose-600 text-white shadow-md' : 'text-white/80 hover:bg-white/10 hover:text-white'
+                }`}
+                id="tab-mode-login"
+              >
+                <Mail className="w-3.5 h-3.5" />
+                <span>Iniciar Sesión (Correo & Contraseña)</span>
+              </button>
 
-            <button
-              onClick={() => { setModalMode('register'); setRegisterError(null); }}
-              className={`py-2 px-3 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                modalMode === 'register' ? 'bg-rose-600 text-white shadow-md' : 'text-white/80 hover:bg-white/10 hover:text-white'
-              }`}
-              id="tab-mode-register"
-            >
-              <BadgeCheck className="w-3.5 h-3.5" />
-              <span>Crear Nueva Cuenta</span>
-            </button>
-          </div>
+              <button
+                onClick={() => { setModalMode('register'); setRegisterError(null); }}
+                className={`py-2 px-3 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                  modalMode === 'register' ? 'bg-rose-600 text-white shadow-md' : 'text-white/80 hover:bg-white/10 hover:text-white'
+                }`}
+                id="tab-mode-register"
+              >
+                <BadgeCheck className="w-3.5 h-3.5" />
+                <span>Crear Nueva Cuenta</span>
+              </button>
+            </div>
+          ) : (
+            <div className="mt-4 p-2.5 bg-white/10 backdrop-blur rounded-2xl border border-white/20 text-xs font-bold text-center text-rose-100 flex items-center justify-center gap-2">
+              <Sparkles className="w-4 h-4 text-amber-300" />
+              <span>Selector de Perfil de Acceso (Usuario con Múltiples Roles)</span>
+            </div>
+          )}
         </div>
 
         {/* Modal Body */}
         <div className="p-5 sm:p-6 max-h-[75vh] overflow-y-auto">
           {/* ========================================================
+              SELECTOR DE PERFIL INICIAL MULTI-ROL (Págs 20-21 del PDF)
+              ======================================================== */}
+          {pendingMultiRoleData && (
+            <div className="space-y-6 py-2">
+              <div className="text-center space-y-2">
+                <div className="w-14 h-14 rounded-2xl bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center mx-auto shadow-xs">
+                  <Sparkles className="w-7 h-7" />
+                </div>
+                <h4 className="text-xl font-black text-slate-900 font-['Outfit',sans-serif]">
+                  Selecciona el perfil con el que deseas ingresar a la sesión:
+                </h4>
+                <p className="text-xs text-slate-500 max-w-lg mx-auto">
+                  Bienvenido/a, <strong className="text-slate-800">{pendingMultiRoleData.apiRes.nombreCompleto || pendingMultiRoleData.cleanEmail}</strong>. Tu cuenta tiene múltiples credenciales autorizadas en HemoVida. Selecciona el perfil con el que deseas operar:
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                {pendingMultiRoleData.apiRes.rolesDisponibles.map((r: RolDisponible) => (
+                  <button
+                    key={r.codigo}
+                    type="button"
+                    onClick={() => executeSessionLogin(r.codigo, pendingMultiRoleData.apiRes, pendingMultiRoleData.cleanEmail, pendingMultiRoleData.cleanPwd)}
+                    className="p-4 rounded-2xl border-2 border-slate-200 hover:border-rose-600 hover:bg-rose-50/50 hover:shadow-md transition-all text-left flex items-start gap-3.5 group cursor-pointer"
+                  >
+                    <div className="w-11 h-11 rounded-xl bg-slate-100 group-hover:bg-rose-600 group-hover:text-white flex items-center justify-center text-slate-700 shrink-0 transition-colors shadow-2xs">
+                      {r.codigo === 'ADMIN' && <ShieldCheck className="w-5 h-5 text-rose-600 group-hover:text-white" />}
+                      {r.codigo === 'DOC_TRIAJE' && <Stethoscope className="w-5 h-5 text-blue-600 group-hover:text-white" />}
+                      {r.codigo === 'PERS_COLECTA' && <UserCheck className="w-5 h-5 text-rose-600 group-hover:text-white" />}
+                      {r.codigo === 'BIOQ_INTEGRAL' && <FlaskConical className="w-5 h-5 text-teal-600 group-hover:text-white" />}
+                      {r.codigo === 'TEC_LOGISTICA' && <Truck className="w-5 h-5 text-red-600 group-hover:text-white" />}
+                      {r.codigo === 'DONANTE' && <Heart className="w-5 h-5 text-rose-600 group-hover:text-white" />}
+                      {r.codigo === 'POSIBLE_DONADOR' && <Droplet className="w-5 h-5 text-amber-600 group-hover:text-white" />}
+                    </div>
+                    <div className="space-y-0.5">
+                      <span className="text-[10px] font-black text-rose-600 uppercase tracking-wider block">
+                        {r.codigo}
+                      </span>
+                      <span className="text-sm font-bold text-slate-900 group-hover:text-rose-950 block">
+                        {r.nombre}
+                      </span>
+                      <span className="text-[11px] text-slate-500 block">
+                        Haga clic para ingresar con este rol
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+
+              <div className="pt-2 text-center border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setPendingMultiRoleData(null)}
+                  className="text-xs text-slate-500 hover:text-slate-800 underline cursor-pointer"
+                >
+                  ← Cancelar y volver a la pantalla de ingreso
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ========================================================
               MODE 1: INICIAR SESIÓN CON CORREO ELECTRÓNICO Y CONTRASEÑA
               ======================================================== */}
-          {modalMode === 'login' && (
+          {!pendingMultiRoleData && modalMode === 'login' && (
             <div className="space-y-5">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <div>
@@ -703,7 +905,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
           {/* ========================================================
               MODE: RECUPERAR CONTRASEÑA POR CORREO ELECTRÓNICO (TOKEN)
               ======================================================== */}
-          {modalMode === 'forgot_password' && (
+          {!pendingMultiRoleData && modalMode === 'forgot_password' && (
             <div className="space-y-5 animate-fadeIn">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <div>
@@ -918,7 +1120,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
           {/* ========================================================
               MODE 2: CREAR CUENTA (DONANTE O PERSONAL DE SALUD)
               ======================================================== */}
-          {modalMode === 'register' && (
+          {!pendingMultiRoleData && modalMode === 'register' && (
             <div className="space-y-4">
               {/* SELECTOR DE TIPO DE CUENTA: DONANTE VS PERSONAL DE SALUD */}
               <div className="bg-slate-100 p-1.5 rounded-2xl grid grid-cols-2 gap-1.5 text-xs font-bold border border-slate-200 shadow-2xs">
@@ -1297,17 +1499,23 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                     {/* Submit Register Button */}
                     <button
                       type="submit"
-                      disabled={!regPasswordRules.isValid}
+                      disabled={!regPasswordRules.isValid || registerLoading}
                       className={`w-full py-3.5 font-bold text-sm rounded-xl transition-all flex items-center justify-center gap-2 ${
-                        regPasswordRules.isValid 
+                        regPasswordRules.isValid && !registerLoading
                           ? 'bg-rose-600 hover:bg-rose-700 text-white cursor-pointer shadow-md shadow-rose-600/30' 
                           : 'bg-slate-200 text-slate-400 cursor-not-allowed'
                       }`}
                       id="btn-submit-donor-register"
                     >
-                      <BadgeCheck className="w-4 h-4" />
-                      <span>Crear Cuenta & Obtener Carnet Digital Acreditado</span>
-                      <ArrowRight className="w-4 h-4" />
+                      {registerLoading ? (
+                        <span>Registrando en base de datos central...</span>
+                      ) : (
+                        <>
+                          <BadgeCheck className="w-4 h-4" />
+                          <span>Registrarse como Posible Donador (Auto-Registro)</span>
+                          <ArrowRight className="w-4 h-4" />
+                        </>
+                      )}
                     </button>
                   </form>
                 </div>

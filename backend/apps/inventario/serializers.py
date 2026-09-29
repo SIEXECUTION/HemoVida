@@ -29,7 +29,6 @@ class ParametroStockMinimoSerializer(serializers.ModelSerializer):
             'tipoComponente',
             'stockMinimoSeguridad',
             'stockCriticoAlerta',
-            'stockOptimo',
         ]
         read_only_fields = ['idParametro', 'idGrupo', 'tipoComponente']
 
@@ -40,31 +39,21 @@ class ParametroStockMinimoUpdateSerializer(serializers.ModelSerializer):
     """
     class Meta:
         model = ParametroStockMinimo
-        fields = ['stockMinimoSeguridad', 'stockCriticoAlerta', 'stockOptimo']
+        fields = ['stockMinimoSeguridad', 'stockCriticoAlerta']
 
     def validate(self, attrs):
         stock_minimo = attrs.get('stockMinimoSeguridad', getattr(self.instance, 'stockMinimoSeguridad', 0))
         stock_critico = attrs.get('stockCriticoAlerta', getattr(self.instance, 'stockCriticoAlerta', 0))
-        stock_optimo = attrs.get('stockOptimo', getattr(self.instance, 'stockOptimo', stock_minimo))
 
         if stock_critico > stock_minimo:
             raise serializers.ValidationError({
                 "stockCriticoAlerta": "El stock crítico de alerta no puede ser mayor que el stock mínimo de seguridad."
             })
 
-        if stock_optimo < stock_minimo:
-            raise serializers.ValidationError({
-                "stockOptimo": "El stock óptimo debe ser mayor o igual al stock mínimo de seguridad."
-            })
-
         return attrs
 
 
 class StockAlertaSerializer(serializers.Serializer):
-    """
-    Serializador para el reporte de Alertas Críticas y Déficit de Stock.
-    Replicación de Subconsulta B4 / Consulta 20.
-    """
     idParametro = serializers.IntegerField()
     idGrupo = serializers.IntegerField()
     tipificacion = serializers.CharField()

@@ -18,9 +18,10 @@ import {
   Stethoscope,
   FlaskConical,
   User,
-  KeyRound
+  KeyRound,
+  Clock
 } from 'lucide-react';
-import { UserSession } from '../types';
+import { UserSession, RoleCode } from '../types';
 
 interface NavbarProps {
   session: UserSession | null;
@@ -31,6 +32,7 @@ interface NavbarProps {
   onLogout: () => void;
   onOpenPrecheck: () => void;
   onOpenChangePassword?: () => void;
+  onSwitchRole?: (roleCode: RoleCode) => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -41,9 +43,22 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenRegister,
   onLogout,
   onOpenPrecheck,
-  onOpenChangePassword
+  onOpenChangePassword,
+  onSwitchRole
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const activeRole: RoleCode | null = session 
+    ? (session.activeRole || (
+        session.role === 'donante' ? 'DONANTE' :
+        session.role === 'recepcion' ? 'PERS_COLECTA' :
+        session.role === 'despacho' ? 'TEC_LOGISTICA' :
+        session.role === 'administrador' ? 'ADMIN' :
+        session.role === 'medico' ? 'DOC_TRIAJE' :
+        session.role === 'bioquimico' ? 'BIOQ_INTEGRAL' :
+        (session.role as RoleCode)
+      ))
+    : null;
 
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-slate-200/80 shadow-xs">
@@ -102,36 +117,43 @@ export const Navbar: React.FC<NavbarProps> = ({
               </div>
             </div>
 
-            {/* Institutional Badge based on role */}
-            {session?.role === 'recepcion' && (
+            {/* Institutional Badge based on activeRole */}
+            {activeRole === 'POSIBLE_DONADOR' && (
+              <div className="hidden md:flex items-center gap-2 bg-amber-50 border border-amber-200 px-3 py-1 rounded-xl text-xs font-bold text-amber-800">
+                <Clock className="w-4 h-4 text-amber-600" />
+                <span>Postulante en Evaluación (Sin Análisis)</span>
+              </div>
+            )}
+
+            {activeRole === 'PERS_COLECTA' && (
               <div className="hidden md:flex items-center gap-2 bg-rose-50 border border-rose-200 px-3 py-1 rounded-xl text-xs font-bold text-rose-800">
                 <ShieldCheck className="w-4 h-4 text-rose-600" />
                 <span>Estación de Recepción & Admisión</span>
               </div>
             )}
 
-            {session?.role === 'despacho' && (
+            {activeRole === 'TEC_LOGISTICA' && (
               <div className="hidden md:flex items-center gap-2 bg-red-50 border border-red-200 px-3 py-1 rounded-xl text-xs font-bold text-red-800">
                 <Truck className="w-4 h-4 text-red-600" />
                 <span>Estación de Despacho Transfusional</span>
               </div>
             )}
 
-            {session?.role === 'administrador' && (
+            {activeRole === 'ADMIN' && (
               <div className="hidden md:flex items-center gap-2 bg-slate-900 border border-slate-700 px-3 py-1 rounded-xl text-xs font-bold text-rose-300">
                 <ShieldCheck className="w-4 h-4 text-rose-400" />
                 <span>Auditoría Forense & RBAC</span>
               </div>
             )}
 
-            {session?.role === 'medico' && (
+            {activeRole === 'DOC_TRIAJE' && (
               <div className="hidden md:flex items-center gap-2 bg-blue-50 border border-blue-200 px-3 py-1 rounded-xl text-xs font-bold text-blue-800">
                 <ShieldCheck className="w-4 h-4 text-blue-600" />
                 <span>Estación Médica de Triaje Clínico</span>
               </div>
             )}
 
-            {session?.role === 'bioquimico' && (
+            {activeRole === 'BIOQ_INTEGRAL' && (
               <div className="hidden md:flex items-center gap-2 bg-teal-50 border border-teal-200 px-3 py-1 rounded-xl text-xs font-bold text-teal-800">
                 <ShieldCheck className="w-4 h-4 text-teal-600" />
                 <span>Laboratorio Central & Inmunoserología</span>
@@ -140,7 +162,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
 
           {/* Desktop Navigation for Donor Mode ONLY */}
-          {session?.role === 'donante' && (
+          {activeRole === 'DONANTE' && (
             <nav className="hidden lg:flex items-center gap-1">
               <button
                 id="nav-tab-inicio"
@@ -217,12 +239,76 @@ export const Navbar: React.FC<NavbarProps> = ({
             </nav>
           )}
 
+          {/* Desktop Navigation for Posible Donador ONLY */}
+          {activeRole === 'POSIBLE_DONADOR' && (
+            <nav className="hidden lg:flex items-center gap-1">
+              <button
+                id="nav-tab-postulante"
+                onClick={() => onSelectTab('inicio')}
+                className={`px-3 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-1.5 cursor-pointer ${
+                  activeTab === 'inicio'
+                    ? 'bg-amber-50 text-amber-800 font-bold'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                }`}
+              >
+                Estado Postulante
+              </button>
+
+              <button
+                id="nav-tab-autoevaluacion-postulante"
+                onClick={onOpenPrecheck}
+                className="px-3 py-2 rounded-lg text-sm font-semibold text-slate-600 hover:text-amber-800 hover:bg-amber-50 transition-colors flex items-center gap-1.5 cursor-pointer"
+              >
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                ¿Puedo Donar? (Prefiltro)
+              </button>
+            </nav>
+          )}
+
           {/* Active Account Identity & Logout (No switching without logging out) */}
           <div className="flex items-center gap-2 sm:gap-3">
             {session ? (
               <>
+                {/* Selector de Perfil Activo (Multi-Rol RBAC Págs 20-21) */}
+                {session.rolesDisponibles && session.rolesDisponibles.length > 1 && (
+                  <div className="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200/90 border border-slate-300 rounded-xl px-2.5 py-1.5 transition-colors">
+                    <span className="text-[10px] font-black uppercase text-slate-500 tracking-wider hidden sm:inline">
+                      Perfil:
+                    </span>
+                    <select
+                      value={activeRole || ''}
+                      onChange={(e) => onSwitchRole?.(e.target.value as RoleCode)}
+                      className="bg-transparent text-xs font-black text-rose-700 focus:outline-none cursor-pointer pr-1"
+                      title="Conmutar Perfil Activo (Sesión Multi-Rol)"
+                    >
+                      {session.rolesDisponibles.map(r => (
+                        <option key={r.codigo} value={r.codigo} className="bg-white text-slate-800 font-semibold">
+                          {r.nombre}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* Account 0: Posible Donador Info */}
+                {activeRole === 'POSIBLE_DONADOR' && (
+                  <div className="hidden sm:flex items-center gap-2.5 bg-amber-50 px-3.5 py-1.5 rounded-full border border-amber-200">
+                    <div className="w-8 h-8 rounded-full bg-amber-500 text-white flex items-center justify-center font-bold text-xs shadow-xs border border-amber-400 shrink-0">
+                      <Clock className="w-4 h-4 text-white" />
+                    </div>
+                    <div className="text-left">
+                      <p className="text-xs font-bold text-amber-950 leading-tight">
+                        {session.nombreCompleto || session.user?.nombres}
+                      </p>
+                      <p className="text-[10px] text-amber-700 font-semibold leading-tight">
+                        Posible Donador
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 {/* Account 1: Donante Info */}
-                {session.role === 'donante' && (
+                {activeRole === 'DONANTE' && session.user && (
                   <div 
                     onClick={() => onSelectTab('carnet')}
                     className="hidden sm:flex items-center gap-2 bg-slate-100 hover:bg-slate-200/80 px-3 py-1.5 rounded-full cursor-pointer transition-colors border border-slate-200"
@@ -250,7 +336,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 )}
 
                 {/* Account 2: Recepción Info */}
-                {session.role === 'recepcion' && (
+                {(activeRole === 'PERS_COLECTA' || session.role === 'recepcion') && session.staff && (
                   <div className="hidden sm:flex items-center gap-2.5 bg-rose-50 px-3.5 py-1.5 rounded-full border border-rose-200">
                     <div className="w-8 h-8 rounded-full bg-rose-600 text-white flex items-center justify-center shadow-xs border border-rose-500 shrink-0">
                       <UserCheck className="w-4 h-4 text-white" />
@@ -267,7 +353,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 )}
 
                 {/* Account 3: Despacho Info */}
-                {session.role === 'despacho' && (
+                {(activeRole === 'TEC_LOGISTICA' || session.role === 'despacho') && session.staff && (
                   <div className="hidden sm:flex items-center gap-2.5 bg-red-50 px-3.5 py-1.5 rounded-full border border-red-200">
                     <div className="w-8 h-8 rounded-full bg-red-700 text-white flex items-center justify-center shadow-xs border border-red-600 shrink-0">
                       <Truck className="w-4 h-4 text-white" />
@@ -284,7 +370,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 )}
 
                 {/* Account 4: Admin Info */}
-                {session.role === 'administrador' && (
+                {(activeRole === 'ADMIN' || session.role === 'administrador') && session.staff && (
                   <div className="hidden sm:flex items-center gap-2.5 bg-slate-900 text-white px-3.5 py-1.5 rounded-full border border-slate-700">
                     <div className="w-8 h-8 rounded-full bg-slate-800 text-rose-400 flex items-center justify-center shadow-xs border border-slate-700 shrink-0">
                       <ShieldCheck className="w-4 h-4 text-rose-400" />
@@ -301,7 +387,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 )}
 
                 {/* Account 5: Médico Info */}
-                {session.role === 'medico' && (
+                {(activeRole === 'DOC_TRIAJE' || session.role === 'medico') && session.staff && (
                   <div className="hidden sm:flex items-center gap-2.5 bg-blue-50 px-3.5 py-1.5 rounded-full border border-blue-200">
                     <div className="w-8 h-8 rounded-full bg-blue-700 text-white flex items-center justify-center shadow-xs border border-blue-600 shrink-0">
                       <Stethoscope className="w-4 h-4 text-white" />
@@ -318,7 +404,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 )}
 
                 {/* Account 6: Bioquímico Info */}
-                {session.role === 'bioquimico' && (
+                {(activeRole === 'BIOQ_INTEGRAL' || session.role === 'bioquimico') && session.staff && (
                   <div className="hidden sm:flex items-center gap-2.5 bg-teal-50 px-3.5 py-1.5 rounded-full border border-teal-200">
                     <div className="w-8 h-8 rounded-full bg-teal-700 text-white flex items-center justify-center shadow-xs border border-teal-600 shrink-0">
                       <FlaskConical className="w-4 h-4 text-white" />
@@ -402,16 +488,14 @@ export const Navbar: React.FC<NavbarProps> = ({
               <div className="p-3 bg-slate-50 rounded-xl flex items-center justify-between gap-3 mb-2 border border-slate-200">
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-full bg-rose-600 text-white flex items-center justify-center font-bold text-xs">
-                    {session.role === 'donante' ? 'D' : session.role === 'recepcion' ? 'R' : 'T'}
+                    {activeRole === 'POSIBLE_DONADOR' ? 'P' : activeRole === 'DONANTE' ? 'D' : activeRole === 'ADMIN' ? 'A' : activeRole === 'DOC_TRIAJE' ? 'M' : activeRole === 'BIOQ_INTEGRAL' ? 'B' : activeRole === 'TEC_LOGISTICA' ? 'T' : 'R'}
                   </div>
                   <div>
-                    <p className="font-bold text-xs text-slate-900">
-                      {session.role === 'donante' 
-                        ? `${session.user.nombres} ${session.user.apellidos}` 
-                        : session.staff.nombre}
+                    <p className="font-bold text-xs text-slate-900 truncate max-w-[170px]">
+                      {session.nombreCompleto || (session.user ? `${session.user.nombres} ${session.user.apellidos}` : session.staff?.nombre)}
                     </p>
-                    <p className="text-[11px] text-slate-500 font-medium capitalize">
-                      Rol: {session.role === 'donante' ? 'Donador de Sangre' : session.role === 'recepcion' ? 'Recepción y Admisión' : 'Despacho Transfusional'}
+                    <p className="text-[11px] text-slate-500 font-medium">
+                      Rol Activo: <strong className="text-rose-700">{activeRole}</strong>
                     </p>
                   </div>
                 </div>
@@ -420,12 +504,33 @@ export const Navbar: React.FC<NavbarProps> = ({
                     onLogout();
                     setMobileMenuOpen(false);
                   }}
-                  className="p-1.5 text-rose-600 hover:bg-rose-100 rounded-lg text-xs font-bold flex items-center gap-1"
+                  className="p-1.5 text-rose-600 hover:bg-rose-100 rounded-lg text-xs font-bold flex items-center gap-1 cursor-pointer"
                 >
                   <LogOut className="w-3.5 h-3.5" />
                   <span>Salir</span>
                 </button>
               </div>
+
+              {/* Selector de Perfil Activo en Mobile */}
+              {session.rolesDisponibles && session.rolesDisponibles.length > 1 && (
+                <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between gap-2">
+                  <span className="text-xs font-bold text-slate-700 shrink-0">Cambiar Perfil:</span>
+                  <select
+                    value={activeRole || ''}
+                    onChange={(e) => {
+                      onSwitchRole?.(e.target.value as RoleCode);
+                      setMobileMenuOpen(false);
+                    }}
+                    className="text-xs font-bold text-rose-700 bg-white border border-slate-300 rounded-lg px-2 py-1 w-full"
+                  >
+                    {session.rolesDisponibles.map(r => (
+                      <option key={r.codigo} value={r.codigo}>
+                        {r.nombre}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               {/* Modificar Contraseña Mobile */}
               {onOpenChangePassword && (
@@ -434,15 +539,34 @@ export const Navbar: React.FC<NavbarProps> = ({
                     onOpenChangePassword();
                     setMobileMenuOpen(false);
                   }}
-                  className="w-full text-left px-3 py-2 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-100 flex items-center gap-2"
+                  className="w-full text-left px-3 py-2 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-100 flex items-center gap-2 cursor-pointer"
                 >
                   <KeyRound className="w-4 h-4 text-amber-500" />
                   <span>Modificar Contraseña</span>
                 </button>
               )}
 
+              {/* Navigation links if Posible Donador */}
+              {activeRole === 'POSIBLE_DONADOR' && (
+                <>
+                  <button
+                    onClick={() => { onSelectTab('inicio'); setMobileMenuOpen(false); }}
+                    className="w-full text-left px-3 py-2 rounded-lg text-sm font-semibold text-slate-800 hover:bg-slate-100 flex items-center gap-2 cursor-pointer"
+                  >
+                    Estado Postulante
+                  </button>
+                  <button
+                    onClick={() => { onOpenPrecheck(); setMobileMenuOpen(false); }}
+                    className="w-full text-left px-3 py-2 rounded-lg text-sm font-semibold text-amber-700 hover:bg-amber-50 flex items-center gap-2 cursor-pointer"
+                  >
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    ¿Puedo Donar? (Prefiltro)
+                  </button>
+                </>
+              )}
+
               {/* Navigation links if donor */}
-              {session.role === 'donante' && (
+              {activeRole === 'DONANTE' && (
                 <>
                   <button
                     onClick={() => { onSelectTab('inicio'); setMobileMenuOpen(false); }}

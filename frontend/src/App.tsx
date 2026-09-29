@@ -13,6 +13,7 @@ import { AdminAuditView } from './components/admin/AdminAuditView';
 import { DoctorTriageView } from './components/doctor/DoctorTriageView';
 import { LabProcessingView } from './components/lab/LabProcessingView';
 import { ChangePasswordModal } from './components/ChangePasswordModal';
+import { PosibleDonadorView } from './components/PosibleDonadorView';
 import { 
   MOCK_USERS, 
   MOCK_STAFF_ACCOUNTS,
@@ -33,6 +34,7 @@ import {
   UserDonor, 
   StaffAccount,
   AppRole,
+  RoleCode,
   UserSession,
   Appointment, 
   DonationRecord,
@@ -74,13 +76,13 @@ import {
 } from 'lucide-react';
 
 export default function App() {
-  // Active Exclusive Session: Either Donante, Recepcion, Despacho, Administrador, Medico, or Bioquimico
+  // Active Exclusive Session: Either Donante, Recepcion, Despacho, Administrador, Medico, Bioquimico, or Posible Donador
   const [session, setSession] = useState<UserSession | null>(() => {
     const saved = localStorage.getItem('hemovida_session');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (parsed && ['donante', 'recepcion', 'despacho', 'administrador', 'medico', 'bioquimico'].includes(parsed.role)) {
+        if (parsed && (parsed.activeRole || ['donante', 'recepcion', 'despacho', 'administrador', 'medico', 'bioquimico', 'POSIBLE_DONADOR', 'DONANTE', 'ADMIN'].includes(parsed.role))) {
           return parsed;
         }
       } catch (e) {
@@ -444,8 +446,117 @@ export default function App() {
     localStorage.setItem('hemovida_incentivos_entrega', JSON.stringify(incentivosEntrega));
   }, [incentivosEntrega]);
 
+  // Rol activo normalizado (Soporte para RBAC multi-rol páginas 20-21 del diseño)
+  const activeRole: RoleCode | null = session 
+    ? (session.activeRole || (
+        session.role === 'donante' ? 'DONANTE' :
+        session.role === 'recepcion' ? 'PERS_COLECTA' :
+        session.role === 'despacho' ? 'TEC_LOGISTICA' :
+        session.role === 'administrador' ? 'ADMIN' :
+        session.role === 'medico' ? 'DOC_TRIAJE' :
+        session.role === 'bioquimico' ? 'BIOQ_INTEGRAL' :
+        (session.role as RoleCode)
+      ))
+    : null;
+
+  // Conmutador de perfil en caliente para usuarios multi-rol (Págs 20-21 del PDF)
+  const handleSwitchRole = (newRole: RoleCode) => {
+    if (!session) return;
+    const targetRolInfo = session.rolesDisponibles?.find(r => r.codigo === newRole);
+    if (!targetRolInfo && session.rolesDisponibles && session.rolesDisponibles.length > 0) {
+      console.warn(`Rol ${newRole} no encontrado en roles autorizados.`);
+    }
+
+    const staffRoleMap: Record<RoleCode, StaffRole> = {
+      'ADMIN': 'administrador',
+      'DOC_TRIAJE': 'medico',
+      'PERS_COLECTA': 'recepcion',
+      'BIOQ_INTEGRAL': 'bioquimico',
+      'TEC_LOGISTICA': 'despacho',
+      'POSIBLE_DONADOR': 'donante',
+      'DONANTE': 'donante',
+      'RECEPTOR': 'donante',
+      'MED_SOLICITANTE': 'medico'
+    };
+
+    const newAppRole = staffRoleMap[newRole] || 'donante';
+    
+    let updatedStaff = session.staff;
+    if (['ADMIN', 'DOC_TRIAJE', 'PERS_COLECTA', 'BIOQ_INTEGRAL', 'TEC_LOGISTICA'].includes(newRole)) {
+      updatedStaff = {
+        id: session.staff?.id || `staff-${session.usuarioId}`,
+        rol: newAppRole,
+        nombre: session.nombreCompleto,
+        cargo: targetRolInfo?.nombre || newRole,
+        ci: session.staff?.ci || session.user?.ci || '0000000',
+        email: session.email,
+        turno: 'Turno Mañana (07:00 - 15:00)',
+        credencial: `HV-${newRole}-01`,
+        sede: 'Banco de Sangre Central'
+      };
+    }
+
+    const newSession: UserSession = {
+      ...session,
+      role: newAppRole,
+      activeRole: newRole,
+      staff: updatedStaff
+    };
+
+    setSession(newSession);
+    setActiveTab('inicio');
+
+    // Registrar en bitácora forense de auditoría
+    const auditEntry: BitacoraAuditoria = {
+      idEvento: `EVT-${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      actorNombre: session.nombreCompleto,
+      actorRol: newRole,
+      actorCi: session.user?.ci || session.staff?.ci || '0000000',
+      ipSimulada: generateForensicIp(),
+      tipoEvento: 'CAMBIO_ROL_ACTIVO',
+      accion: `Conmutación de perfil activo a ${targetRolInfo?.nombre || newRole}`,
+      detalles: `El usuario alternó su rol activo dentro de la misma sesión autorizada.`
+    };
+    setAuditLogs(prev => [auditEntry, ...prev]);
+  };
+
   // Authentication & Session Handlers (CU01 / CU02 / CU03)
   const handleSelectAccount = (selection: AccountLoginSelection) => {
+    if (selection.type === 'session') {
+      const sess = selection.session;
+      setSession(sess);
+      if (sess.user) {
+        setDonors(prev => {
+          const exists = prev.some(d => d.id === sess.user!.id || d.ci === sess.user!.ci || (d.email && d.email.toLowerCase() === sess.user!.email.toLowerCase()));
+          return exists ? prev : [sess.user!, ...prev];
+        });
+      }
+      if (sess.staff) {
+        setStaffAccounts(prev => {
+          const exists = prev.some(s => s.id === sess.staff!.id || (s.email && s.email.toLowerCase() === sess.staff!.email.toLowerCase()) || s.ci === sess.staff!.ci);
+          return exists ? prev : [sess.staff!, ...prev];
+        });
+      }
+      setActiveTab('inicio');
+
+      // CU03: Log event in forensic audit log
+      const auditEntry: BitacoraAuditoria = {
+        idEvento: `EVT-${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        actorNombre: sess.nombreCompleto,
+        actorRol: sess.activeRole,
+        actorCi: sess.user?.ci || sess.staff?.ci || '0000000',
+        ipSimulada: generateForensicIp(),
+        tipoEvento: 'LOGIN',
+        accion: `Inicio de sesión autorizada con rol ${sess.activeRole}`,
+        detalles: `Autenticación exitosa con rol activo ${sess.activeRole} bajo RBAC.`
+      };
+      setAuditLogs(prev => [auditEntry, ...prev]);
+      setIsLoginModalOpen(false);
+      return;
+    }
+
     if (selection.type === 'donante') {
       setDonors(prev => {
         const exists = prev.some(d => d.id === selection.user.id || d.ci === selection.user.ci || (d.email && d.email.toLowerCase() === selection.user.email.toLowerCase()));
@@ -454,7 +565,16 @@ export default function App() {
         }
         return prev;
       });
-      setSession({ role: 'donante', user: selection.user });
+      setSession({ 
+        role: 'donante', 
+        activeRole: 'DONANTE',
+        usuarioId: selection.user.id,
+        nombreCompleto: `${selection.user.nombres} ${selection.user.apellidos}`,
+        username: selection.user.email.split('@')[0],
+        email: selection.user.email,
+        rolesDisponibles: [{ id: 3, codigo: 'DONANTE', nombre: 'Donante' }],
+        user: selection.user 
+      });
       setActiveTab('inicio');
     } else {
       // Healthcare Staff role login / registration
@@ -465,17 +585,30 @@ export default function App() {
         }
         return prev;
       });
-      if (selection.type === 'recepcion') {
-        setSession({ role: 'recepcion', staff: selection.staff });
-      } else if (selection.type === 'despacho') {
-        setSession({ role: 'despacho', staff: selection.staff });
-      } else if (selection.type === 'administrador') {
-        setSession({ role: 'administrador', staff: selection.staff });
-      } else if (selection.type === 'medico') {
-        setSession({ role: 'medico', staff: selection.staff });
-      } else if (selection.type === 'bioquimico') {
-        setSession({ role: 'bioquimico', staff: selection.staff });
-      }
+      const staffRoleToCode: Record<StaffRole, RoleCode> = {
+        'administrador': 'ADMIN',
+        'ADMIN': 'ADMIN',
+        'medico': 'DOC_TRIAJE',
+        'DOC_TRIAJE': 'DOC_TRIAJE',
+        'recepcion': 'PERS_COLECTA',
+        'PERS_COLECTA': 'PERS_COLECTA',
+        'bioquimico': 'BIOQ_INTEGRAL',
+        'BIOQ_INTEGRAL': 'BIOQ_INTEGRAL',
+        'despacho': 'TEC_LOGISTICA',
+        'TEC_LOGISTICA': 'TEC_LOGISTICA',
+        'MED_SOLICITANTE': 'MED_SOLICITANTE'
+      };
+      const assignedRoleCode: RoleCode = staffRoleToCode[selection.type as StaffRole] || 'ADMIN';
+      setSession({
+        role: selection.type as AppRole,
+        activeRole: assignedRoleCode,
+        usuarioId: parseInt(selection.staff.id.replace(/\D/g, '')) || Date.now(),
+        nombreCompleto: selection.staff.nombre,
+        username: selection.staff.email.split('@')[0],
+        email: selection.staff.email,
+        rolesDisponibles: [{ id: 1, codigo: assignedRoleCode, nombre: selection.staff.cargo }],
+        staff: selection.staff
+      });
     }
 
     // CU03: Log event in forensic audit log
@@ -502,20 +635,21 @@ export default function App() {
 
   const handleLogout = () => {
     if (session) {
-      const actorName = session.role === 'donante' 
-        ? `${session.user.nombres} ${session.user.apellidos}` 
-        : session.staff.nombre;
-      const actorCi = session.role === 'donante' ? session.user.ci : session.staff.ci;
+      const actorName = session.nombreCompleto || (session.role === 'donante' 
+        ? `${session.user?.nombres || ''} ${session.user?.apellidos || ''}`.trim() 
+        : session.staff?.nombre) || 'Usuario';
+      const actorCi = session.user?.ci || session.staff?.ci || '0000000';
+      const actorRol = session.activeRole || session.role;
 
       const auditEntry: BitacoraAuditoria = {
         idEvento: `EVT-${Date.now()}`,
         timestamp: new Date().toISOString(),
         actorNombre: actorName,
-        actorRol: session.role,
-        actorCi,
+        actorRol: actorRol,
+        actorCi: actorCi,
         ipSimulada: generateForensicIp(),
         tipoEvento: 'LOGOUT',
-        accion: `Cierre formal de sesión de ${session.role.toUpperCase()}`,
+        accion: `Cierre formal de sesión de ${actorRol.toUpperCase()}`,
         detalles: `Sesión cerrada voluntariamente. Terminal segura.`
       };
       setAuditLogs(prev => [auditEntry, ...prev]);
@@ -726,7 +860,9 @@ export default function App() {
   const bioquimicoStaff = MOCK_STAFF_ACCOUNTS.find(s => s.rol === 'bioquimico') || MOCK_STAFF_ACCOUNTS[4];
 
   // Donor-specific filter for donor portal
-  const currentDonorUser = session?.role === 'donante' ? session.user : null;
+  const currentDonorUser = (activeRole === 'DONANTE' || session?.role === 'donante') 
+    ? (session?.user || donors[0]) 
+    : null;
   const userDonations = currentDonorUser 
     ? allDonations.filter(d => d.donanteCi === currentDonorUser.ci || (d.donanteNombre && d.donanteNombre.toLowerCase().includes(currentDonorUser.nombres.toLowerCase())))
     : [];
@@ -749,6 +885,7 @@ export default function App() {
         onLogout={handleLogout}
         onOpenPrecheck={() => setIsPrecheckOpen(true)}
         onOpenChangePassword={() => setIsChangePasswordOpen(true)}
+        onSwitchRole={handleSwitchRole}
       />
 
       {/* Main Content Area */}
@@ -992,9 +1129,20 @@ export default function App() {
         )}
 
         {/* ======================================================== */}
-        {/* ESTADO 2: CUENTA DE RECEPCIÓN EXCLUSIVA                  */}
+        {/* ESTADO 1.5: CUENTA DE POSIBLE DONADOR (POSTULANTE)      */}
         {/* ======================================================== */}
-        {session?.role === 'recepcion' && (
+        {activeRole === 'POSIBLE_DONADOR' && (
+          <PosibleDonadorView
+            session={session}
+            onOpenPrecheck={() => setIsPrecheckOpen(true)}
+            onOpenAppointments={() => setActiveTab('citas')}
+          />
+        )}
+
+        {/* ======================================================== */}
+        {/* ESTADO 2: CUENTA DE RECEPCIÓN / COLECTA EXCLUSIVA        */}
+        {/* ======================================================== */}
+        {(activeRole === 'PERS_COLECTA' || session?.role === 'recepcion') && (
           <ReceptionDeskView
             inventory={inventory}
             setInventory={setInventory}
@@ -1010,15 +1158,15 @@ export default function App() {
             setAppointments={setAppointments}
             incentivosEntrega={incentivosEntrega}
             setIncentivosEntrega={setIncentivosEntrega}
-            staffAccount={session.staff}
+            staffAccount={session.staff || receptionStaff}
             onOpenChangePassword={() => setIsChangePasswordOpen(true)}
           />
         )}
 
         {/* ======================================================== */}
-        {/* ESTADO 3: CUENTA DE DESPACHO TRANSFUSIONAL EXCLUSIVA     */}
+        {/* ESTADO 3: CUENTA DE DESPACHO TRANSFUSIONAL / LOGÍSTICA   */}
         {/* ======================================================== */}
-        {session?.role === 'despacho' && (
+        {(activeRole === 'TEC_LOGISTICA' || session?.role === 'despacho') && (
           <DispatchDeskView
             inventory={inventory}
             setInventory={setInventory}
@@ -1026,7 +1174,7 @@ export default function App() {
             setDispatches={setDispatches}
             replacements={replacements}
             setReplacements={setReplacements}
-            staffAccount={session.staff}
+            staffAccount={session.staff || dispatchStaff}
             onOpenChangePassword={() => setIsChangePasswordOpen(true)}
           />
         )}
@@ -1034,9 +1182,9 @@ export default function App() {
         {/* ======================================================== */}
         {/* ESTADO 4: CUENTA DE ADMINISTRADOR & AUDITORÍA FORENSE     */}
         {/* ======================================================== */}
-        {session?.role === 'administrador' && (
+        {(activeRole === 'ADMIN' || session?.role === 'administrador') && (
           <AdminAuditView
-            staffAccount={session.staff}
+            staffAccount={session.staff || adminStaff}
             allStaff={staffAccounts}
             auditLogs={auditLogs}
             stockThresholds={stockThresholds}
@@ -1046,9 +1194,9 @@ export default function App() {
               const auditEntry: BitacoraAuditoria = {
                 idEvento: `EVT-${Date.now()}`,
                 timestamp: new Date().toISOString(),
-                actorNombre: session.staff.nombre,
-                actorRol: 'administrador',
-                actorCi: session.staff.ci,
+                actorNombre: (session.staff || adminStaff).nombre,
+                actorRol: 'ADMIN',
+                actorCi: (session.staff || adminStaff).ci,
                 ipSimulada: generateForensicIp(),
                 tipoEvento: 'CAMBIO_UMBRAL_STOCK',
                 accion: 'Actualización de Umbrales Mínimos de Stock',
@@ -1070,9 +1218,9 @@ export default function App() {
         {/* ======================================================== */}
         {/* ESTADO 5: CUENTA MÉDICA DE TRIAJE CLÍNICO (CU10/11)      */}
         {/* ======================================================== */}
-        {session?.role === 'medico' && (
+        {(activeRole === 'DOC_TRIAJE' || session?.role === 'medico') && (
           <DoctorTriageView
-            staffAccount={session.staff}
+            staffAccount={session.staff || medicoStaff}
             appointments={appointments}
             donors={donors}
             triajes={triajes}
@@ -1084,9 +1232,9 @@ export default function App() {
         {/* ======================================================== */}
         {/* ESTADO 6: CUENTA DE BIOQUÍMICO DE LABORATORIO (CU12-15)  */}
         {/* ======================================================== */}
-        {session?.role === 'bioquimico' && (
+        {(activeRole === 'BIOQ_INTEGRAL' || session?.role === 'bioquimico') && (
           <LabProcessingView
-            staffAccount={session.staff}
+            staffAccount={session.staff || bioquimicoStaff}
             allDonations={allDonations}
             setAllDonations={setAllDonations}
             inventory={inventory}
@@ -1100,9 +1248,9 @@ export default function App() {
         )}
 
         {/* ======================================================== */}
-        {/* ESTADO 7: CUENTA DE DONADOR EXCLUSIVA                     */}
+        {/* ESTADO 7: CUENTA DE DONADOR CALIFICADO CON CARNET QR      */}
         {/* ======================================================== */}
-        {session?.role === 'donante' && currentDonorUser && (
+        {(activeRole === 'DONANTE' || session?.role === 'donante') && currentDonorUser && (
           <>
             {activeTab === 'inicio' && (
               <DashboardSummary

@@ -1,10 +1,12 @@
-/**
- * Servicio API HemoVida - Cliente REST conectado a Render Backend y Supabase Cloud
- */
+import { RolDisponible, RoleCode } from '../types';
 
 const API_BASE_URL = 'https://hemovida-backend.onrender.com/api';
 
 export interface LoginResponse {
+  usuarioId: number;
+  nombreCompleto: string;
+  token?: string;
+  rolesDisponibles: RolDisponible[];
   tokens?: {
     access: string;
     refresh: string;
@@ -14,16 +16,19 @@ export interface LoginResponse {
     username: string;
     email: string;
     estado: string;
-    rol: {
-      idRol: number;
-      nombreRol: string;
-    };
+    roles?: RolDisponible[];
     persona?: {
       idPersona: number;
       ci: string;
       nombres: string;
       apellidos: string;
       nombreCompleto: string;
+      sexo?: string;
+      celular?: string;
+      direccion?: string;
+      ocupacion?: string;
+      fechaNacimiento?: string;
+      nacionalidad?: string;
     };
   };
   detail?: string;
@@ -232,6 +237,7 @@ export const apiService = {
     tablaAfectada: string;
     idRegistroAfectado?: number;
     idUsuario?: number;
+    rolActivo?: string;
   }): Promise<any> {
     try {
       const headers: Record<string, string> = {
@@ -258,7 +264,87 @@ export const apiService = {
   },
 
   /**
-   * Consultar verificación pública oficial de carnet digital del donante
+   * Procedimiento 1: Auto-Registro Público de Posible Donador (Sin Admin)
+   */
+  async autoRegistroPosibleDonador(data: {
+    ci: string;
+    nombres: string;
+    apellidos: string;
+    sexo: 'M' | 'F' | 'O';
+    fechaNacimiento: string;
+    celular?: string;
+    direccion?: string;
+    ocupacion?: string;
+    username: string;
+    email: string;
+    password: string;
+  }): Promise<any> {
+    try {
+      const res = await fetch(`${API_BASE_URL}/auth/autoregistro/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify(data)
+      });
+      const resData = await res.json();
+      if (!res.ok) {
+        const errorMsg = resData.detail || (typeof resData === 'object' ? Object.values(resData).flat().join(', ') : 'Error en el auto-registro.');
+        throw new Error(errorMsg);
+      }
+      return resData;
+    } catch (e: any) {
+      if (e?.message && !e.message.includes('fetch')) {
+        throw e;
+      }
+      throw new Error('No se pudo conectar con el servidor para procesar el auto-registro.');
+    }
+  },
+
+  /**
+   * Procedimiento 2: Alta de Personal de Salud (Solo Ejecutable por Administrador)
+   */
+  async crearPersonalSalud(token: string, data: {
+    ci: string;
+    nombres: string;
+    apellidos: string;
+    sexo: 'M' | 'F' | 'O';
+    fechaNacimiento: string;
+    celular?: string;
+    cargo: string;
+    registroProfesional: string;
+    username: string;
+    email: string;
+    password: string;
+    codigoRolAsignar: RoleCode;
+  }): Promise<any> {
+    try {
+      const res = await fetch(`${API_BASE_URL}/personal/crear/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(data)
+      });
+      const resData = await res.json();
+      if (!res.ok) {
+        const errorMsg = resData.detail || (typeof resData === 'object' ? Object.values(resData).flat().join(', ') : 'Error al registrar personal de salud.');
+        throw new Error(errorMsg);
+      }
+      return resData;
+    } catch (e: any) {
+      if (e?.message && !e.message.includes('fetch')) {
+        throw e;
+      }
+      throw new Error('Fallo al conectar con el servidor para registrar al personal de salud.');
+    }
+  },
+
+  /**
+   * Consultar verificación pública oficial de carnet digital del donante o posible donador
    */
   async getCarnetDigital(ciOrCode: string): Promise<any> {
     try {

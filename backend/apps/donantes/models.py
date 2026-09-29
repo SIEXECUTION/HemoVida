@@ -1,11 +1,43 @@
 """
 Modelos ORM para la app Donantes de HemoVida.
-Mapeo de tablas existentes en PostgreSQL:
+Mapeo de tablas de PostgreSQL (Supabase):
+- posibledonador
 - donante
 - extracciondonacion
 """
 from django.db import models
 from apps.seguridad.models import Persona, PersonalSalud
+
+class PosibleDonador(models.Model):
+    persona = models.OneToOneField(
+        Persona,
+        primary_key=True,
+        on_delete=models.CASCADE,
+        db_column='idpersona',
+        related_name='posible_donador'
+    )
+    estadoAptitud = models.CharField(
+        max_length=30,
+        default='No Apto',
+        choices=[
+            ('No Apto', 'No Apto'),
+            ('En Evaluacion', 'En Evaluacion'),
+            ('Apto', 'Apto')
+        ],
+        db_column='estadoaptitud'
+    )
+    tieneAnalisis = models.BooleanField(default=False, db_column='tieneanalisis')
+    fechaRegistroPostulante = models.DateField(auto_now_add=True, db_column='fecharegistropostulante')
+
+    class Meta:
+        managed = False
+        db_table = 'posibledonador'
+        verbose_name = 'Posible Donador'
+        verbose_name_plural = 'Posibles Donadores'
+
+    def __str__(self):
+        return f"{self.persona.nombreCompleto} - {self.estadoAptitud} (Análisis: {self.tieneAnalisis})"
+
 
 class Donante(models.Model):
     persona = models.OneToOneField(
@@ -15,16 +47,17 @@ class Donante(models.Model):
         db_column='idpersona',
         related_name='donante'
     )
+    carnetDigitalCodigo = models.CharField(max_length=30, unique=True, db_column='carnetdigitalcodigo')
     tipoDonante = models.CharField(
-        max_length=50,
+        max_length=30,
+        default='Voluntario Altruista',
         choices=[
             ('Voluntario Altruista', 'Voluntario Altruista'),
-            ('Reposicion Familiar', 'Reposición Familiar'),
-            ('Autologo', 'Autólogo'),
+            ('Reposicion Familiar', 'Reposicion Familiar'),
+            ('Autologo', 'Autologo'),
         ],
         db_column='tipodonante'
     )
-    carnetDigitalCodigo = models.CharField(max_length=50, unique=True, db_column='carnetdigitalcodigo')
     estadoHabilitacion = models.CharField(
         max_length=30,
         default='Apto',
@@ -49,37 +82,26 @@ class Donante(models.Model):
 
 class ExtraccionDonacion(models.Model):
     idExtraccion = models.AutoField(primary_key=True, db_column='idextraccion')
-    donante = models.ForeignKey(
-        Donante, 
-        on_delete=models.RESTRICT, 
-        db_column='iddonante',
+    personaDonante = models.ForeignKey(
+        Persona, 
+        on_delete=models.CASCADE, 
+        db_column='idpersonadonante',
         related_name='extracciones'
     )
-    idTriaje = models.IntegerField(null=True, blank=True, unique=True, db_column='idtriaje')
     personalSalud = models.ForeignKey(
         PersonalSalud, 
         on_delete=models.RESTRICT, 
         db_column='idpersonalsalud',
         related_name='extracciones_realizadas'
     )
-    codigoExtraccion = models.CharField(max_length=50, unique=True, db_column='codigoextraccion')
-    modalidadDonacion = models.CharField(
-        max_length=50,
-        default='Sangre Total',
-        choices=[
-            ('Sangre Total', 'Sangre Total'),
-            ('Aferesis Plaquetaria', 'Aférisis Plaquetaria'),
-            ('Autologa', 'Autóloga'),
-        ],
-        db_column='modalidaddonacion'
-    )
+    codigoExtraccion = models.CharField(max_length=30, unique=True, db_column='codigoextraccion')
     fechaHora = models.DateTimeField(auto_now_add=True, db_column='fechahora')
+    volumenExtraidoMl = models.IntegerField(db_column='volumenextraidoml')
     brazoExtraccion = models.CharField(
-        max_length=20,
+        max_length=15,
         choices=[('Izquierdo', 'Izquierdo'), ('Derecho', 'Derecho')],
         db_column='brazoextraccion'
     )
-    volumenExtraidoMl = models.IntegerField(db_column='volumenextraidoml')
 
     class Meta:
         managed = False
@@ -89,4 +111,4 @@ class ExtraccionDonacion(models.Model):
         ordering = ['-fechaHora']
 
     def __str__(self):
-        return f"{self.codigoExtraccion} - {self.donante.persona.nombreCompleto} ({self.volumenExtraidoMl} ml)"
+        return f"{self.codigoExtraccion} - {self.personaDonante.nombreCompleto} ({self.volumenExtraidoMl} ml)"

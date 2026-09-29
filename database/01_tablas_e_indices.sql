@@ -1,424 +1,495 @@
-DROP SCHEMA IF EXISTS public CASCADE;
-CREATE SCHEMA public;
-
 -- ============================================================================
--- MÓDULO 1: SEGURIDAD, ACTORES Y ROLES (HERENCIA TABLE-PER-TYPE)
+-- BANCO DE SANGRE "HEMOVIDA" - DDL COMPLETO ACTUALIZADO (PostgreSQL 14+)
 -- ============================================================================
 
-CREATE TABLE Persona (
-    idPersona SERIAL PRIMARY KEY,
-    ci VARCHAR(20) NOT NULL UNIQUE,
-    nombres VARCHAR(100) NOT NULL,
-    apellidos VARCHAR(100) NOT NULL,
-    fechaNacimiento DATE NOT NULL,
-    sexo VARCHAR(10) NOT NULL CHECK (sexo IN ('M', 'F', 'Otro')),
-    nacionalidad VARCHAR(50) DEFAULT 'Boliviana',
-    direccion VARCHAR(255),
-    celular VARCHAR(20),
-    ocupacion VARCHAR(100)
+DROP TABLE IF EXISTS BitacoraAuditoria CASCADE;
+DROP TABLE IF EXISTS DetalleDespacho CASCADE;
+DROP TABLE IF EXISTS ComprobanteDespacho CASCADE;
+DROP TABLE IF EXISTS ComprobantePago CASCADE;
+DROP TABLE IF EXISTS CompromisoDonacion CASCADE;
+DROP TABLE IF EXISTS ReposicionPendiente CASCADE;
+DROP TABLE IF EXISTS PruebaCompatibilidad CASCADE;
+DROP TABLE IF EXISTS SolicitudHospitalaria CASCADE;
+DROP TABLE IF EXISTS CitaLaboratorio CASCADE;
+DROP TABLE IF EXISTS BajaInventario CASCADE;
+DROP TABLE IF EXISTS EjemplarBolsa CASCADE;
+DROP TABLE IF EXISTS AnalisisInmunoSerologico CASCADE;
+DROP TABLE IF EXISTS PruebaInmunohematologica CASCADE;
+DROP TABLE IF EXISTS UnidadSangreTotal CASCADE;
+DROP TABLE IF EXISTS IncentivoEntrega CASCADE;
+DROP TABLE IF EXISTS ExtraccionDonacion CASCADE;
+DROP TABLE IF EXISTS Diferimiento CASCADE;
+DROP TABLE IF EXISTS TriajeClinico CASCADE;
+DROP TABLE IF EXISTS DetalleCitaRequisito CASCADE;
+DROP TABLE IF EXISTS CitaDonacion CASCADE;
+DROP TABLE IF EXISTS ParametroStockMinimo CASCADE;
+DROP TABLE IF EXISTS UbicacionAlmacen CASCADE;
+DROP TABLE IF EXISTS RequisitoDonacion CASCADE;
+DROP TABLE IF EXISTS InstitucionSalud CASCADE;
+DROP TABLE IF EXISTS Donante CASCADE;
+DROP TABLE IF EXISTS Receptor CASCADE;
+DROP TABLE IF EXISTS PosibleDonador CASCADE;
+DROP TABLE IF EXISTS PersonalSalud CASCADE;
+DROP TABLE IF EXISTS UsuarioRol CASCADE;
+DROP TABLE IF EXISTS Usuario CASCADE;
+DROP TABLE IF EXISTS Rol CASCADE;
+DROP TABLE IF EXISTS Persona CASCADE;
+DROP TABLE IF EXISTS GrupoSanguineo CASCADE;
+
+-- Catálogo Grupo Sanguíneo
+CREATE TABLE GrupoSanguineo (
+    idGrupo SERIAL PRIMARY KEY,
+    grupoABO VARCHAR(5) NOT NULL CHECK (grupoABO IN ('O', 'A', 'B', 'AB')),
+    factorRh VARCHAR(10) NOT NULL CHECK (factorRh IN ('Positivo', 'Negativo')),
+    CONSTRAINT uq_grupo_rh UNIQUE (grupoABO, factorRh)
 );
 
+-- Catálogo de Roles Oficiales
 CREATE TABLE Rol (
     idRol SERIAL PRIMARY KEY,
-    nombreRol VARCHAR(50) NOT NULL UNIQUE,
+    nombreRol VARCHAR(60) NOT NULL UNIQUE,
+    codigoRol VARCHAR(30) NOT NULL UNIQUE,
     descripcion TEXT
 );
 
+INSERT INTO Rol (nombreRol, codigoRol, descripcion) VALUES
+('Administrador', 'ADMIN', 'Gestión integral y administración de usuarios del sistema'),
+('Posible Donador', 'POSIBLE_DONADOR', 'Postulante en fase de cuestionario y evaluación médica preliminar'),
+('Donante', 'DONANTE', 'Donante calificado y validado con historial de extracciones'),
+('Receptor / Tutor Familiar', 'RECEPTOR', 'Paciente o tutor legal solicitante de hemocomponentes'),
+('Doctor(a) de Triaje', 'DOC_TRIAJE', 'Evaluación clínica previa y diferimiento de postulantes'),
+('Personal de Colecta', 'PERS_COLECTA', 'Flebotomistas y extracción de sangre'),
+('Bioquímico(a) Integral', 'BIOQ_INTEGRAL', 'Ensayos serológicos, inmunohematología y liberación biológica'),
+('Técnico(a) de Logística', 'TEC_LOGISTICA', 'Almacén, cadena de frío y despacho de hemocomponentes'),
+('Médico(a) Solicitante / Clínica', 'MED_SOLICITANTE', 'Prescripción y solicitud hospitalaria externa/interna');
+
+-- Entidad Base Persona (incluye nacionalidad)
+CREATE TABLE Persona (
+    idPersona SERIAL PRIMARY KEY,
+    ci VARCHAR(20) NOT NULL UNIQUE,
+    nombres VARCHAR(80) NOT NULL,
+    apellidos VARCHAR(80) NOT NULL,
+    sexo CHAR(1) NOT NULL CHECK (sexo IN ('M', 'F', 'O')),
+    fechaNacimiento DATE NOT NULL,
+    direccion VARCHAR(150),
+    celular VARCHAR(20),
+    ocupacion VARCHAR(80),
+    nacionalidad VARCHAR(50) DEFAULT 'Boliviana'
+);
+
+-- Cuentas de Acceso (Sin idRol directo: 1 login por persona)
 CREATE TABLE Usuario (
     idUsuario SERIAL PRIMARY KEY,
-    idPersona INT UNIQUE REFERENCES Persona(idPersona) ON DELETE RESTRICT,
-    idRol INT NOT NULL REFERENCES Rol(idRol) ON DELETE RESTRICT,
+    idPersona INT NOT NULL UNIQUE,
     username VARCHAR(50) NOT NULL UNIQUE,
+    email VARCHAR(100) NOT NULL UNIQUE,
     passwordHash VARCHAR(255) NOT NULL,
-    email VARCHAR(120) NOT NULL UNIQUE,
-    estado VARCHAR(20) NOT NULL DEFAULT 'Activo' CHECK (estado IN ('Activo', 'Inactivo', 'Bloqueado'))
+    estado VARCHAR(20) NOT NULL DEFAULT 'Activo' CHECK (estado IN ('Activo', 'Inactivo', 'Bloqueado')),
+    fechaCreacion TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_usuario_persona FOREIGN KEY (idPersona)
+        REFERENCES Persona (idPersona) ON DELETE CASCADE
 );
 
+-- Tabla Intermedia para RBAC Múltiple
+CREATE TABLE UsuarioRol (
+    idUsuario INT NOT NULL,
+    idRol INT NOT NULL,
+    fechaAsignacion TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT pk_usuariorol PRIMARY KEY (idUsuario, idRol),
+    CONSTRAINT fk_usuariorol_usuario FOREIGN KEY (idUsuario)
+        REFERENCES Usuario (idUsuario) ON DELETE CASCADE,
+    CONSTRAINT fk_usuariorol_rol FOREIGN KEY (idRol)
+        REFERENCES Rol (idRol) ON DELETE CASCADE
+);
+
+-- Bitácora con soporte para Rol Activo de sesión
 CREATE TABLE BitacoraAuditoria (
     idAuditoria SERIAL PRIMARY KEY,
-    idUsuario INT NOT NULL REFERENCES Usuario(idUsuario) ON DELETE RESTRICT,
-    accionRealizada VARCHAR(100) NOT NULL,
-    tablaAfectada VARCHAR(100) NOT NULL,
-    idRegistroAfectado INT NOT NULL,
+    idUsuario INT,
+    rolActivo VARCHAR(60),
+    accionRealizada VARCHAR(255) NOT NULL,
+    tablaAfectada VARCHAR(60) NOT NULL,
+    idRegistroAfectado INT,
     fechaHora TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    ipOrigen VARCHAR(45) NOT NULL
+    ipOrigen VARCHAR(45),
+    CONSTRAINT fk_bitacora_usuario FOREIGN KEY (idUsuario)
+        REFERENCES Usuario (idUsuario) ON DELETE SET NULL
 );
 
+-- Personal de Salud (Vinculado a Persona)
 CREATE TABLE PersonalSalud (
-    idPersona INT PRIMARY KEY REFERENCES Persona(idPersona) ON DELETE CASCADE,
-    idSupervisor INT REFERENCES PersonalSalud(idPersona) ON DELETE SET NULL,
-    cargo VARCHAR(100) NOT NULL,
-    especialidad VARCHAR(100),
-    registroProfesional VARCHAR(50) NOT NULL UNIQUE,
-    estado VARCHAR(20) NOT NULL DEFAULT 'Activo' CHECK (estado IN ('Activo', 'Inactivo', 'Licencia'))
+    idPersona INT PRIMARY KEY,
+    cargo VARCHAR(80) NOT NULL,
+    registroProfesional VARCHAR(40) NOT NULL UNIQUE,
+    CONSTRAINT fk_personalsalud_persona FOREIGN KEY (idPersona)
+        REFERENCES Persona (idPersona) ON DELETE CASCADE
 );
 
+-- Posible Donador (Nace No Apto y Sin Análisis)
 CREATE TABLE PosibleDonador (
-    idPersona INT PRIMARY KEY REFERENCES Persona(idPersona) ON DELETE CASCADE,
-    estadoCandidato VARCHAR(30) NOT NULL DEFAULT 'Postulante' CHECK (estadoCandidato IN ('Postulante', 'En Evaluacion', 'Acreditado', 'Rechazado')),
-    fechaPrimerContacto DATE NOT NULL DEFAULT CURRENT_DATE,
-    observacionesPreliminares TEXT
+    idPersona INT PRIMARY KEY,
+    estadoAptitud VARCHAR(30) NOT NULL DEFAULT 'No Apto' CHECK (estadoAptitud IN ('No Apto', 'En Evaluacion', 'Apto')),
+    tieneAnalisis BOOLEAN NOT NULL DEFAULT FALSE,
+    fechaRegistroPostulante DATE NOT NULL DEFAULT CURRENT_DATE,
+    CONSTRAINT fk_posibledonador_persona FOREIGN KEY (idPersona)
+        REFERENCES Persona (idPersona) ON DELETE CASCADE
 );
 
+-- Donante Calificado (Solo quienes superan la Inmunoserología)
 CREATE TABLE Donante (
-    idPersona INT PRIMARY KEY REFERENCES Persona(idPersona) ON DELETE CASCADE,
-    tipoDonante VARCHAR(50) NOT NULL CHECK (tipoDonante IN ('Voluntario Altruista', 'Reposicion Familiar', 'Autologo')),
-    carnetDigitalCodigo VARCHAR(50) NOT NULL UNIQUE,
+    idPersona INT PRIMARY KEY,
+    carnetDigitalCodigo VARCHAR(30) NOT NULL UNIQUE,
+    tipoDonante VARCHAR(30) NOT NULL CHECK (tipoDonante IN ('Voluntario Altruista', 'Reposicion Familiar', 'Autologo')),
     estadoHabilitacion VARCHAR(30) NOT NULL DEFAULT 'Apto' CHECK (estadoHabilitacion IN ('Apto', 'Diferido Temporal', 'Diferido Definitivo')),
-    fechaUltimaDonacion DATE
+    fechaUltimaDonacion DATE,
+    CONSTRAINT fk_donante_persona FOREIGN KEY (idPersona)
+        REFERENCES Persona (idPersona) ON DELETE CASCADE
 );
 
--- ============================================================================
--- MÓDULO 2: GESTIÓN DE CITAS Y REQUISITOS (PORTAL WEB)
--- ============================================================================
+-- Receptores
+CREATE TABLE Receptor (
+    idPersona INT PRIMARY KEY,
+    codigoHistorialClinico VARCHAR(40) NOT NULL UNIQUE,
+    grupoSanguineoReceptor VARCHAR(20) NOT NULL,
+    CONSTRAINT fk_receptor_persona FOREIGN KEY (idPersona)
+        REFERENCES Persona (idPersona) ON DELETE CASCADE
+);
 
+-- Resto de tablas operativas
 CREATE TABLE RequisitoDonacion (
     idRequisito SERIAL PRIMARY KEY,
-    nombreRequisito VARCHAR(150) NOT NULL,
-    tipoRequisito VARCHAR(50) NOT NULL CHECK (tipoRequisito IN ('Clinico', 'Legal', 'Habito', 'Epidemiologico')),
+    nombreRequisito VARCHAR(120) NOT NULL,
+    tipoRequisito VARCHAR(40) NOT NULL,
     esExcluyenteDefinitivo BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 CREATE TABLE CitaDonacion (
     idCita SERIAL PRIMARY KEY,
-    idDonante INT NOT NULL REFERENCES Donante(idPersona) ON DELETE RESTRICT,
+    idPersona INT NOT NULL,
     fechaHoraProgramada TIMESTAMP NOT NULL,
     prefiltroAprobado BOOLEAN NOT NULL DEFAULT FALSE,
     asistenciaConfirmada BOOLEAN NOT NULL DEFAULT FALSE,
-    estadoCita VARCHAR(30) NOT NULL DEFAULT 'Programada' CHECK (estadoCita IN ('Programada', 'Atendida', 'Cancelada', 'Inasistencia'))
+    estadoCita VARCHAR(25) NOT NULL DEFAULT 'Programada' CHECK (estadoCita IN ('Programada', 'Atendida', 'Cancelada', 'Inasistencia')),
+    CONSTRAINT fk_cita_persona FOREIGN KEY (idPersona)
+        REFERENCES Persona (idPersona) ON DELETE CASCADE
 );
 
 CREATE TABLE DetalleCitaRequisito (
     idDetalleCita SERIAL PRIMARY KEY,
-    idCita INT NOT NULL REFERENCES CitaDonacion(idCita) ON DELETE CASCADE,
-    idRequisito INT NOT NULL REFERENCES RequisitoDonacion(idRequisito) ON DELETE RESTRICT,
+    idCita INT NOT NULL,
+    idRequisito INT NOT NULL,
     cumpleRequisito BOOLEAN NOT NULL,
-    observacionRespuesta TEXT,
-    CONSTRAINT uk_cita_requisito UNIQUE (idCita, idRequisito)
+    observacionRespuesta VARCHAR(200),
+    CONSTRAINT fk_detalle_cita FOREIGN KEY (idCita)
+        REFERENCES CitaDonacion (idCita) ON DELETE CASCADE,
+    CONSTRAINT fk_detalle_requisito FOREIGN KEY (idRequisito)
+        REFERENCES RequisitoDonacion (idRequisito)
 );
-
--- ============================================================================
--- MÓDULO 3: EVALUACIÓN CLÍNICA, EXTRACCIÓN E INCENTIVOS
--- ============================================================================
 
 CREATE TABLE TriajeClinico (
     idTriaje SERIAL PRIMARY KEY,
-    idPosibleDonador INT NOT NULL REFERENCES PosibleDonador(idPersona) ON DELETE RESTRICT,
-    idPersonalSalud INT NOT NULL REFERENCES PersonalSalud(idPersona) ON DELETE RESTRICT,
+    idPosibleDonador INT NOT NULL,
+    idPersonalSalud INT NOT NULL,
     fechaHora TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    pesoKg NUMERIC(5,2) NOT NULL CHECK (pesoKg > 0),
-    tallaCm NUMERIC(5,2) NOT NULL CHECK (tallaCm > 0),
-    presionSistolicaMmHg INT NOT NULL CHECK (presionSistolicaMmHg BETWEEN 50 AND 250),
-    presionDiastolicaMmHg INT NOT NULL CHECK (presionDiastolicaMmHg BETWEEN 30 AND 150),
-    temperatura NUMERIC(4,2) NOT NULL CHECK (temperatura BETWEEN 35.0 AND 42.0),
-    nivelHemoglobina NUMERIC(4,2) NOT NULL CHECK (nivelHemoglobina > 0),
-    frecuenciaCardiaca INT NOT NULL CHECK (frecuenciaCardiaca BETWEEN 40 AND 200),
-    consumeMedicamentos BOOLEAN NOT NULL DEFAULT FALSE,
-    detalleMedicamentos TEXT,
-    enfermedadBase VARCHAR(255),
-    resultadoAptitud VARCHAR(30) NOT NULL CHECK (resultadoAptitud IN ('Apto', 'Diferido'))
-);
-
-CREATE TABLE ExtraccionDonacion (
-    idExtraccion SERIAL PRIMARY KEY,
-    idDonante INT NOT NULL REFERENCES Donante(idPersona) ON DELETE RESTRICT,
-    idTriaje INT UNIQUE REFERENCES TriajeClinico(idTriaje) ON DELETE RESTRICT,
-    idPersonalSalud INT NOT NULL REFERENCES PersonalSalud(idPersona) ON DELETE RESTRICT,
-    codigoExtraccion VARCHAR(50) NOT NULL UNIQUE,
-    modalidadDonacion VARCHAR(50) NOT NULL CHECK (modalidadDonacion IN ('Sangre Total', 'Aferesis Plaquetaria', 'Autologa')),
-    fechaHora TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    brazoExtraccion VARCHAR(20) NOT NULL CHECK (brazoExtraccion IN ('Izquierdo', 'Derecho')),
-    volumenExtraidoMl INT NOT NULL CHECK (volumenExtraidoMl > 0)
-);
-
-CREATE TABLE ConsentimientoInformado (
-    idConsentimiento SERIAL PRIMARY KEY,
-    idExtraccion INT NOT NULL UNIQUE REFERENCES ExtraccionDonacion(idExtraccion) ON DELETE CASCADE,
-    fechaFirma TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    declaracionJuradaAceptada BOOLEAN NOT NULL CHECK (declaracionJuradaAceptada = TRUE),
-    firmaDigital TEXT NOT NULL
-);
-
-CREATE TABLE IncentivoEntrega (
-    idIncentivo SERIAL PRIMARY KEY,
-    idExtraccion INT NOT NULL UNIQUE REFERENCES ExtraccionDonacion(idExtraccion) ON DELETE CASCADE,
-    tipoArticulo VARCHAR(100) NOT NULL,
-    refrigerioEntregado BOOLEAN NOT NULL DEFAULT TRUE,
-    fechaHoraEntrega TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
--- ============================================================================
--- MÓDULO 4: LABORATORIO E INVENTARIO DE BOLSAS K
--- ============================================================================
-
-CREATE TABLE GrupoSanguineo (
-    idGrupo SERIAL PRIMARY KEY,
-    grupoABO VARCHAR(5) NOT NULL CHECK (grupoABO IN ('A', 'B', 'AB', 'O')),
-    factorRh VARCHAR(10) NOT NULL CHECK (factorRh IN ('Positivo', 'Negativo')),
-    CONSTRAINT uk_grupo_rh UNIQUE (grupoABO, factorRh)
-);
-
-CREATE TABLE Receptor (
-    idPersona INT PRIMARY KEY REFERENCES Persona(idPersona) ON DELETE CASCADE,
-    idGrupo INT REFERENCES GrupoSanguineo(idGrupo) ON DELETE RESTRICT,
-    codigoExpedienteClinico VARCHAR(50) NOT NULL UNIQUE,
-    historialTransfusional TEXT,
-    requiereDonantesReposicion BOOLEAN NOT NULL DEFAULT FALSE,
-    tipoRequisito VARCHAR(50), -- Sincronizado con el modelo UML
-    fechaCirugiaProgramada DATE
-);
-
-CREATE TABLE ParametroStockMinimo (
-    idParametro SERIAL PRIMARY KEY,
-    idGrupo INT NOT NULL REFERENCES GrupoSanguineo(idGrupo) ON DELETE RESTRICT,
-    tipoComponente VARCHAR(50) NOT NULL CHECK (tipoComponente IN ('Concentrado de Globulos Rojos', 'Plasma Fresco Congelado', 'Concentrado Plaquetario', 'Crioprecipitado')),
-    stockMinimoSeguridad INT NOT NULL CHECK (stockMinimoSeguridad >= 0),
-    stockCriticoAlerta INT NOT NULL CHECK (stockCriticoAlerta >= 0),
-    stockOptimo INT NOT NULL CHECK (stockOptimo >= stockMinimoSeguridad),
-    CONSTRAINT uk_parametro_stock UNIQUE (idGrupo, tipoComponente)
-);
-
-CREATE TABLE UnidadSangreTotal (
-    idUnidadMadre SERIAL PRIMARY KEY,
-    idExtraccion INT NOT NULL UNIQUE REFERENCES ExtraccionDonacion(idExtraccion) ON DELETE RESTRICT,
-    idGrupo INT REFERENCES GrupoSanguineo(idGrupo) ON DELETE RESTRICT,
-    codigoBolsaMadre VARCHAR(50) NOT NULL UNIQUE,
-    tipoBolsa VARCHAR(50) NOT NULL,
-    fechaExtraccion TIMESTAMP NOT NULL,
-    fechaVencimiento DATE NOT NULL,
-    estadoLiberacion VARCHAR(30) NOT NULL DEFAULT 'En Cuarentena' CHECK (estadoLiberacion IN ('En Cuarentena', 'Liberada Apta', 'Rechazada'))
-);
-
-CREATE TABLE UbicacionAlmacen (
-    idUbicacion SERIAL PRIMARY KEY,
-    tipoEquipo VARCHAR(50) NOT NULL CHECK (tipoEquipo IN ('Heladera Conservacion', 'Ultrafreezer', 'Agitador Plaquetas')),
-    identificadorCompartimento VARCHAR(50) NOT NULL UNIQUE,
-    temperaturaRegistro NUMERIC(4,2) NOT NULL,
-    capacidadMaxima INT NOT NULL CHECK (capacidadMaxima > 0),
-    capacidadOcupada INT NOT NULL DEFAULT 0 CHECK (capacidadOcupada <= capacidadMaxima)
-);
-
-CREATE TABLE EjemplarBolsa (
-    idEjemplarBolsa SERIAL PRIMARY KEY,
-    idUnidadMadre INT NOT NULL REFERENCES UnidadSangreTotal(idUnidadMadre) ON DELETE RESTRICT,
-    idGrupo INT NOT NULL REFERENCES GrupoSanguineo(idGrupo) ON DELETE RESTRICT,
-    idUbicacion INT REFERENCES UbicacionAlmacen(idUbicacion) ON DELETE SET NULL,
-    codigoEjemplarK VARCHAR(50) NOT NULL UNIQUE,
-    tipoComponente VARCHAR(50) NOT NULL CHECK (tipoComponente IN ('Concentrado de Globulos Rojos', 'Plasma Fresco Congelado', 'Concentrado Plaquetario', 'Crioprecipitado')),
-    volumenMl INT NOT NULL CHECK (volumenMl > 0),
-    fechaFraccionamiento TIMESTAMP NOT NULL,
-    fechaCaducidad DATE NOT NULL,
-    esExclusivoAutologo BOOLEAN NOT NULL DEFAULT FALSE,
-    estadoBolsaK VARCHAR(30) NOT NULL DEFAULT 'En Cuarentena' CHECK (estadoBolsaK IN ('En Cuarentena', 'Disponible', 'Reservada', 'Despachada', 'Baja'))
-);
-
-CREATE TABLE BajaInventario (
-    idBaja SERIAL PRIMARY KEY,
-    idPersonalSalud INT NOT NULL REFERENCES PersonalSalud(idPersona) ON DELETE RESTRICT,
-    idEjemplarBolsa INT UNIQUE REFERENCES EjemplarBolsa(idEjemplarBolsa) ON DELETE RESTRICT,
-    idUnidadMadre INT UNIQUE REFERENCES UnidadSangreTotal(idUnidadMadre) ON DELETE RESTRICT,
-    fechaHoraBaja TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    motivoBaja VARCHAR(100) NOT NULL,
-    observaciones TEXT,
-    CONSTRAINT chk_baja_origen_xor CHECK (
-        (idEjemplarBolsa IS NOT NULL AND idUnidadMadre IS NULL) OR
-        (idEjemplarBolsa IS NULL AND idUnidadMadre IS NOT NULL)
-    )
-);
-
--- ============================================================================
--- MÓDULO 5: CITAS DE LABORATORIO, TAMIZAJE Y DIFERIMIENTO
--- ============================================================================
-
-CREATE TABLE CitaLaboratorio (
-    idCitaLab SERIAL PRIMARY KEY,
-    idPersona INT NOT NULL REFERENCES Persona(idPersona) ON DELETE RESTRICT,
-    idExtraccion INT REFERENCES ExtraccionDonacion(idExtraccion) ON DELETE SET NULL,
-    codigoCita VARCHAR(50) NOT NULL UNIQUE,
-    fechaHoraProgramada TIMESTAMP NOT NULL,
-    tipoAnalisisRequerido VARCHAR(50) NOT NULL CHECK (tipoAnalisisRequerido IN ('InmunoSerologico', 'InmunoHematologico', 'Panel Completo')),
-    momentoRespectoExtraccion VARCHAR(30) NOT NULL CHECK (momentoRespectoExtraccion IN ('Pre-Extraccion', 'Post-Extraccion')),
-    motivoEstudio TEXT,
-    asistenciaConfirmada BOOLEAN NOT NULL DEFAULT FALSE,
-    estadoCita VARCHAR(30) NOT NULL DEFAULT 'Programada' CHECK (estadoCita IN ('Programada', 'Completada', 'Cancelada'))
-);
-
-CREATE TABLE AnalisisInmunoSerologico (
-    idTamizaje SERIAL PRIMARY KEY,
-    idPersonalSalud INT NOT NULL REFERENCES PersonalSalud(idPersona) ON DELETE RESTRICT,
-    idPosibleDonador INT REFERENCES PosibleDonador(idPersona) ON DELETE RESTRICT,
-    idUnidadMadre INT REFERENCES UnidadSangreTotal(idUnidadMadre) ON DELETE RESTRICT,
-    idCitaLab INT REFERENCES CitaLaboratorio(idCitaLab) ON DELETE SET NULL,
-    codigoAnalisis VARCHAR(50) NOT NULL UNIQUE,
-    etapaAnalisis VARCHAR(50) NOT NULL CHECK (etapaAnalisis IN ('Pre-Extraccion', 'Post-Extraccion')),
-    fechaAnalisis TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    resultadoVIH VARCHAR(30) NOT NULL CHECK (resultadoVIH IN ('No Reactivo', 'Reactivo', 'Indeterminado')),
-    resultadoChagas VARCHAR(30) NOT NULL CHECK (resultadoChagas IN ('No Reactivo', 'Reactivo', 'Indeterminado')),
-    resultadoHepatitisB VARCHAR(30) NOT NULL CHECK (resultadoHepatitisB IN ('No Reactivo', 'Reactivo', 'Indeterminado')),
-    resultadoHepatitisC VARCHAR(30) NOT NULL CHECK (resultadoHepatitisC IN ('No Reactivo', 'Reactivo', 'Indeterminado')),
-    resultadoSifilis VARCHAR(30) NOT NULL CHECK (resultadoSifilis IN ('No Reactivo', 'Reactivo', 'Indeterminado')),
-    resultadoHTLV VARCHAR(30) NOT NULL CHECK (resultadoHTLV IN ('No Reactivo', 'Reactivo', 'Indeterminado')),
-    dictamenFinal VARCHAR(30) NOT NULL CHECK (dictamenFinal IN ('Apto', 'No Apto')),
-    habilitaExtraccion BOOLEAN NOT NULL DEFAULT FALSE
-);
-
-CREATE TABLE AnalisisInmunoHematologico (
-    idAnalisisHematologico SERIAL PRIMARY KEY,
-    idPersonalSalud INT NOT NULL REFERENCES PersonalSalud(idPersona) ON DELETE RESTRICT,
-    idPosibleDonador INT REFERENCES PosibleDonador(idPersona) ON DELETE RESTRICT,
-    idReceptor INT REFERENCES Receptor(idPersona) ON DELETE RESTRICT,
-    idUnidadMadre INT REFERENCES UnidadSangreTotal(idUnidadMadre) ON DELETE RESTRICT,
-    idCitaLab INT REFERENCES CitaLaboratorio(idCitaLab) ON DELETE SET NULL,
-    etapaAnalisis VARCHAR(50) NOT NULL CHECK (etapaAnalisis IN ('Pre-Extraccion', 'Post-Extraccion', 'Pre-Transfusional')),
-    fechaAnalisis TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    grupoABOConfirmado VARCHAR(5) NOT NULL CHECK (grupoABOConfirmado IN ('A', 'B', 'AB', 'O')),
-    factorRhConfirmado VARCHAR(10) NOT NULL CHECK (factorRhConfirmado IN ('Positivo', 'Negativo')),
-    pruebaCoombsDirecta VARCHAR(30) NOT NULL,
-    pruebaCoombsIndirecta VARCHAR(30) NOT NULL,
-    rastreoAnticuerposIrregulares VARCHAR(100) NOT NULL,
-    observaciones TEXT
+    pesoKg NUMERIC(5,2) NOT NULL,
+    presionSistolicaMmHg INT NOT NULL,
+    presionDiastolicaMmHg INT NOT NULL,
+    nivelHemoglobina NUMERIC(4,1) NOT NULL,
+    temperatura NUMERIC(4,1) NOT NULL,
+    resultadoAptitud VARCHAR(20) NOT NULL CHECK (resultadoAptitud IN ('Apto', 'Rechazado')),
+    CONSTRAINT fk_triaje_posible FOREIGN KEY (idPosibleDonador)
+        REFERENCES PosibleDonador (idPersona),
+    CONSTRAINT fk_triaje_medico FOREIGN KEY (idPersonalSalud)
+        REFERENCES PersonalSalud (idPersona)
 );
 
 CREATE TABLE Diferimiento (
     idDiferimiento SERIAL PRIMARY KEY,
-    idTriaje INT UNIQUE REFERENCES TriajeClinico(idTriaje) ON DELETE RESTRICT,
-    idTamizaje INT UNIQUE REFERENCES AnalisisInmunoSerologico(idTamizaje) ON DELETE RESTRICT,
-    fechaInicio TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    tipoRechazo VARCHAR(50) NOT NULL CHECK (tipoRechazo IN ('Temporal', 'Definitivo')),
-    motivoDetallado TEXT NOT NULL,
-    diasInhabilitacion INT NOT NULL CHECK (diasInhabilitacion >= 0),
-    fechaReactivacionProyectada DATE,
-    CONSTRAINT chk_diferimiento_origen_xor CHECK (
-        (idTriaje IS NOT NULL AND idTamizaje IS NULL) OR
-        (idTriaje IS NULL AND idTamizaje IS NOT NULL)
-    )
+    idTriaje INT UNIQUE,
+    idPosibleDonador INT NOT NULL,
+    motivoDetallado VARCHAR(255) NOT NULL,
+    diasInhabilitacion INT NOT NULL DEFAULT 0,
+    fechaInicioDiferimiento DATE NOT NULL,
+    fechaFinDiferimiento DATE,
+    CONSTRAINT fk_diferimiento_triaje FOREIGN KEY (idTriaje)
+        REFERENCES TriajeClinico (idTriaje) ON DELETE SET NULL,
+    CONSTRAINT fk_diferimiento_posible FOREIGN KEY (idPosibleDonador)
+        REFERENCES PosibleDonador (idPersona)
 );
 
--- ============================================================================
--- MÓDULO 6: SOLICITUDES, RESERVAS, COMPROMISOS Y DESPACHO
--- ============================================================================
+CREATE TABLE ExtraccionDonacion (
+    idExtraccion SERIAL PRIMARY KEY,
+    idPersonaDonante INT NOT NULL,
+    idPersonalSalud INT NOT NULL,
+    codigoExtraccion VARCHAR(30) NOT NULL UNIQUE,
+    fechaHora TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    volumenExtraidoMl INT NOT NULL CHECK (volumenExtraidoMl > 0),
+    brazoExtraccion VARCHAR(15) NOT NULL CHECK (brazoExtraccion IN ('Izquierdo', 'Derecho')),
+    CONSTRAINT fk_extraccion_persona FOREIGN KEY (idPersonaDonante)
+        REFERENCES Persona (idPersona),
+    CONSTRAINT fk_extraccion_enfermero FOREIGN KEY (idPersonalSalud)
+        REFERENCES PersonalSalud (idPersona)
+);
+
+CREATE TABLE IncentivoEntrega (
+    idIncentivo SERIAL PRIMARY KEY,
+    idExtraccion INT NOT NULL UNIQUE,
+    tipoArticulo VARCHAR(80) NOT NULL,
+    refrigerioEntregado BOOLEAN NOT NULL DEFAULT TRUE,
+    fechaHoraEntrega TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_incentivo_extraccion FOREIGN KEY (idExtraccion)
+        REFERENCES ExtraccionDonacion (idExtraccion) ON DELETE CASCADE
+);
+
+CREATE TABLE UnidadSangreTotal (
+    idUnidadMadre SERIAL PRIMARY KEY,
+    idExtraccion INT NOT NULL UNIQUE,
+    idGrupo INT NOT NULL,
+    codigoBolsaMadre VARCHAR(40) NOT NULL UNIQUE,
+    tipoBolsa VARCHAR(40) NOT NULL,
+    estadoLiberacion VARCHAR(30) NOT NULL DEFAULT 'En Cuarentena' CHECK (estadoLiberacion IN ('En Cuarentena', 'Liberada Apta', 'Rechazada')),
+    CONSTRAINT fk_madre_extraccion FOREIGN KEY (idExtraccion)
+        REFERENCES ExtraccionDonacion (idExtraccion) ON DELETE CASCADE,
+    CONSTRAINT fk_madre_grupo FOREIGN KEY (idGrupo)
+        REFERENCES GrupoSanguineo (idGrupo)
+);
+
+CREATE TABLE AnalisisInmunoSerologico (
+    idAnalisis SERIAL PRIMARY KEY,
+    idUnidadMadre INT NOT NULL UNIQUE,
+    idPersonalSalud INT NOT NULL,
+    codigoAnalisis VARCHAR(30) NOT NULL UNIQUE,
+    fechaAnalisis TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    resultadoVIH VARCHAR(20) NOT NULL CHECK (resultadoVIH IN ('No Reactivo', 'Reactivo', 'Indeterminado')),
+    resultadoChagas VARCHAR(20) NOT NULL CHECK (resultadoChagas IN ('No Reactivo', 'Reactivo', 'Indeterminado')),
+    resultadoHepatitisB VARCHAR(20) NOT NULL CHECK (resultadoHepatitisB IN ('No Reactivo', 'Reactivo', 'Indeterminado')),
+    resultadoHepatitisC VARCHAR(20) NOT NULL CHECK (resultadoHepatitisC IN ('No Reactivo', 'Reactivo', 'Indeterminado')),
+    resultadoSifilis VARCHAR(20) NOT NULL CHECK (resultadoSifilis IN ('No Reactivo', 'Reactivo', 'Indeterminado')),
+    resultadoHTLV VARCHAR(20) NOT NULL CHECK (resultadoHTLV IN ('No Reactivo', 'Reactivo', 'Indeterminado')),
+    dictamenFinal VARCHAR(20) NOT NULL CHECK (dictamenFinal IN ('Apto', 'No Apto')),
+    habilitaExtraccion BOOLEAN NOT NULL DEFAULT FALSE,
+    CONSTRAINT fk_serologia_madre FOREIGN KEY (idUnidadMadre)
+        REFERENCES UnidadSangreTotal (idUnidadMadre) ON DELETE CASCADE,
+    CONSTRAINT fk_serologia_bioquimico FOREIGN KEY (idPersonalSalud)
+        REFERENCES PersonalSalud (idPersona)
+);
+
+CREATE TABLE PruebaInmunohematologica (
+    idPruebaInmuno SERIAL PRIMARY KEY,
+    idUnidadMadre INT,
+    idPersona INT NOT NULL,
+    idGrupo INT NOT NULL,
+    idPersonalSalud INT NOT NULL,
+    fechaHoraPrueba TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    faseSalina VARCHAR(30),
+    faseTermica VARCHAR(30),
+    coombsDirecto VARCHAR(30),
+    rastreoAnticuerposIrregulares VARCHAR(30),
+    dictamenInmunohematologico VARCHAR(100) NOT NULL,
+    CONSTRAINT fk_inmuno_madre FOREIGN KEY (idUnidadMadre)
+        REFERENCES UnidadSangreTotal (idUnidadMadre) ON DELETE SET NULL,
+    CONSTRAINT fk_inmuno_persona FOREIGN KEY (idPersona)
+        REFERENCES Persona (idPersona),
+    CONSTRAINT fk_inmuno_grupo FOREIGN KEY (idGrupo)
+        REFERENCES GrupoSanguineo (idGrupo),
+    CONSTRAINT fk_inmuno_bioquimico FOREIGN KEY (idPersonalSalud)
+        REFERENCES PersonalSalud (idPersona)
+);
+
+CREATE TABLE UbicacionAlmacen (
+    idUbicacion SERIAL PRIMARY KEY,
+    identificadorCompartimento VARCHAR(30) NOT NULL UNIQUE,
+    tipoEquipo VARCHAR(80) NOT NULL,
+    temperaturaRegistro NUMERIC(4,1) NOT NULL,
+    capacidadMaxima INT NOT NULL,
+    capacidadOcupada INT NOT NULL DEFAULT 0
+);
+
+CREATE TABLE ParametroStockMinimo (
+    idParametro SERIAL PRIMARY KEY,
+    idGrupo INT NOT NULL,
+    tipoComponente VARCHAR(50) NOT NULL,
+    stockMinimoSeguridad INT NOT NULL,
+    stockCriticoAlerta INT NOT NULL,
+    CONSTRAINT fk_parametro_grupo FOREIGN KEY (idGrupo)
+        REFERENCES GrupoSanguineo (idGrupo),
+    CONSTRAINT uq_parametro_grupo_componente UNIQUE (idGrupo, tipoComponente)
+);
+
+CREATE TABLE EjemplarBolsa (
+    idEjemplarBolsa SERIAL PRIMARY KEY,
+    idUnidadMadre INT,
+    idGrupo INT NOT NULL,
+    idUbicacion INT,
+    codigoEjemplarK VARCHAR(40) NOT NULL UNIQUE,
+    tipoComponente VARCHAR(50) NOT NULL CHECK (tipoComponente IN (
+        'Concentrado de Globulos Rojos', 'Plasma Fresco Congelado',
+        'Concentrado Plaquetario', 'Crioprecipitado', 'Sangre Total'
+    )),
+    volumenMl INT NOT NULL,
+    fechaExtraccion DATE NOT NULL,
+    fechaCaducidad DATE NOT NULL,
+    estadoBolsaK VARCHAR(25) NOT NULL DEFAULT 'En Cuarentena' CHECK (estadoBolsaK IN (
+        'Disponible', 'En Cuarentena', 'Reservada', 'Despachada', 'Baja'
+    )),
+    CONSTRAINT fk_ejemplar_madre FOREIGN KEY (idUnidadMadre)
+        REFERENCES UnidadSangreTotal (idUnidadMadre) ON DELETE SET NULL,
+    CONSTRAINT fk_ejemplar_grupo FOREIGN KEY (idGrupo)
+        REFERENCES GrupoSanguineo (idGrupo),
+    CONSTRAINT fk_ejemplar_ubicacion FOREIGN KEY (idUbicacion)
+        REFERENCES UbicacionAlmacen (idUbicacion)
+);
+
+CREATE TABLE BajaInventario (
+    idBaja SERIAL PRIMARY KEY,
+    idUnidadMadre INT,
+    idEjemplarBolsa INT,
+    idPersonalSalud INT NOT NULL,
+    fechaHoraBaja TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    motivoBaja VARCHAR(100) NOT NULL,
+    observaciones TEXT,
+    CONSTRAINT fk_baja_madre FOREIGN KEY (idUnidadMadre)
+        REFERENCES UnidadSangreTotal (idUnidadMadre) ON DELETE SET NULL,
+    CONSTRAINT fk_baja_ejemplar FOREIGN KEY (idEjemplarBolsa)
+        REFERENCES EjemplarBolsa (idEjemplarBolsa) ON DELETE SET NULL,
+    CONSTRAINT fk_baja_responsable FOREIGN KEY (idPersonalSalud)
+        REFERENCES PersonalSalud (idPersona)
+);
 
 CREATE TABLE InstitucionSalud (
     idInstitucion SERIAL PRIMARY KEY,
-    nombreInstitucion VARCHAR(150) NOT NULL,
-    tipoInstitucion VARCHAR(50) NOT NULL CHECK (tipoInstitucion IN ('Hospital Publico', 'Clinica Privada', 'Seguro Social')),
-    nit VARCHAR(30),
-    direccion VARCHAR(255),
-    telefonoContacto VARCHAR(30)
+    nombreInstitucion VARCHAR(100) NOT NULL UNIQUE,
+    tipoInstitucion VARCHAR(50) NOT NULL,
+    direccion VARCHAR(150),
+    telefonoContacto VARCHAR(25)
+);
+
+CREATE TABLE CitaLaboratorio (
+    idCitaLab SERIAL PRIMARY KEY,
+    idReceptor INT NOT NULL,
+    idInstitucion INT,
+    fechaHoraCita TIMESTAMP NOT NULL,
+    fechaCirugiaProgramada DATE NOT NULL,
+    tipoAnalisisRequerido VARCHAR(100) NOT NULL,
+    muestraRecolectada BOOLEAN NOT NULL DEFAULT FALSE,
+    estadoCita VARCHAR(25) NOT NULL DEFAULT 'Programada' CHECK (estadoCita IN ('Programada', 'Completada', 'Cancelada')),
+    CONSTRAINT fk_citalab_receptor FOREIGN KEY (idReceptor)
+        REFERENCES Receptor (idPersona),
+    CONSTRAINT fk_citalab_institucion FOREIGN KEY (idInstitucion)
+        REFERENCES InstitucionSalud (idInstitucion)
 );
 
 CREATE TABLE SolicitudHospitalaria (
     idSolicitud SERIAL PRIMARY KEY,
-    idInstitucion INT NOT NULL REFERENCES InstitucionSalud(idInstitucion) ON DELETE RESTRICT,
-    idReceptor INT NOT NULL REFERENCES Receptor(idPersona) ON DELETE RESTRICT,
-    numeroSolicitud VARCHAR(50) NOT NULL UNIQUE,
+    idInstitucion INT NOT NULL,
+    idReceptor INT NOT NULL,
+    numeroSolicitud VARCHAR(35) NOT NULL UNIQUE,
     fechaHoraRequerimiento TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    prioridadSolicitud VARCHAR(30) NOT NULL CHECK (prioridadSolicitud IN ('Emergencia (Roja)', 'Urgencia (Amarilla)', 'Programada (Verde)')),
-    motivoTransfusion TEXT,
-    horarioRequerido TIME,
+    prioridadSolicitud VARCHAR(25) NOT NULL CHECK (prioridadSolicitud IN ('Programada', 'Urgente', 'Código Rojo')),
+    motivoTransfusion VARCHAR(150),
     velocidadGoteo VARCHAR(50),
-    cantidadBolsasSolicitadas INT NOT NULL DEFAULT 0 CHECK (cantidadBolsasSolicitadas >= 0),
-    cantidadDonadaEfectiva INT NOT NULL DEFAULT 0 CHECK (cantidadDonadaEfectiva >= 0),
-    cantidadEntregadaReceptor INT NOT NULL DEFAULT 0 CHECK (cantidadEntregadaReceptor >= 0),
-    cantidadRetiradaStock INT NOT NULL DEFAULT 0 CHECK (cantidadRetiradaStock >= 0),
-    estadoSolicitud VARCHAR(30) NOT NULL DEFAULT 'Registrada' CHECK (estadoSolicitud IN ('Registrada', 'En Evaluacion', 'En Proceso', 'Despachada', 'Cancelada'))
-);
-
-CREATE TABLE DetalleSolicitud (
-    idDetalle SERIAL PRIMARY KEY,
-    idSolicitud INT NOT NULL REFERENCES SolicitudHospitalaria(idSolicitud) ON DELETE CASCADE,
-    idGrupo INT NOT NULL REFERENCES GrupoSanguineo(idGrupo) ON DELETE RESTRICT,
-    tipoComponenteRequerido VARCHAR(50) NOT NULL CHECK (tipoComponenteRequerido IN ('Concentrado de Globulos Rojos', 'Plasma Fresco Congelado', 'Concentrado Plaquetario', 'Crioprecipitado')),
-    cantidadSolicitada INT NOT NULL CHECK (cantidadSolicitada > 0),
-    cantidadAsignada INT NOT NULL DEFAULT 0 CHECK (cantidadAsignada >= 0)
-);
-
-CREATE TABLE ReposicionPendiente (
-    idReposicion SERIAL PRIMARY KEY,
-    idSolicitud INT NOT NULL UNIQUE REFERENCES SolicitudHospitalaria(idSolicitud) ON DELETE RESTRICT,
-    fechaGeneracion TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    cantidadBolsasAReponer INT NOT NULL CHECK (cantidadBolsasAReponer > 0),
-    cantidadRecuperada INT NOT NULL DEFAULT 0 CHECK (cantidadRecuperada >= 0),
-    estadoReposicion VARCHAR(30) NOT NULL DEFAULT 'Pendiente' CHECK (estadoReposicion IN ('Pendiente', 'Parcialmente Cubierta', 'Liquidada', 'Vencida')),
-    fechaLimiteReposicion DATE NOT NULL
-);
-
-CREATE TABLE CompromisoDonacion (
-    idCompromiso SERIAL PRIMARY KEY,
-    idSolicitud INT NOT NULL REFERENCES SolicitudHospitalaria(idSolicitud) ON DELETE RESTRICT,
-    idDonante INT NOT NULL REFERENCES Donante(idPersona) ON DELETE RESTRICT,
-    idReposicion INT REFERENCES ReposicionPendiente(idReposicion) ON DELETE SET NULL,
-    idExtraccion INT UNIQUE REFERENCES ExtraccionDonacion(idExtraccion) ON DELETE SET NULL,
-    fechaCompromiso DATE NOT NULL DEFAULT CURRENT_DATE,
-    asistioACita BOOLEAN NOT NULL DEFAULT FALSE,
-    donacionConcretada BOOLEAN NOT NULL DEFAULT FALSE,
-    volumenDonadoEfectivoMl INT NOT NULL DEFAULT 0 CHECK (volumenDonadoEfectivoMl >= 0),
-    estadoCompromiso VARCHAR(30) NOT NULL DEFAULT 'Asignado' CHECK (estadoCompromiso IN ('Asignado', 'Cumplido', 'Incumplido', 'Rechazado en Triaje')),
-    observacionesIncumplimiento TEXT
-);
-
-CREATE TABLE ReservaSangre (
-    idReserva SERIAL PRIMARY KEY,
-    idReceptor INT NOT NULL REFERENCES Receptor(idPersona) ON DELETE RESTRICT,
-    idEjemplarBolsa INT NOT NULL UNIQUE REFERENCES EjemplarBolsa(idEjemplarBolsa) ON DELETE RESTRICT,
-    idDetalleSolicitud INT REFERENCES DetalleSolicitud(idDetalle) ON DELETE SET NULL,
-    fechaReserva TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    esAutologa BOOLEAN NOT NULL DEFAULT FALSE,
-    motivoReserva VARCHAR(100),
-    fechaVencimientoReserva DATE NOT NULL,
-    estadoReserva VARCHAR(30) NOT NULL DEFAULT 'Activa' CHECK (estadoReserva IN ('Activa', 'Consumida', 'Vencida', 'Cancelada'))
+    horarioRequerido VARCHAR(50),
+    cantidadBolsasSolicitadas INT NOT NULL CHECK (cantidadBolsasSolicitadas > 0),
+    cantidadEntregadaReceptor INT NOT NULL DEFAULT 0,
+    cantidadRetiradaStock INT NOT NULL DEFAULT 0,
+    estadoSolicitud VARCHAR(25) NOT NULL DEFAULT 'Registrada' CHECK (estadoSolicitud IN (
+        'Registrada', 'En Evaluacion', 'En Proceso', 'Despachada', 'Anulada'
+    )),
+    CONSTRAINT fk_solicitud_institucion FOREIGN KEY (idInstitucion)
+        REFERENCES InstitucionSalud (idInstitucion),
+    CONSTRAINT fk_solicitud_receptor FOREIGN KEY (idReceptor)
+        REFERENCES Receptor (idPersona)
 );
 
 CREATE TABLE PruebaCompatibilidad (
-    idCompatibilidad SERIAL PRIMARY KEY,
-    idDetalleSolicitud INT NOT NULL REFERENCES DetalleSolicitud(idDetalle) ON DELETE RESTRICT,
-    idEjemplarBolsa INT NOT NULL REFERENCES EjemplarBolsa(idEjemplarBolsa) ON DELETE RESTRICT,
-    idPersonalSalud INT NOT NULL REFERENCES PersonalSalud(idPersona) ON DELETE RESTRICT,
+    idPruebaCompatibilidad SERIAL PRIMARY KEY,
+    idSolicitud INT NOT NULL,
+    idEjemplarBolsa INT NOT NULL,
+    idPersonalSalud INT NOT NULL,
     fechaHoraPrueba TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    resultadoCompatibilidad VARCHAR(30) NOT NULL CHECK (resultadoCompatibilidad IN ('Compatible', 'Incompatible', 'Dudoso')),
-    observaciones TEXT
+    resultadoCompatibilidad VARCHAR(25) NOT NULL CHECK (resultadoCompatibilidad IN ('Compatible', 'Incompatible', 'Dudoso')),
+    faseAntiglobulina VARCHAR(50),
+    reaccionObservada VARCHAR(150),
+    aprobadoParaDespacho BOOLEAN NOT NULL DEFAULT FALSE,
+    CONSTRAINT fk_cruce_solicitud FOREIGN KEY (idSolicitud)
+        REFERENCES SolicitudHospitalaria (idSolicitud),
+    CONSTRAINT fk_cruce_ejemplar FOREIGN KEY (idEjemplarBolsa)
+        REFERENCES EjemplarBolsa (idEjemplarBolsa),
+    CONSTRAINT fk_cruce_personal FOREIGN KEY (idPersonalSalud)
+        REFERENCES PersonalSalud (idPersona)
 );
 
 CREATE TABLE ComprobanteDespacho (
     idDespacho SERIAL PRIMARY KEY,
-    idSolicitud INT NOT NULL UNIQUE REFERENCES SolicitudHospitalaria(idSolicitud) ON DELETE RESTRICT,
-    idPersonalSalud INT NOT NULL REFERENCES PersonalSalud(idPersona) ON DELETE RESTRICT,
-    codigoGuiaDespacho VARCHAR(50) NOT NULL UNIQUE,
+    idSolicitud INT NOT NULL,
+    codigoGuiaDespacho VARCHAR(35) NOT NULL UNIQUE,
     fechaHoraSalida TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     receptorEntrega VARCHAR(100) NOT NULL,
-    temperaturaDespacho NUMERIC(4,2) NOT NULL,
-    estadoEntrega VARCHAR(30) NOT NULL DEFAULT 'En Transito' CHECK (estadoEntrega IN ('En Transito', 'Entregado Conforme', 'Rechazado Cadena Frio'))
+    temperaturaDespacho NUMERIC(4,1) NOT NULL,
+    estadoEntrega VARCHAR(30) NOT NULL DEFAULT 'En Transito' CHECK (estadoEntrega IN ('En Transito', 'En Transito Urgente', 'Entregado en Destino')),
+    CONSTRAINT fk_despacho_solicitud FOREIGN KEY (idSolicitud)
+        REFERENCES SolicitudHospitalaria (idSolicitud)
 );
 
 CREATE TABLE DetalleDespacho (
     idDetalleDespacho SERIAL PRIMARY KEY,
-    idDespacho INT NOT NULL REFERENCES ComprobanteDespacho(idDespacho) ON DELETE CASCADE,
-    idEjemplarBolsa INT NOT NULL UNIQUE REFERENCES EjemplarBolsa(idEjemplarBolsa) ON DELETE RESTRICT,
-    temperaturaEntrega NUMERIC(4,2) NOT NULL,
-    observacionesEntrega TEXT
+    idDespacho INT NOT NULL,
+    idEjemplarBolsa INT NOT NULL,
+    CONSTRAINT fk_detalledespacho_despacho FOREIGN KEY (idDespacho)
+        REFERENCES ComprobanteDespacho (idDespacho) ON DELETE CASCADE,
+    CONSTRAINT fk_detalledespacho_ejemplar FOREIGN KEY (idEjemplarBolsa)
+        REFERENCES EjemplarBolsa (idEjemplarBolsa)
 );
 
 CREATE TABLE ComprobantePago (
     idComprobante SERIAL PRIMARY KEY,
-    idSolicitud INT NOT NULL UNIQUE REFERENCES SolicitudHospitalaria(idSolicitud) ON DELETE RESTRICT,
-    idPersonalSalud INT NOT NULL REFERENCES PersonalSalud(idPersona) ON DELETE RESTRICT,
-    numeroReciboFactura VARCHAR(50) NOT NULL UNIQUE,
-    fechaEmision TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    idSolicitud INT NOT NULL UNIQUE,
+    numeroReciboFactura VARCHAR(35) NOT NULL UNIQUE,
     conceptoServicio VARCHAR(150) NOT NULL,
-    montoTotal NUMERIC(10,2) NOT NULL CHECK (montoTotal >= 0),
-    metodoPago VARCHAR(50) NOT NULL CHECK (metodoPago IN ('Efectivo', 'Transferencia QR', 'Tarjeta Debito/Credito', 'Convenio Institucional')),
-    estadoPago VARCHAR(30) NOT NULL DEFAULT 'Pagado' CHECK (estadoPago IN ('Pendiente', 'Pagado', 'Exonerado'))
+    montoTotal NUMERIC(10,2) NOT NULL,
+    estadoPago VARCHAR(30) NOT NULL CHECK (estadoPago IN ('Pagado', 'Exonerado SUS', 'Convenio Institucional', 'Pendiente')),
+    metodoPago VARCHAR(50) NOT NULL,
+    fechaHoraPago TIMESTAMP,
+    CONSTRAINT fk_pago_solicitud FOREIGN KEY (idSolicitud)
+        REFERENCES SolicitudHospitalaria (idSolicitud)
 );
 
--- ============================================================================
--- ÍNDICES ESTRATÉGICOS
--- ============================================================================
+CREATE TABLE ReposicionPendiente (
+    idReposicion SERIAL PRIMARY KEY,
+    idSolicitud INT NOT NULL UNIQUE,
+    cantidadBolsasAReponer INT NOT NULL CHECK (cantidadBolsasAReponer >= 0),
+    cantidadRecuperada INT NOT NULL DEFAULT 0 CHECK (cantidadRecuperada >= 0),
+    fechaLimiteReposicion DATE NOT NULL,
+    estadoReposicion VARCHAR(25) NOT NULL DEFAULT 'Pendiente' CHECK (estadoReposicion IN ('Pendiente', 'Parcial', 'Liquidada', 'Incumplida')),
+    CONSTRAINT fk_reposicion_solicitud FOREIGN KEY (idSolicitud)
+        REFERENCES SolicitudHospitalaria (idSolicitud)
+);
 
-CREATE INDEX idx_persona_ci ON Persona(ci);
+CREATE TABLE CompromisoDonacion (
+    idCompromiso SERIAL PRIMARY KEY,
+    idReposicion INT NOT NULL,
+    idPersonaFirmante INT NOT NULL,
+    idDonante INT,
+    fechaCompromiso DATE NOT NULL DEFAULT CURRENT_DATE,
+    donacionConcretada BOOLEAN NOT NULL DEFAULT FALSE,
+    volumenDonadoEfectivoMl INT DEFAULT 0,
+    estadoCompromiso VARCHAR(25) NOT NULL DEFAULT 'Vigente' CHECK (estadoCompromiso IN ('Vigente', 'Cumplido', 'Anulado')),
+    CONSTRAINT fk_compromiso_reposicion FOREIGN KEY (idReposicion)
+        REFERENCES ReposicionPendiente (idReposicion) ON DELETE CASCADE,
+    CONSTRAINT fk_compromiso_firmante FOREIGN KEY (idPersonaFirmante)
+        REFERENCES Persona (idPersona),
+    CONSTRAINT fk_compromiso_donante FOREIGN KEY (idDonante)
+        REFERENCES Donante (idPersona) ON DELETE SET NULL
+);
+
+-- Índices estratégicos
+CREATE INDEX idx_usuario_persona ON Usuario(idPersona);
+CREATE INDEX idx_usuariorol_usuario ON UsuarioRol(idUsuario);
+CREATE INDEX idx_usuariorol_rol ON UsuarioRol(idRol);
+CREATE INDEX idx_bitacora_usuario ON BitacoraAuditoria(idUsuario);
+CREATE INDEX idx_bitacora_fechahora ON BitacoraAuditoria(fechaHora);
+CREATE INDEX idx_extraccion_persona ON ExtraccionDonacion(idPersonaDonante);
+CREATE INDEX idx_unidad_extraccion ON UnidadSangreTotal(idExtraccion);
+CREATE INDEX idx_ejemplar_madre ON EjemplarBolsa(idUnidadMadre);
 CREATE INDEX idx_ejemplar_estado ON EjemplarBolsa(estadoBolsaK);
-CREATE INDEX idx_ejemplar_componente_caducidad ON EjemplarBolsa(tipoComponente, fechaCaducidad);
-CREATE INDEX idx_solicitud_estado_prioridad ON SolicitudHospitalaria(estadoSolicitud, prioridadSolicitud);
-CREATE INDEX idx_reposicion_estado ON ReposicionPendiente(estadoReposicion);
-CREATE INDEX idx_unidad_madre_codigo ON UnidadSangreTotal(codigoBolsaMadre);
-CREATE INDEX idx_compromiso_solicitud ON CompromisoDonacion(idSolicitud);
-CREATE INDEX idx_bitacora_usuario_fecha ON BitacoraAuditoria(idUsuario, fechaHora);
+CREATE INDEX idx_solicitud_estado ON SolicitudHospitalaria(estadoSolicitud);

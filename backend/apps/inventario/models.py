@@ -1,6 +1,6 @@
 """
 Modelos ORM para la app Inventario de HemoVida.
-Mapeo de tablas existentes en PostgreSQL:
+Mapeo de tablas de PostgreSQL (Supabase):
 - gruposanguineo
 - parametrostockminimo
 - ejemplarbolsa
@@ -41,6 +41,7 @@ class ParametroStockMinimo(models.Model):
         ('Plasma Fresco Congelado', 'Plasma Fresco Congelado'),
         ('Concentrado Plaquetario', 'Concentrado Plaquetario'),
         ('Crioprecipitado', 'Crioprecipitado'),
+        ('Sangre Total', 'Sangre Total'),
     ]
 
     idParametro = models.AutoField(primary_key=True, db_column='idparametro')
@@ -57,7 +58,6 @@ class ParametroStockMinimo(models.Model):
     )
     stockMinimoSeguridad = models.IntegerField(db_column='stockminimoseguridad')
     stockCriticoAlerta = models.IntegerField(db_column='stockcriticoalerta')
-    stockOptimo = models.IntegerField(default=0, db_column='stockoptimo')
 
     class Meta:
         managed = False
@@ -81,7 +81,7 @@ class EjemplarBolsa(models.Model):
     ]
 
     idEjemplarBolsa = models.AutoField(primary_key=True, db_column='idejemplarbolsa')
-    idUnidadMadre = models.IntegerField(db_column='idunidadmadre')
+    idUnidadMadre = models.IntegerField(null=True, blank=True, db_column='idunidadmadre')
     grupo = models.ForeignKey(
         GrupoSanguineo,
         on_delete=models.RESTRICT,
@@ -89,18 +89,17 @@ class EjemplarBolsa(models.Model):
         related_name='bolsas'
     )
     idUbicacion = models.IntegerField(null=True, blank=True, db_column='idubicacion')
-    codigoEjemplarK = models.CharField(max_length=50, unique=True, db_column='codigoejemplark')
+    codigoEjemplarK = models.CharField(max_length=40, unique=True, db_column='codigoejemplark')
     tipoComponente = models.CharField(
         max_length=50,
         choices=ParametroStockMinimo.COMPONENTES_CHOICES,
         db_column='tipocomponente'
     )
     volumenMl = models.IntegerField(db_column='volumenml')
-    fechaFraccionamiento = models.DateTimeField(db_column='fechafraccionamiento')
+    fechaExtraccion = models.DateField(db_column='fechaextraccion')
     fechaCaducidad = models.DateField(db_column='fechacaducidad')
-    esExclusivoAutologo = models.BooleanField(default=False, db_column='esexclusivoautologo')
     estadoBolsaK = models.CharField(
-        max_length=30,
+        max_length=25,
         default='En Cuarentena',
         choices=ESTADOS_BOLSA,
         db_column='estadobolsak'

@@ -1,15 +1,15 @@
 """
-Serializadores para la app Donantes (CU05).
+Serializadores para la app Donantes (CU05) adaptados al modelo PosibleDonador / Donante.
 """
 from rest_framework import serializers
-from datetime import date, timedelta
-from .models import Donante, ExtraccionDonacion
+from .models import Donante, PosibleDonador, ExtraccionDonacion
 
 class ExtraccionItemSerializer(serializers.ModelSerializer):
     """
     Serializador resumen de extracciones para la línea de tiempo del carnet.
     """
     enfermeroPuncion = serializers.SerializerMethodField()
+    modalidadDonacion = serializers.SerializerMethodField()
 
     class Meta:
         model = ExtraccionDonacion
@@ -28,13 +28,37 @@ class ExtraccionItemSerializer(serializers.ModelSerializer):
             return obj.personalSalud.persona.nombreCompleto
         return 'Personal Autorizado'
 
+    def get_modalidadDonacion(self, obj):
+        return 'Sangre Total'
+
+
+class PosibleDonadorResponseSerializer(serializers.Serializer):
+    """
+    Serializador para postulantes en estado inicial de Posible Donador (sin análisis serológico).
+    """
+    esPosibleDonador = serializers.BooleanField(default=True)
+    ci = serializers.CharField()
+    nombres = serializers.CharField()
+    apellidos = serializers.CharField()
+    donante = serializers.CharField()
+    sexo = serializers.CharField()
+    celular = serializers.CharField(allow_null=True)
+    direccion = serializers.CharField(allow_null=True)
+    ocupacion = serializers.CharField(allow_null=True)
+    nacionalidad = serializers.CharField(default='Boliviana')
+    estadoAptitud = serializers.CharField()
+    tieneAnalisis = serializers.BooleanField()
+    fechaRegistroPostulante = serializers.DateField()
+    estaHabilitadoParaDonar = serializers.BooleanField(default=False)
+    mensaje = serializers.CharField()
+
 
 class CarnetDigitalResponseSerializer(serializers.Serializer):
     """
     Serializador que estructura la salida del Carnet Digital (CU05)
-    para el componente React 'DigitalCardModal'.
-    Integra Consulta C1 (biometría y días de espera) y Consulta C3 (histórico acumulado).
+    para donantes calificados que superaron el tamizaje serológico.
     """
+    esPosibleDonador = serializers.BooleanField(default=False)
     carnetDigitalCodigo = serializers.CharField()
     ci = serializers.CharField()
     nombres = serializers.CharField()

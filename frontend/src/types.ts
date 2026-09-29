@@ -1,17 +1,62 @@
 export type BloodGroup = 'O' | 'A' | 'B' | 'AB';
 export type RhFactor = 'Positivo' | 'Negativo';
 
-export type AppRole = 'donante' | 'recepcion' | 'despacho' | 'administrador' | 'medico' | 'bioquimico';
+export type RoleCode = 
+  | 'ADMIN' 
+  | 'POSIBLE_DONADOR' 
+  | 'DONANTE' 
+  | 'RECEPTOR' 
+  | 'DOC_TRIAJE' 
+  | 'PERS_COLECTA' 
+  | 'BIOQ_INTEGRAL' 
+  | 'TEC_LOGISTICA' 
+  | 'MED_SOLICITANTE';
 
-export type StaffRole = 'recepcion' | 'despacho' | 'administrador' | 'medico' | 'bioquimico';
+export interface RolDisponible {
+  id: number;
+  codigo: RoleCode;
+  nombre: string;
+}
 
-export type UserSession = 
-  | { role: 'donante'; user: UserDonor }
-  | { role: 'recepcion'; staff: StaffAccount }
-  | { role: 'despacho'; staff: StaffAccount }
-  | { role: 'administrador'; staff: StaffAccount }
-  | { role: 'medico'; staff: StaffAccount }
-  | { role: 'bioquimico'; staff: StaffAccount };
+export type AppRole = 
+  | RoleCode
+  | 'donante' 
+  | 'recepcion' 
+  | 'despacho' 
+  | 'administrador' 
+  | 'medico' 
+  | 'bioquimico';
+
+export type StaffRole = 
+  | 'ADMIN' 
+  | 'DOC_TRIAJE' 
+  | 'PERS_COLECTA' 
+  | 'BIOQ_INTEGRAL' 
+  | 'TEC_LOGISTICA' 
+  | 'MED_SOLICITANTE'
+  | 'recepcion' 
+  | 'despacho' 
+  | 'administrador' 
+  | 'medico' 
+  | 'bioquimico';
+
+export interface UserSession {
+  role: AppRole;
+  activeRole: RoleCode;
+  usuarioId: number;
+  nombreCompleto: string;
+  username: string;
+  email: string;
+  token?: string;
+  rolesDisponibles: RolDisponible[];
+  user?: UserDonor;
+  staff?: StaffAccount;
+  posibleDonador?: {
+    estadoAptitud: 'No Apto' | 'En Evaluacion' | 'Apto';
+    tieneAnalisis: boolean;
+    fechaRegistroPostulante?: string;
+  };
+}
 
 export interface StaffAccount {
   id: string;

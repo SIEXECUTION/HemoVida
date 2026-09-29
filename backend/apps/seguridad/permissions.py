@@ -1,11 +1,11 @@
 """
-Permisos RBAC para el sistema HemoVida.
+Permisos RBAC para el sistema HemoVida basados en UsuarioRol.
 """
 from rest_framework import permissions
 
 class IsAdminRole(permissions.BasePermission):
     """
-    Permite el acceso exclusivamente a usuarios con rol de Administrador.
+    Permite el acceso exclusivamente a usuarios con rol de Administrador (ADMIN).
     """
     message = "Se requieren privilegios de Administrador del Sistema para realizar esta acción."
 
@@ -17,9 +17,10 @@ class IsAdminRole(permissions.BasePermission):
         if getattr(request.user, 'estado', None) != 'Activo':
             return False
 
-        # Comprobar nombre de rol
-        rol_nombre = getattr(getattr(request.user, 'rol', None), 'nombreRol', '')
-        return 'Administrador' in rol_nombre or getattr(request.user, 'is_staff', False)
+        # Comprobar rol ADMIN en la tabla UsuarioRol
+        if hasattr(request.user, 'roles'):
+            return request.user.roles.filter(codigoRol='ADMIN').exists()
+        return False
 
 
 class IsHealthStaffRole(permissions.BasePermission):
@@ -35,13 +36,14 @@ class IsHealthStaffRole(permissions.BasePermission):
         if getattr(request.user, 'estado', None) != 'Activo':
             return False
 
-        rol_nombre = getattr(getattr(request.user, 'rol', None), 'nombreRol', '')
-        roles_permitidos = [
-            'Administrador del Sistema',
-            'Secretaría y Admisión',
-            'Médico Evaluador de Triaje',
-            'Bioquímico Serólogo',
-            'Bioquímico Inmunohematólogo',
-            'Técnico de Fraccionamiento y Almacén',
+        roles_salud = [
+            'ADMIN',
+            'DOC_TRIAJE',
+            'PERS_COLECTA',
+            'BIOQ_INTEGRAL',
+            'TEC_LOGISTICA',
+            'MED_SOLICITANTE'
         ]
-        return any(rol in rol_nombre for rol in roles_permitidos)
+        if hasattr(request.user, 'roles'):
+            return request.user.roles.filter(codigoRol__in=roles_salud).exists()
+        return False

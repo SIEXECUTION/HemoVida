@@ -1,7 +1,10 @@
 """
-Vistas de API REST para Seguridad, Autenticación y Auditoría (CU01, CU02, CU03).
+Vistas de API REST para Seguridad, Autenticación y Auditoría (CU01, CU02, CU03)
+con soporte para RBAC múltiple, Auto-registro de Posible Donador y Alta de Personal de Salud.
 """
 import os
+import random
+from datetime import date
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -10,26 +13,31 @@ from django.db import transaction
 from django.db.models import Q
 from django.db.models.functions import ExtractHour
 from django.shortcuts import get_object_or_404
+from django.core.cache import cache
+from django.conf import settings
+from django.contrib.auth.hashers import make_password
 
-from .models import Usuario, PersonalSalud, BitacoraAuditoria, Rol
+from .models import Usuario, PersonalSalud, BitacoraAuditoria, Rol, UsuarioRol, Persona
 from .serializers import (
     LoginSerializer,
-    UsuarioRegistrarSerializer,
+    AutoRegistroPosibleDonadorSerializer,
+    CrearPersonalSaludSerializer,
     PersonalSaludListSerializer,
     UsuarioEstadoUpdateSerializer,
     BitacoraAuditoriaSerializer,
 )
-from .permissions import IsAdminRole
+from .permissions import IsAdminRole, IsHealthStaffRole
 from .utils import get_client_ip, registrar_auditoria
+from .validators import validate_password_complexity
 
 # ============================================================================
-# [CU01] Autenticar Usuario e Iniciar Sesión
+# [CU01] Autenticar Usuario e Iniciar Sesión (Selector de Perfiles)
 # ============================================================================
 class LoginView(APIView):
     """
     Endpoint: POST /api/auth/login/
     Autentica credenciales institucionales, verifica estado 'Activo'
-    y registra automáticamente el acceso en BitacoraAuditoria.
+    y retorna la estructura de consumo con 'rolesDisponibles' para el modal selector de perfiles.
     """
     permission_classes = [AllowAny]
 
@@ -44,78 +52,113 @@ class LoginView(APIView):
 
         # Auditoría automática del acceso exitoso
         try:
-            usuario = Usuario.objects.get(idUsuario=user_id)
+            usuario = Usuario.objects.select_related('persona').prefetch_related('roles').get(idUsuario=user_id)
             ip_origen = get_client_ip(request)
+            primer_rol = usuario.roles.first()
+            rol_nombre = primer_rol.nombreRol if primer_rol else 'Posible Donador'
             registrar_auditoria(
                 usuario=usuario,
                 accion='Inicio de Sesión Exitoso',
                 tabla='Usuario',
                 id_registro=user_id,
-                ip_origen=ip_origen
+                ip_origen=ip_origen,
+                rol_activo=rol_nombre
             )
-        except Exception:
-            # No bloquea el login si falla la auditoría externa
-            pass
+        except Exception as e:
+            print(f"[WARN AUDITORIA LOGIN]: {e}")
 
         return Response(data, status=status.HTTP_200_OK)
 
 
 # ============================================================================
-# [CU02] Gestionar Cuentas de Personal y Roles RBAC
+# PROCEDIMIENTO 1: Auto-Registro Público de Posible Donador (Sin Admin)
 # ============================================================================
-class UsuarioRegistrarView(APIView):
+class AutoRegistroPosibleDonadorView(APIView):
     """
-    Endpoint: POST /api/usuarios/registrar/
-    Crea una nueva cuenta de usuario aplicando la política de contraseña segura.
-    Requiere rol de Administrador y audita la acción.
+    Endpoint: POST /api/auth/autoregistro/
+    Permite que un postulante a donante se cree una cuenta libremente.
+    Nace con rol Posible Donador (POSIBLE_DONADOR), estado No Apto y sin análisis previo.
     """
-    permission_classes = [IsAdminRole]
+    permission_classes = [AllowAny]
 
-    @transaction.atomic
     def post(self, request):
-        serializer = UsuarioRegistrarSerializer(data=request.data)
+        serializer = AutoRegistroPosibleDonadorSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        usuario = serializer.save()
-
-        # Registro en Bitácora de Auditoría
-        ip_origen = get_client_ip(request)
-        registrar_auditoria(
-            usuario=request.user,
-            accion=f"Alta de usuario institucional: {usuario.username} con rol {usuario.rol.nombreRol}",
-            tabla='Usuario',
-            id_registro=usuario.idUsuario,
-            ip_origen=ip_origen
-        )
-
-        return Response({
-            "message": "Usuario creado satisfactoriamente cumpliendo las directivas de seguridad.",
-            "usuario": {
-                "idUsuario": usuario.idUsuario,
-                "username": usuario.username,
-                "email": usuario.email,
-                "rol": usuario.rol.nombreRol,
-                "estado": usuario.estado
-            }
-        }, status=status.HTTP_201_CREATED)
+        try:
+            usuario = serializer.save()
+            return Response({
+                "success": True,
+                "message": "Registro completado con éxito como Posible Donador. Estado inicial: No Apto (Sin análisis serológico).",
+                "usuario": {
+                    "idUsuario": usuario.idUsuario,
+                    "username": usuario.username,
+                    "email": usuario.email,
+                    "nombreCompleto": usuario.persona.nombreCompleto if usuario.persona else usuario.username,
+                    "rol": "Posible Donador",
+                    "codigoRol": "POSIBLE_DONADOR"
+                }
+            }, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response(
+                {"detail": f"Error al procesar el auto-registro: {str(e)}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
 
+# ============================================================================
+# PROCEDIMIENTO 2: Alta de Personal de Salud (Solo Ejecutable por Administrador)
+# ============================================================================
+class CrearPersonalSaludView(APIView):
+    """
+    Endpoint: POST /api/personal/crear/
+    Permite a un Administrador dar de alta cuentas para el personal operativo de salud
+    (Doctor de Triaje, Personal de Colecta, Bioquímico Integral, Técnico de Logística, etc.).
+    """
+    permission_classes = [IsAdminRole]
+
+    def post(self, request):
+        serializer = CrearPersonalSaludSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            nuevo_usuario = serializer.create_for_admin(request.user, serializer.validated_data)
+            return Response({
+                "success": True,
+                "message": "Personal de salud registrado y acreditado satisfactoriamente.",
+                "usuario": {
+                    "idUsuario": nuevo_usuario.idUsuario,
+                    "username": nuevo_usuario.username,
+                    "email": nuevo_usuario.email,
+                    "cargo": nuevo_usuario.persona.personal_salud.cargo if hasattr(nuevo_usuario.persona, 'personal_salud') else '',
+                    "registroProfesional": nuevo_usuario.persona.personal_salud.registroProfesional if hasattr(nuevo_usuario.persona, 'personal_salud') else '',
+                    "roles": [r.codigoRol for r in nuevo_usuario.roles.all()]
+                }
+            }, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response(
+                {"detail": f"Error al crear personal de salud: {str(e)}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+
+# ============================================================================
+# [CU02] Matriz de Personal de Salud Clasificados por Rol Institucional
+# ============================================================================
 class PersonalSaludListView(APIView):
     """
     Endpoint: GET /api/personal/
-    Replicación de la Consulta C4 / Consulta 6:
-    Matriz de usuarios del personal de salud clasificados por rol institucional.
+    Replicación de la Matriz de personal de salud clasificados por rol institucional.
     """
     permission_classes = [IsAdminRole]
 
     def get(self, request):
-        # Consulta C4: Personal con cuenta de usuario y rol institucional
         personal_qs = PersonalSalud.objects.select_related(
             'persona', 
-            'persona__usuario', 
-            'persona__usuario__rol'
-        ).all()
+            'persona__usuario'
+        ).prefetch_related('persona__usuario__roles').all()
 
         serializer = PersonalSaludListSerializer(personal_qs, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -148,7 +191,8 @@ class UsuarioEstadoUpdateView(APIView):
             accion=f"Actualización de estado de usuario '{usuario.username}': {estado_anterior} -> {nuevo_estado}",
             tabla='Usuario',
             id_registro=usuario.idUsuario,
-            ip_origen=ip_origen
+            ip_origen=ip_origen,
+            rol_activo='Administrador'
         )
 
         return Response({
@@ -166,28 +210,28 @@ class BitacoraAuditoriaListView(APIView):
     """
     Endpoint: GET /api/auditoria/
     Filtros soportados:
-    - ?q=TEXT (Búsqueda en funcionario, username, CI, tabla, acción, IP)
+    - ?q=TEXT
     - ?fecha_inicio=YYYY-MM-DD
     - ?fecha_fin=YYYY-MM-DD
     - ?id_usuario=INT
-    - ?tabla_afectada=STR (Ej. Usuario, Donante, AnalisisInmunoSerologico, EjemplarBolsa, etc.)
-    - ?fuera_turno=true (Ejecuta la Subconsulta B2 / Consulta 8: 19:00 a 07:00 en laboratorio)
+    - ?tabla_afectada=STR
+    - ?rol_activo=STR
+    - ?fuera_turno=true
     """
     permission_classes = [AllowAny]
 
     def get(self, request):
         queryset = BitacoraAuditoria.objects.select_related(
             'usuario',
-            'usuario__rol',
             'usuario__persona'
-        ).all()
+        ).prefetch_related('usuario__roles').all()
 
-        # Filtro especial: Subconsulta B2 (Operaciones fuera del turno central 19:00 - 07:00)
+        # Filtro especial: Operaciones fuera del turno central 19:00 - 07:00
         fuera_turno = request.query_params.get('fuera_turno', '').lower() in ('true', '1')
         if fuera_turno:
-            roles_laboratorio = ['Bioquímico Serólogo', 'Técnico de Fraccionamiento y Almacén']
+            roles_lab = ['BIOQ_INTEGRAL', 'Bioquímico(a) Integral', 'Bioquímico Serólogo', 'TEC_LOGISTICA']
             queryset = queryset.filter(
-                usuario__rol__nombreRol__in=roles_laboratorio
+                Q(rolActivo__in=roles_lab) | Q(usuario__roles__codigoRol__in=roles_lab)
             ).annotate(
                 hora=ExtractHour('fechaHora')
             ).filter(
@@ -208,6 +252,11 @@ class BitacoraAuditoriaListView(APIView):
         if id_usuario:
             queryset = queryset.filter(usuario__idUsuario=id_usuario)
 
+        # Filtro por rol activo
+        rol_activo_param = request.query_params.get('rol_activo') or request.query_params.get('rolActivo')
+        if rol_activo_param and rol_activo_param.lower() != 'all':
+            queryset = queryset.filter(rolActivo__icontains=rol_activo_param)
+
         # Filtro por tabla afectada
         tabla_afectada = request.query_params.get('tabla_afectada')
         if tabla_afectada and tabla_afectada.lower() != 'all':
@@ -223,12 +272,12 @@ class BitacoraAuditoriaListView(APIView):
             queryset = queryset.filter(
                 Q(accionRealizada__icontains=query_text) |
                 Q(tablaAfectada__icontains=query_text) |
+                Q(rolActivo__icontains=query_text) |
                 Q(ipOrigen__icontains=query_text) |
                 Q(usuario__username__icontains=query_text) |
                 Q(usuario__persona__nombres__icontains=query_text) |
                 Q(usuario__persona__apellidos__icontains=query_text) |
-                Q(usuario__persona__ci__icontains=query_text) |
-                Q(usuario__persona__nacionalidad__icontains=query_text)
+                Q(usuario__persona__ci__icontains=query_text)
             )
 
         queryset = queryset.order_by('-fechaHora')
@@ -243,12 +292,13 @@ class BitacoraAuditoriaListView(APIView):
     def post(self, request):
         """
         Endpoint: POST /api/auditoria/
-        Registra un evento de auditoría forense directamente en la tabla BitacoraAuditoria de PostgreSQL/Supabase.
+        Registra un evento de auditoría forense con rolActivo.
         """
         accion = request.data.get('accion') or request.data.get('accionRealizada') or 'Operación en Plataforma'
         tabla = request.data.get('tabla') or request.data.get('tablaAfectada') or 'Usuario'
         id_reg = request.data.get('idRegistroAfectado') or request.data.get('id_registro', 0)
         id_usuario = request.data.get('idUsuario')
+        rol_activo = request.data.get('rolActivo') or request.data.get('rol_activo') or request.data.get('rol', '')
         ip_origen = get_client_ip(request)
 
         usuario_obj = None
@@ -267,7 +317,8 @@ class BitacoraAuditoriaListView(APIView):
             accion=accion,
             tabla=tabla,
             id_registro=id_registro_val,
-            ip_origen=ip_origen
+            ip_origen=ip_origen,
+            rol_activo=rol_activo
         )
 
         serializer = BitacoraAuditoriaSerializer(evento)
@@ -275,19 +326,11 @@ class BitacoraAuditoriaListView(APIView):
 
 
 # ============================================================================
-# RECUPERACIÓN Y MODIFICACIÓN DE CONTRASEÑA CON TOKEN / CLAVE ACTUAL
+# RECUPERACIÓN Y MODIFICACIÓN DE CONTRASEÑA
 # ============================================================================
-import random
-from django.core.cache import cache
-from django.core.mail import send_mail
-from django.conf import settings
-from .validators import validate_password_complexity
-from django.contrib.auth.hashers import make_password
-
 class PasswordResetRequestView(APIView):
     """
     Endpoint: POST /api/auth/recuperar-password/solicitar/
-    Genera un token de 6 dígitos válido por 15 minutos y lo envía al correo.
     """
     permission_classes = [AllowAny]
 
@@ -343,26 +386,16 @@ class PasswordResetRequestView(APIView):
                     <span style="font-family: 'Consolas', 'Monaco', monospace; font-size: 36px; font-weight: 800; color: #be123c; letter-spacing: 6px;">{code}</span>
                     <span style="display: block; font-size: 11px; color: #9f1239; margin-top: 8px;">Válido durante 15 minutos</span>
                 </div>
-                <p style="font-size: 13px; color: #64748b;">
-                    Ingrese este código en el sistema para confirmar que esta cuenta de correo electrónico le pertenece y proceder a establecer su nueva contraseña segura.
-                </p>
-                <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #f1f5f9; font-size: 11px; color: #94a3b8;">
-                    <p style="margin: 0;">Por razones de seguridad, nunca comparta este código con nadie. Si no solicitó esta recuperación, puede ignorar este mensaje.</p>
-                </div>
-            </div>
-            <div style="background: #f8fafc; padding: 16px 24px; text-align: center; font-size: 11px; color: #64748b; border-top: 1px solid #e2e8f0;">
-                Banco de Sangre y Servicio de Transfusión HemoVida • Calle Warnes N° 271, Santa Cruz, Bolivia.
             </div>
         </div>
         """
 
         from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', None) or 'Banco de Sangre HemoVida <seguridad@hemovida.org>'
         email_enviado = False
-        email_error_detalle = None
 
-        # 1. Prioridad: Brevo (Sendinblue) API vía HTTPS Puerto 443 (Rápido, confiable, sin bloqueo en Render)
+        # Intentos de envío vía Brevo / Resend / SMTP
         brevo_key = os.getenv('BREVO_API_KEY')
-        if not email_enviado and brevo_key:
+        if brevo_key:
             try:
                 import urllib.request
                 import json
@@ -385,82 +418,8 @@ class PasswordResetRequestView(APIView):
                 with urllib.request.urlopen(brevo_req, timeout=10) as res_brevo:
                     if res_brevo.status in (200, 201):
                         email_enviado = True
-                        email_error_detalle = None
-                        print(f"[INFO EMAIL] Enviado exitosamente vía Brevo API a {email}")
             except Exception as e_brevo:
                 print(f"[ERROR BREVO API]: {e_brevo}")
-                email_error_detalle = f"Brevo API error: {e_brevo}"
-
-        # 2. Prioridad: Resend API vía HTTPS Puerto 443
-        resend_key = os.getenv('RESEND_API_KEY')
-        if not email_enviado and resend_key:
-            try:
-                import urllib.request
-                import json
-                req_data = json.dumps({
-                    "from": os.getenv('RESEND_FROM', 'onboarding@resend.dev'),
-                    "to": [email],
-                    "subject": asunto,
-                    "html": mensaje_html,
-                    "text": mensaje_texto
-                }).encode('utf-8')
-                resend_req = urllib.request.Request(
-                    "https://api.resend.com/emails",
-                    data=req_data,
-                    headers={
-                        "Authorization": f"Bearer {resend_key}",
-                        "Content-Type": "application/json"
-                    }
-                )
-                with urllib.request.urlopen(resend_req, timeout=10) as res_api:
-                    if res_api.status in (200, 201):
-                        email_enviado = True
-                        email_error_detalle = None
-                        print(f"[INFO EMAIL] Enviado exitosamente vía Resend API a {email}")
-            except Exception as e_resend:
-                print(f"[ERROR RESEND API]: {e_resend}")
-                email_error_detalle = f"Resend API error: {e_resend}"
-
-        # 3. Fallback a SMTP solo si no hay API Keys configuradas
-        if not email_enviado and not brevo_key and not resend_key:
-            try:
-                from django.core.mail import EmailMultiAlternatives
-                msg = EmailMultiAlternatives(asunto, mensaje_texto, from_email, [email])
-                msg.attach_alternative(mensaje_html, "text/html")
-                msg.send(fail_silently=False)
-                email_enviado = True
-            except Exception as e:
-                email_error_detalle = str(e)
-                print(f"[ERROR EMAIL] Fallo intento primario SMTP: {e}")
-
-        # 4. Fallback directo a SSL puerto 465 si SMTP falló
-        if not email_enviado and not brevo_key and not resend_key:
-            smtp_user = getattr(settings, 'EMAIL_HOST_USER', '')
-            smtp_pass = getattr(settings, 'EMAIL_HOST_PASSWORD', '')
-            smtp_host = getattr(settings, 'EMAIL_HOST', 'smtp.gmail.com')
-            if smtp_user and smtp_pass:
-                try:
-                    import smtplib
-                    from email.mime.multipart import MIMEMultipart
-                    from email.mime.text import MIMEText
-                    server = smtplib.SMTP_SSL(smtp_host, 465, timeout=5)
-                    server.login(smtp_user, smtp_pass)
-                    
-                    email_msg = MIMEMultipart('alternative')
-                    email_msg['Subject'] = asunto
-                    email_msg['From'] = from_email
-                    email_msg['To'] = email
-                    email_msg.attach(MIMEText(mensaje_texto, 'plain'))
-                    email_msg.attach(MIMEText(mensaje_html, 'html'))
-                    
-                    server.sendmail(from_email, [email], email_msg.as_string())
-                    server.quit()
-                    email_enviado = True
-                    email_error_detalle = None
-                    print(f"[INFO EMAIL] Enviado exitosamente vía SSL puerto 465 a {email}")
-                except Exception as e_ssl:
-                    print(f"[ERROR EMAIL SSL 465]: {e_ssl}")
-                    email_error_detalle = f"{email_error_detalle} | SSL 465: {e_ssl}"
 
         if usuario:
             try:
@@ -469,29 +428,23 @@ class PasswordResetRequestView(APIView):
                     accion=f"Solicitud de token de recuperación de contraseña para {email}",
                     tabla='Usuario',
                     id_registro=usuario.idUsuario,
-                    ip_origen=get_client_ip(request)
+                    ip_origen=get_client_ip(request),
+                    rol_activo='Usuario'
                 )
             except Exception:
                 pass
 
-        resp_payload = {
+        return Response({
             "success": True,
-            "message": f"Se ha enviado un código de verificación de 6 dígitos al correo {email}. Revise su bandeja de entrada (y carpeta de spam o correo no deseado).",
+            "message": f"Se ha enviado un código de verificación de 6 dígitos al correo {email}.",
             "email": email,
             "email_enviado": email_enviado
-        }
-        if not email_enviado and email_error_detalle:
-            resp_payload["advertencia_smtp"] = (
-                "Para entrega externa de correo, configure las credenciales SMTP (EMAIL_HOST_USER, EMAIL_HOST_PASSWORD) en Render."
-            )
-
-        return Response(resp_payload, status=status.HTTP_200_OK)
+        }, status=status.HTTP_200_OK)
 
 
 class PasswordResetConfirmView(APIView):
     """
     Endpoint: POST /api/auth/recuperar-password/confirmar/
-    Valida el token de 6 dígitos y crea una nueva contraseña.
     """
     permission_classes = [AllowAny]
 
@@ -521,29 +474,12 @@ class PasswordResetConfirmView(APIView):
             err_msg = str(err.messages if hasattr(err, 'messages') else err)
             return Response({"detail": err_msg}, status=status.HTTP_400_BAD_REQUEST)
 
-        try:
-            usuario = Usuario.objects.filter(email__iexact=email).first()
-            if not usuario:
-                # Si el usuario no existe aún en la base de datos (p.ej. donante nuevo), lo creamos
-                rol_donante = Rol.objects.filter(nombreRol__icontains='donante').first() or Rol.objects.first()
-                base_user = email.split('@')[0]
-                username = base_user
-                idx = 1
-                while Usuario.objects.filter(username=username).exists():
-                    username = f"{base_user}{idx}"
-                    idx += 1
-                usuario = Usuario.objects.create(
-                    username=username,
-                    email=email,
-                    passwordHash=make_password(new_password),
-                    rol=rol_donante,
-                    estado='Activo'
-                )
-            else:
-                usuario.passwordHash = make_password(new_password)
-                usuario.save(update_fields=['passwordHash'])
-        except Exception as e:
-            print(f"[WARN DB] Error al actualizar contraseña en base de datos: {e}")
+        usuario = Usuario.objects.filter(email__iexact=email).first()
+        if usuario:
+            usuario.passwordHash = make_password(new_password)
+            usuario.save(update_fields=['passwordHash'])
+        else:
+            return Response({"detail": "Usuario no encontrado para el correo indicado."}, status=status.HTTP_404_NOT_FOUND)
 
         cache.delete(cache_key)
 
@@ -553,7 +489,8 @@ class PasswordResetConfirmView(APIView):
                 accion=f"Restablecimiento exitoso de contraseña mediante token para {usuario.username}",
                 tabla='Usuario',
                 id_registro=usuario.idUsuario,
-                ip_origen=get_client_ip(request)
+                ip_origen=get_client_ip(request),
+                rol_activo='Usuario'
             )
         except Exception:
             pass
@@ -576,6 +513,7 @@ class PasswordChangeView(APIView):
         current_password = request.data.get('current_password', '')
         token = request.data.get('token', '').strip()
         new_password = request.data.get('new_password', '')
+        rol_activo = request.data.get('rolActivo', 'Usuario')
 
         if not email or not new_password:
             return Response(
@@ -583,10 +521,10 @@ class PasswordChangeView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        usuario = Usuario.objects.filter(email__iexact=email).first()
+        usuario = Usuario.objects.prefetch_related('roles').filter(email__iexact=email).first()
         if not usuario:
             uname = email.split('@')[0]
-            usuario = Usuario.objects.filter(username__iexact=uname).first()
+            usuario = Usuario.objects.prefetch_related('roles').filter(username__iexact=uname).first()
 
         if not usuario:
             # Buscar si existe persona asociada al email, carnet o CI
@@ -601,22 +539,25 @@ class PasswordChangeView(APIView):
                     persona = donante.persona
 
             if persona:
-                rol = Rol.objects.filter(idRol=2).first() or Rol.objects.first()
+                rol_don = Rol.objects.filter(codigoRol='DONANTE').first() or Rol.objects.filter(codigoRol='POSIBLE_DONADOR').first()
                 usuario = Usuario.objects.create(
                     persona=persona,
-                    rol=rol,
                     username=uname[:50],
                     email=email,
                     passwordHash=make_password(new_password),
                     estado='Activo'
                 )
+                if rol_don:
+                    UsuarioRol.objects.create(usuario=usuario, rol=rol_don)
+
                 try:
                     registrar_auditoria(
                         usuario=usuario,
                         accion=f"Creación y asignación de contraseña para donante {usuario.username}",
                         tabla='Usuario',
                         id_registro=usuario.idUsuario,
-                        ip_origen=get_client_ip(request)
+                        ip_origen=get_client_ip(request),
+                        rol_activo='Donante'
                     )
                 except Exception:
                     pass
@@ -664,7 +605,8 @@ class PasswordChangeView(APIView):
                 accion=f"Cambio de contraseña exitoso ({metodo}) para {usuario.username}",
                 tabla='Usuario',
                 id_registro=usuario.idUsuario,
-                ip_origen=get_client_ip(request)
+                ip_origen=get_client_ip(request),
+                rol_activo=rol_activo
             )
         except Exception:
             pass
@@ -673,4 +615,3 @@ class PasswordChangeView(APIView):
             "success": True,
             "message": "Contraseña modificada satisfactoriamente."
         }, status=status.HTTP_200_OK)
-
