@@ -23,7 +23,6 @@ interface PosibleDonadorViewProps {
   onOpenPrecheck: () => void;
   onOpenAppointments: () => void;
   onOpenDigitalCard: () => void;
-  onOpenOtherRoles?: () => void;
 }
 
 export const PosibleDonadorView: React.FC<PosibleDonadorViewProps> = ({
@@ -31,7 +30,6 @@ export const PosibleDonadorView: React.FC<PosibleDonadorViewProps> = ({
   onOpenPrecheck,
   onOpenAppointments,
   onOpenDigitalCard,
-  onOpenOtherRoles,
 }) => {
   const persona = session.user || session.persona || {};
   const estadoAptitud = session.posibleDonador?.estadoAptitud || 'No Apto';
@@ -84,16 +82,6 @@ export const PosibleDonadorView: React.FC<PosibleDonadorViewProps> = ({
               <CreditCard className="w-4 h-4 text-white" />
               <span>Ver mi Carnet Digital</span>
             </button>
-            {onOpenOtherRoles && (
-              <button
-                id="btn-otros-roles-postulante"
-                onClick={onOpenOtherRoles}
-                className="px-5 py-2.5 bg-white/20 hover:bg-white/30 border border-white/30 text-white font-bold text-xs rounded-xl transition-all flex items-center gap-2 cursor-pointer backdrop-blur-xs"
-              >
-                <Briefcase className="w-4 h-4 text-amber-200" />
-                <span>Otros Roles (Área de Salud)</span>
-              </button>
-            )}
           </div>
         </div>
       </div>

@@ -26,7 +26,8 @@ import {
   RefreshCw,
   Moon,
   Globe,
-  UserPlus
+  UserPlus,
+  Briefcase
 } from 'lucide-react';
 import { 
   StaffAccount, 
@@ -50,6 +51,7 @@ interface AdminAuditViewProps {
   onApproveStaff?: (staffId: string) => void;
   onRejectStaff?: (staffId: string) => void;
   onOpenChangePassword?: () => void;
+  onOpenOtherRoles?: () => void;
   onRefreshAuditLogs?: () => Promise<void>;
   isLoadingAudit?: boolean;
   auditError?: string | null;
@@ -66,6 +68,7 @@ export const AdminAuditView: React.FC<AdminAuditViewProps> = ({
   onApproveStaff,
   onRejectStaff,
   onOpenChangePassword,
+  onOpenOtherRoles,
   onRefreshAuditLogs,
   isLoadingAudit = false,
   auditError = null
@@ -238,6 +241,19 @@ export const AdminAuditView: React.FC<AdminAuditViewProps> = ({
               >
                 <KeyRound className="w-3.5 h-3.5 text-rose-300" />
                 <span>Cambiar Contraseña</span>
+              </button>
+            )}
+
+            {onOpenOtherRoles && (
+              <button
+                type="button"
+                id="btn-admin-otros-roles"
+                onClick={onOpenOtherRoles}
+                className="px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 bg-white/10 text-white/90 hover:bg-white/20 border border-white/10"
+                title="Explorar o probar otros roles del área de salud"
+              >
+                <Briefcase className="w-3.5 h-3.5 text-amber-300" />
+                <span>Otros Roles</span>
               </button>
             )}
 

@@ -1020,7 +1020,7 @@ export default function App() {
         onOpenPrecheck={() => setIsPrecheckOpen(true)}
         onOpenChangePassword={() => setIsChangePasswordOpen(true)}
         onSwitchRole={handleSwitchRole}
-        onOpenOtherRoles={() => setIsOtherRolesOpen(true)}
+        onOpenOtherRoles={(activeRole === 'ADMIN' || session?.role === 'administrador') ? () => setIsOtherRolesOpen(true) : undefined}
       />
 
       {/* Main Content Area */}
@@ -1272,7 +1272,6 @@ export default function App() {
             onOpenPrecheck={() => setIsPrecheckOpen(true)}
             onOpenAppointments={() => setActiveTab('citas')}
             onOpenDigitalCard={() => setIsDigitalCardOpen(true)}
-            onOpenOtherRoles={() => setIsOtherRolesOpen(true)}
           />
         )}
 
@@ -1346,6 +1345,7 @@ export default function App() {
             onApproveStaff={handleApproveStaff}
             onRejectStaff={handleRejectStaff}
             onOpenChangePassword={() => setIsChangePasswordOpen(true)}
+            onOpenOtherRoles={() => setIsOtherRolesOpen(true)}
             onRefreshAuditLogs={fetchAuditLogs}
             isLoadingAudit={isLoadingAudit}
             auditError={auditError}
@@ -1404,7 +1404,6 @@ export default function App() {
                 onOpenDigitalCard={() => setIsDigitalCardOpen(true)}
                 onOpenPrecheck={() => setIsPrecheckOpen(true)}
                 onOpenChangePassword={() => setIsChangePasswordOpen(true)}
-                onOpenOtherRoles={() => setIsOtherRolesOpen(true)}
               />
             )}
 

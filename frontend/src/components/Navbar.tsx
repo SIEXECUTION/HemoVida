@@ -306,13 +306,13 @@ export const Navbar: React.FC<NavbarProps> = ({
                   </div>
                 )}
 
-                {/* Botón Explorar Otros Roles (Área de Salud y Movilidad Hospitalaria) */}
-                {onOpenOtherRoles && (
+                {/* Botón Explorar Otros Roles (Exclusivo Perfil de Administración) */}
+                {onOpenOtherRoles && (activeRole === 'ADMIN' || session.role === 'administrador') && (
                   <button
                     id="btn-otros-roles-nav"
                     onClick={onOpenOtherRoles}
                     className="px-2.5 sm:px-3 py-1.5 text-xs font-bold text-slate-800 hover:text-rose-700 bg-white hover:bg-rose-50 border border-slate-300 hover:border-rose-300 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs"
-                    title="Explorar o solicitar otros roles del área de salud (Médico, Bioquímico, Recepción, Despacho)"
+                    title="Explorar o probar otros roles del área de salud (Exclusivo Administración)"
                   >
                     <Briefcase className="w-3.5 h-3.5 text-rose-600" />
                     <span className="font-extrabold text-[11px] sm:text-xs">Otros Roles</span>
@@ -566,8 +566,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </div>
               )}
 
-              {/* Explorar Otros Roles Mobile */}
-              {onOpenOtherRoles && (
+              {/* Explorar Otros Roles Mobile (Exclusivo Perfil de Administración) */}
+              {onOpenOtherRoles && (activeRole === 'ADMIN' || session.role === 'administrador') && (
                 <button
                   id="btn-otros-roles-mobile"
                   onClick={() => {
