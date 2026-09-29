@@ -39,13 +39,17 @@ export const NewDonorModal: React.FC<NewDonorModalProps> = ({
       alert('Por favor ingrese nombres y apellidos completos.');
       return;
     }
+    if (!email.trim() || !email.includes('@')) {
+      alert('El correo electrónico es obligatorio y no se puede dejar en blanco.');
+      return;
+    }
 
     const createdDonor: UserDonor = {
       id: Date.now(),
       ci: ci.trim(),
       nombres: nombres.trim(),
       apellidos: apellidos.trim(),
-      email: email.trim() || `${nombres.toLowerCase().replace(/\s+/g, '.')}.${Math.floor(10 + Math.random() * 90)}@gmail.com`,
+      email: email.trim().toLowerCase(),
       celular: celular.trim() || '+591 700-00000',
       sexo,
       fechaNacimiento,
@@ -163,6 +167,20 @@ export const NewDonorModal: React.FC<NewDonorModalProps> = ({
                 value={fechaNacimiento}
                 onChange={(e) => setFechaNacimiento(e.target.value)}
                 className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-rose-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-slate-700 font-bold mb-1">
+                Correo Electrónico *
+              </label>
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="ejemplo@hemovida.org"
+                className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-rose-500"
               />
             </div>
 

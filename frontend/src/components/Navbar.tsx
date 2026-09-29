@@ -255,6 +255,19 @@ export const Navbar: React.FC<NavbarProps> = ({
               </button>
 
               <button
+                id="nav-tab-carnet-postulante"
+                onClick={() => onSelectTab('carnet')}
+                className={`px-3 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-1.5 cursor-pointer ${
+                  activeTab === 'carnet'
+                    ? 'bg-rose-50 text-rose-700 font-bold'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                }`}
+              >
+                <CreditCard className="w-4 h-4 text-rose-600" />
+                Carnet Digital
+              </button>
+
+              <button
                 id="nav-tab-autoevaluacion-postulante"
                 onClick={onOpenPrecheck}
                 className="px-3 py-2 rounded-lg text-sm font-semibold text-slate-600 hover:text-amber-800 hover:bg-amber-50 transition-colors flex items-center gap-1.5 cursor-pointer"
@@ -292,7 +305,11 @@ export const Navbar: React.FC<NavbarProps> = ({
 
                 {/* Account 0: Posible Donador Info */}
                 {activeRole === 'POSIBLE_DONADOR' && (
-                  <div className="hidden sm:flex items-center gap-2.5 bg-amber-50 px-3.5 py-1.5 rounded-full border border-amber-200">
+                  <div 
+                    onClick={() => onSelectTab('carnet')}
+                    className="hidden sm:flex items-center gap-2.5 bg-amber-50 hover:bg-amber-100/80 px-3.5 py-1.5 rounded-full border border-amber-200 cursor-pointer transition-colors"
+                    title="Ver mi Carnet Digital (Ficha de Postulante)"
+                  >
                     <div className="w-8 h-8 rounded-full bg-amber-500 text-white flex items-center justify-center font-bold text-xs shadow-xs border border-amber-400 shrink-0">
                       <Clock className="w-4 h-4 text-white" />
                     </div>
@@ -300,8 +317,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                       <p className="text-xs font-bold text-amber-950 leading-tight">
                         {session.nombreCompleto || session.user?.nombres}
                       </p>
-                      <p className="text-[10px] text-amber-700 font-semibold leading-tight">
-                        Posible Donador
+                      <p className="text-[10px] text-amber-700 font-semibold leading-tight flex items-center gap-1">
+                        <span>Posible Donador</span>
+                        <span className="text-[9px] bg-amber-200/80 px-1 rounded text-amber-900 font-bold">Ver Carnet</span>
                       </p>
                     </div>
                   </div>
@@ -554,6 +572,13 @@ export const Navbar: React.FC<NavbarProps> = ({
                     className="w-full text-left px-3 py-2 rounded-lg text-sm font-semibold text-slate-800 hover:bg-slate-100 flex items-center gap-2 cursor-pointer"
                   >
                     Estado Postulante
+                  </button>
+                  <button
+                    onClick={() => { onSelectTab('carnet'); setMobileMenuOpen(false); }}
+                    className="w-full text-left px-3 py-2 rounded-lg text-sm font-semibold text-rose-700 hover:bg-rose-50 flex items-center gap-2 cursor-pointer"
+                  >
+                    <CreditCard className="w-4 h-4 text-rose-600" />
+                    Carnet Digital
                   </button>
                   <button
                     onClick={() => { onOpenPrecheck(); setMobileMenuOpen(false); }}

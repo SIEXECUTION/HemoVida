@@ -13,7 +13,8 @@ import {
   HelpCircle,
   Sparkles,
   ArrowRight,
-  Droplet
+  Droplet,
+  CreditCard
 } from 'lucide-react';
 import { UserSession } from '../types';
 
@@ -21,12 +22,14 @@ interface PosibleDonadorViewProps {
   session: UserSession;
   onOpenPrecheck: () => void;
   onOpenAppointments: () => void;
+  onOpenDigitalCard: () => void;
 }
 
 export const PosibleDonadorView: React.FC<PosibleDonadorViewProps> = ({
   session,
   onOpenPrecheck,
   onOpenAppointments,
+  onOpenDigitalCard,
 }) => {
   const persona = session.user || session.persona || {};
   const estadoAptitud = session.posibleDonador?.estadoAptitud || 'No Apto';
@@ -70,6 +73,14 @@ export const PosibleDonadorView: React.FC<PosibleDonadorViewProps> = ({
             >
               <Calendar className="w-4 h-4 text-amber-200" />
               <span>Agendar Cita en Centro de Colecta</span>
+            </button>
+            <button
+              id="btn-ver-carnet-postulante"
+              onClick={onOpenDigitalCard}
+              className="px-5 py-2.5 bg-rose-600/90 hover:bg-rose-600 border border-rose-400/50 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer"
+            >
+              <CreditCard className="w-4 h-4 text-white" />
+              <span>Ver mi Carnet Digital</span>
             </button>
           </div>
         </div>

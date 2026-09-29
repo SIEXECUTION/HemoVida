@@ -859,9 +859,29 @@ export default function App() {
   const medicoStaff = MOCK_STAFF_ACCOUNTS.find(s => s.rol === 'medico') || MOCK_STAFF_ACCOUNTS[3];
   const bioquimicoStaff = MOCK_STAFF_ACCOUNTS.find(s => s.rol === 'bioquimico') || MOCK_STAFF_ACCOUNTS[4];
 
-  // Donor-specific filter for donor portal
-  const currentDonorUser = (activeRole === 'DONANTE' || session?.role === 'donante') 
-    ? (session?.user || donors[0]) 
+  // Donor-specific filter for donor portal (both certified donor and applicant/postulante)
+  const currentDonorUser: UserDonor | null = (activeRole === 'DONANTE' || activeRole === 'POSIBLE_DONADOR' || session?.role === 'donante') 
+    ? (session?.user || {
+        id: session?.usuarioId || 1,
+        ci: session?.persona?.ci || '0000000 SC',
+        nombres: session?.persona?.nombres || session?.nombreCompleto?.split(' ')[0] || 'Postulante',
+        apellidos: session?.persona?.apellidos || session?.nombreCompleto?.split(' ').slice(1).join(' ') || 'HemoVida',
+        email: session?.email || '',
+        celular: session?.persona?.celular || '+591 700-00000',
+        sexo: (session?.persona?.sexo as any) || 'M',
+        fechaNacimiento: session?.persona?.fechaNacimiento || '1998-05-15',
+        nacionalidad: 'Boliviana',
+        direccion: session?.persona?.direccion || 'Santa Cruz de la Sierra',
+        ocupacion: session?.persona?.ocupacion || 'Postulante a Donante',
+        tipoDonante: 'Voluntario Altruista',
+        carnetDigitalCodigo: `HV-POST-${session?.usuarioId || Math.floor(1000 + Math.random() * 9000)}`,
+        grupoSanguineo: 'O',
+        factorRh: 'Positivo',
+        fechaUltimaDonacion: null,
+        estadoHabilitacion: 'Apto',
+        totalDonaciones: 0,
+        volumenHistoricoMl: 0
+      }) 
     : null;
   const userDonations = currentDonorUser 
     ? allDonations.filter(d => d.donanteCi === currentDonorUser.ci || (d.donanteNombre && d.donanteNombre.toLowerCase().includes(currentDonorUser.nombres.toLowerCase())))
@@ -1136,6 +1156,7 @@ export default function App() {
             session={session}
             onOpenPrecheck={() => setIsPrecheckOpen(true)}
             onOpenAppointments={() => setActiveTab('citas')}
+            onOpenDigitalCard={() => setIsDigitalCardOpen(true)}
           />
         )}
 
