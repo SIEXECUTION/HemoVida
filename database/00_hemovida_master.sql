@@ -543,7 +543,7 @@ EXECUTE FUNCTION fn_trg_validar_exclusion_roles();
 -- B. Ascenso a Donante Condicionado al Análisis Inmunoserológico
 -- Cuando el bioquímico registra el dictamen Apto en AnalisisInmunoSerologico,
 -- se actualiza la aptitud del postulante, se crea su carnet digital en Donante,
--- se le remueve de PosibleDonador y se migra su rol en el sistema.
+-- y se migra su rol en el sistema (preservando el historial de PosibleDonador).
 CREATE OR REPLACE FUNCTION fn_trg_ascenso_donante_serologia()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -553,7 +553,7 @@ DECLARE
     v_idRolDonante INT;
     v_carnet VARCHAR(30);
 BEGIN
-    -- Obtener la persona a partir de la extracción vinculada a la bolsa madre
+    -- 1. Obtener la persona donante a partir de la extracción vinculada a la bolsa
     SELECT ed.idPersonaDonante INTO v_idPersona
     FROM UnidadSangreTotal ust
     JOIN ExtraccionDonacion ed ON ust.idExtraccion = ed.idExtraccion
@@ -563,43 +563,51 @@ BEGIN
     SELECT idRol INTO v_idRolDonante FROM Rol WHERE codigoRol = 'DONANTE';
     SELECT idUsuario INTO v_idUsuario FROM Usuario WHERE idPersona = v_idPersona;
 
-    -- Marcar que la persona ya cuenta con análisis serológico
-    UPDATE PosibleDonador
-    SET tieneAnalisis = TRUE
+    -- 2. Registrar que la persona ya cuenta con análisis de laboratorio
+    UPDATE PosibleDonador 
+    SET tieneAnalisis = TRUE 
     WHERE idPersona = v_idPersona;
 
+    -- 3. Veredicto Serológico Apto: Habilitación y cambio de roles
     IF NEW.dictamenFinal = 'Apto' THEN
-        -- 1. Actualizar estado en PosibleDonador
-        UPDATE PosibleDonador
-        SET estadoAptitud = 'Apto'
+        -- Actualizar estado médico a Apto
+        UPDATE PosibleDonador 
+        SET estadoAptitud = 'Apto' 
         WHERE idPersona = v_idPersona;
 
-        -- 2. Insertar en Donante si aún no existe
+        -- Generar carnet digital en Donante
         v_carnet := CONCAT('HEMO-', TO_CHAR(CURRENT_DATE, 'YYYY'), '-', v_idPersona);
+        
         IF NOT EXISTS (SELECT 1 FROM Donante WHERE idPersona = v_idPersona) THEN
             INSERT INTO Donante (idPersona, carnetDigitalCodigo, tipoDonante, estadoHabilitacion, fechaUltimaDonacion)
             VALUES (v_idPersona, v_carnet, 'Voluntario Altruista', 'Apto', CURRENT_DATE);
         ELSE
-            UPDATE Donante
+            UPDATE Donante 
             SET estadoHabilitacion = 'Apto', fechaUltimaDonacion = CURRENT_DATE
             WHERE idPersona = v_idPersona;
         END IF;
 
-        -- 3. Transición de Roles: Remover Posible Donador y Asignar Donante
+        -- Transición de credenciales de acceso:
+        -- Se retira el rol POSIBLE_DONADOR y se otorga el rol DONANTE
         IF v_idUsuario IS NOT NULL THEN
             DELETE FROM UsuarioRol WHERE idUsuario = v_idUsuario AND idRol = v_idRolPosible;
+            
             INSERT INTO UsuarioRol (idUsuario, idRol)
             VALUES (v_idUsuario, v_idRolDonante)
             ON CONFLICT DO NOTHING;
         END IF;
 
-        -- 4. Retirar de PosibleDonador
-        DELETE FROM PosibleDonador WHERE idPersona = v_idPersona;
-
+    -- 4. Veredicto Serológico No Apto (Reactivo)
     ELSIF NEW.dictamenFinal = 'No Apto' THEN
-        UPDATE PosibleDonador
-        SET estadoAptitud = 'No Apto'
+        UPDATE PosibleDonador 
+        SET estadoAptitud = 'No Apto' 
         WHERE idPersona = v_idPersona;
+
+        IF EXISTS (SELECT 1 FROM Donante WHERE idPersona = v_idPersona) THEN
+            UPDATE Donante 
+            SET estadoHabilitacion = 'Diferido Definitivo' 
+            WHERE idPersona = v_idPersona;
+        END IF;
     END IF;
 
     RETURN NEW;
