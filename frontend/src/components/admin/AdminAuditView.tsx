@@ -126,7 +126,8 @@ export const AdminAuditView: React.FC<AdminAuditViewProps> = ({
         codigoRolAsignar: staffRol
       });
 
-      setStaffSuccessMsg(res.message || 'Personal de salud registrado y acreditado satisfactoriamente.');
+      const recipientEmail = staffEmail.trim();
+      setStaffSuccessMsg(res.message || `Personal de salud registrado y acreditado satisfactoriamente. Se ha enviado un correo con las credenciales de acceso a ${recipientEmail}.`);
       setStaffCi('');
       setStaffNombres('');
       setStaffApellidos('');

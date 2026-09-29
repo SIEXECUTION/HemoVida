@@ -761,28 +761,44 @@ export default function App() {
   const handleChangePassword = (newPassword: string) => {
     if (!session) return;
     if (session.role === 'donante') {
-      const updatedUser: UserDonor = { ...session.user, password: newPassword };
-      setSession({ role: 'donante', user: updatedUser });
+      const updatedUser: UserDonor = { ...(session.user || {} as any), password: newPassword };
+      const newSess = { ...session, role: 'donante' as const, user: updatedUser };
+      setSession(newSess);
+      localStorage.setItem('hemovida_session', JSON.stringify(newSess));
       setDonors(prev => prev.map(d => d.id === updatedUser.id ? updatedUser : d));
     } else {
-      const updatedStaff: StaffAccount = { ...session.staff, password: newPassword };
-      setSession({ ...session, staff: updatedStaff } as any);
+      const currentStaff: StaffAccount = session.staff || {
+        id: `staff-${(session.activeRole || 'admin').toLowerCase()}-${session.usuarioId || Date.now()}`,
+        rol: (session.activeRole || session.role) as StaffRole,
+        nombre: session.nombreCompleto || 'Administrador',
+        cargo: session.activeRole === 'ADMIN' ? 'Administrador del Sistema' : session.role,
+        ci: (session as any).ci || '0000000 SC',
+        email: session.email || 'admin@hemovida.org',
+        turno: 'Turno Permanente',
+        credencial: `HV-${session.activeRole || 'ADM'}-01`,
+        password: newPassword
+      };
+      const updatedStaff: StaffAccount = { ...currentStaff, password: newPassword };
+      const newSess = { ...session, staff: updatedStaff };
+      setSession(newSess as any);
+      localStorage.setItem('hemovida_session', JSON.stringify(newSess));
       setStaffAccounts(prev => prev.map(s => s.id === updatedStaff.id ? updatedStaff : s));
     }
 
-    const actorName = session.role === 'donante' ? `${session.user.nombres} ${session.user.apellidos}` : session.staff.nombre;
-    const actorCi = session.role === 'donante' ? session.user.ci : session.staff.ci;
+    const actorName = session.nombreCompleto || (session.role === 'donante' ? `${session.user?.nombres || ''} ${session.user?.apellidos || ''}`.trim() : session.staff?.nombre) || 'Usuario';
+    const actorCi = session.user?.ci || session.staff?.ci || (session as any).ci || '0000000';
+    const actorRol = session.activeRole || session.role;
 
     const auditEntry: BitacoraAuditoria = {
       idEvento: `EVT-${Date.now()}`,
       timestamp: new Date().toISOString(),
       actorNombre: actorName,
-      actorRol: session.role,
+      actorRol: actorRol,
       actorCi,
       ipSimulada: generateForensicIp(),
       tipoEvento: 'CAMBIO_PASSWORD',
       accion: 'Modificación de Contraseña',
-      detalles: `El usuario ${actorName} (${session.role}) modificó su clave de acceso bajo política de seguridad.`
+      detalles: `El usuario ${actorName} (${actorRol}) modificó su clave de acceso bajo política de seguridad.`
     };
     setAuditLogs(prev => [auditEntry, ...prev]);
   };
@@ -847,7 +863,9 @@ export default function App() {
       return [approvedStaff, ...prev];
     });
 
-    const adminActor = (session && session.role !== 'donante') ? session.staff : { nombre: 'Administrador del Sistema', ci: '1000000 SC' };
+    const adminActor = (session && session.role !== 'donante' && session.staff) 
+      ? session.staff 
+      : { nombre: session?.nombreCompleto || 'Administrador del Sistema', ci: (session as any)?.ci || '1000000 SC' };
 
     const auditEntry: BitacoraAuditoria = {
       idEvento: `EVT-${Date.now()}`,
@@ -858,10 +876,10 @@ export default function App() {
       ipSimulada: generateForensicIp(),
       tipoEvento: 'APROBACION_PERSONAL',
       accion: `Aprobación de Cuenta de Personal: ${approvedStaff.nombre} (${approvedStaff.rol.toUpperCase()})`,
-      detalles: `El administrador aprobó la solicitud institucional. Matrícula: ${approvedStaff.matricula || approvedStaff.matriculaProfesional || 'N/A'}, Sede: ${approvedStaff.sede || 'Central'}. Acceso habilitado.`
+      detalles: `El administrador aprobó la solicitud institucional. Matrícula: ${approvedStaff.matricula || approvedStaff.matriculaProfesional || 'N/A'}, Sede: ${approvedStaff.sede || 'Central'}. Acceso habilitado con notificación enviada a ${approvedStaff.email}.`
     };
     setAuditLogs(prev => [auditEntry, ...prev]);
-    alert(`Cuenta de ${approvedStaff.nombre} aprobada exitosamente. Ahora puede iniciar sesión con sus credenciales.`);
+    alert(`Cuenta de ${approvedStaff.nombre} aprobada exitosamente. Se ha habilitado el acceso al sistema hospitalario con credenciales vinculadas a ${approvedStaff.email}.`);
   };
 
   const handleRejectStaff = (staffId: string) => {

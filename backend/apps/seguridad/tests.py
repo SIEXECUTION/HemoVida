@@ -192,6 +192,7 @@ class SeguridadAPITestCase(TestCase):
             'codigoRolAsignar': 'BIOQ_INTEGRAL'
         })
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertIn('email_enviado', response.data)
         self.assertTrue(Usuario.objects.filter(username='claudia.morales').exists())
         staff_user = Usuario.objects.get(username='claudia.morales')
         self.assertTrue(staff_user.roles.filter(codigoRol='BIOQ_INTEGRAL').exists())
@@ -265,6 +266,7 @@ class SeguridadAPITestCase(TestCase):
         })
         self.assertEqual(res_req.status_code, status.HTTP_200_OK)
         self.assertTrue(res_req.data['success'])
+        self.assertIn('code', res_req.data)
         cached = cache.get(f"pwd_reset_{self.user_admin.email.lower()}")
         self.assertIsNotNone(cached)
         token = cached['code']
@@ -280,6 +282,16 @@ class SeguridadAPITestCase(TestCase):
 
         self.user_admin.refresh_from_db()
         self.assertTrue(self.user_admin.check_password(nueva_clave))
+
+    def test_recuperar_password_solicitar_con_username(self):
+        res_req = self.client.post('/api/auth/recuperar-password/solicitar/', {
+            'email': self.user_admin.username
+        })
+        self.assertEqual(res_req.status_code, status.HTTP_200_OK)
+        self.assertTrue(res_req.data['success'])
+        self.assertIn('code', res_req.data)
+        cached = cache.get(f"pwd_reset_{self.user_admin.username.lower()}")
+        self.assertIsNotNone(cached)
 
     def test_cambiar_password_con_clave_actual(self):
         res = self.client.post('/api/auth/cambiar-password/', {

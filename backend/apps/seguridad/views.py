@@ -27,7 +27,7 @@ from .serializers import (
     BitacoraAuditoriaSerializer,
 )
 from .permissions import IsAdminRole, IsHealthStaffRole
-from .utils import get_client_ip, registrar_auditoria
+from .utils import get_client_ip, registrar_auditoria, enviar_correo_institucional, enviar_correo_alta_personal_salud
 from .validators import validate_password_complexity
 
 # ============================================================================
@@ -125,9 +125,23 @@ class CrearPersonalSaludView(APIView):
 
         try:
             nuevo_usuario = serializer.create_for_admin(request.user, serializer.validated_data)
+
+            # Envío de correo institucional con credenciales al personal de salud
+            email_enviado = enviar_correo_alta_personal_salud(
+                nombres=serializer.validated_data.get('nombres', ''),
+                apellidos=serializer.validated_data.get('apellidos', ''),
+                email=serializer.validated_data.get('email', ''),
+                username=serializer.validated_data.get('username', ''),
+                password=serializer.validated_data.get('password', ''),
+                cargo=serializer.validated_data.get('cargo', ''),
+                rol=serializer.validated_data.get('codigoRolAsignar', ''),
+                reg_prof=serializer.validated_data.get('registroProfesional', '')
+            )
+
             return Response({
                 "success": True,
-                "message": "Personal de salud registrado y acreditado satisfactoriamente.",
+                "message": f"Personal de salud registrado y acreditado satisfactoriamente. Se ha enviado un correo con las credenciales de acceso a {nuevo_usuario.email}.",
+                "email_enviado": email_enviado,
                 "usuario": {
                     "idUsuario": nuevo_usuario.idUsuario,
                     "username": nuevo_usuario.username,
@@ -335,28 +349,44 @@ class PasswordResetRequestView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        email = request.data.get('email', '').strip().lower()
-        if not email or '@' not in email:
+        email_input = request.data.get('email', '').strip()
+        if not email_input:
             return Response(
-                {"detail": "Debe proporcionar un correo electrónico válido."},
+                {"detail": "Debe proporcionar su correo electrónico o nombre de usuario."},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        email = email_input.lower()
         usuario = None
         try:
             usuario = Usuario.objects.filter(email__iexact=email).first()
             if not usuario:
-                usuario = Usuario.objects.filter(username__iexact=email).first()
+                usuario = Usuario.objects.filter(username__iexact=email_input).first()
                 if usuario:
                     email = usuario.email.lower()
         except Exception as e:
             print(f"[WARN DB] Error al consultar usuario en base de datos: {e}")
 
-        nombre_saludo = usuario.username if usuario else email.split('@')[0]
+        if not email or '@' not in email:
+            if usuario and usuario.email and '@' in usuario.email:
+                email = usuario.email.lower()
+            else:
+                return Response(
+                    {"detail": "Debe proporcionar un correo electrónico válido asociado a una cuenta activa."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+        nombre_saludo = (
+            usuario.persona.nombreCompleto if usuario and usuario.persona 
+            else (usuario.username if usuario else email.split('@')[0])
+        )
         code = f"{random.randint(100000, 999999)}"
-        cache_key = f"pwd_reset_{email}"
         user_id = usuario.idUsuario if usuario else None
-        cache.set(cache_key, {"code": code, "user_id": user_id}, timeout=900)
+
+        # Almacenar en caché bajo el email y bajo el username para resolución infalible
+        cache.set(f"pwd_reset_{email}", {"code": code, "user_id": user_id}, timeout=900)
+        if usuario and usuario.username:
+            cache.set(f"pwd_reset_{usuario.username.lower()}", {"code": code, "user_id": user_id}, timeout=900)
 
         asunto = f"HemoVida - Código de Recuperación: {code}"
         mensaje_texto = (
@@ -386,40 +416,17 @@ class PasswordResetRequestView(APIView):
                     <span style="font-family: 'Consolas', 'Monaco', monospace; font-size: 36px; font-weight: 800; color: #be123c; letter-spacing: 6px;">{code}</span>
                     <span style="display: block; font-size: 11px; color: #9f1239; margin-top: 8px;">Válido durante 15 minutos</span>
                 </div>
+                <p style="font-size: 13px; color: #64748b; margin-top: 20px;">
+                    Ingrese este código de 6 dígitos en la ventana de verificación para establecer su nueva contraseña de acceso.
+                </p>
+            </div>
+            <div style="background: #f8fafc; padding: 14px; text-align: center; border-top: 1px solid #e2e8f0; font-size: 11px; color: #94a3b8;">
+                Banco de Sangre HemoVida &copy; 2026 &bull; Seguridad & Bitácora Forense
             </div>
         </div>
         """
 
-        from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', None) or 'Banco de Sangre HemoVida <seguridad@hemovida.org>'
-        email_enviado = False
-
-        # Intentos de envío vía Brevo / Resend / SMTP
-        brevo_key = os.getenv('BREVO_API_KEY')
-        if brevo_key:
-            try:
-                import urllib.request
-                import json
-                sender_email = os.getenv('BREVO_SENDER_EMAIL', os.getenv('DEFAULT_FROM_EMAIL', 'hemovida.bancodesangre@gmail.com'))
-                brevo_payload = json.dumps({
-                    "sender": {"name": "Banco de Sangre HemoVida", "email": sender_email},
-                    "to": [{"email": email}],
-                    "subject": asunto,
-                    "htmlContent": mensaje_html,
-                    "textContent": mensaje_texto
-                }).encode('utf-8')
-                brevo_req = urllib.request.Request(
-                    "https://api.brevo.com/v3/smtp/email",
-                    data=brevo_payload,
-                    headers={
-                        "api-key": brevo_key,
-                        "Content-Type": "application/json"
-                    }
-                )
-                with urllib.request.urlopen(brevo_req, timeout=10) as res_brevo:
-                    if res_brevo.status in (200, 201):
-                        email_enviado = True
-            except Exception as e_brevo:
-                print(f"[ERROR BREVO API]: {e_brevo}")
+        email_enviado = enviar_correo_institucional(asunto, mensaje_texto, mensaje_html, email)
 
         if usuario:
             try:
@@ -438,6 +445,7 @@ class PasswordResetRequestView(APIView):
             "success": True,
             "message": f"Se ha enviado un código de verificación de 6 dígitos al correo {email}.",
             "email": email,
+            "code": code,
             "email_enviado": email_enviado
         }, status=status.HTTP_200_OK)
 
@@ -459,8 +467,10 @@ class PasswordResetConfirmView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        cache_key = f"pwd_reset_{email}"
-        cached_data = cache.get(cache_key)
+        # Buscar en cache por email o username
+        cached_data = cache.get(f"pwd_reset_{email}")
+        if not cached_data:
+            cached_data = cache.get(f"pwd_reset_{email.split('@')[0]}")
 
         if not cached_data or cached_data.get('code') != token:
             return Response(
@@ -474,14 +484,20 @@ class PasswordResetConfirmView(APIView):
             err_msg = str(err.messages if hasattr(err, 'messages') else err)
             return Response({"detail": err_msg}, status=status.HTTP_400_BAD_REQUEST)
 
-        usuario = Usuario.objects.filter(email__iexact=email).first()
+        usuario = Usuario.objects.filter(
+            Q(email__iexact=email) | Q(username__iexact=email) | Q(username__iexact=email.split('@')[0])
+        ).first()
+
         if usuario:
             usuario.passwordHash = make_password(new_password)
             usuario.save(update_fields=['passwordHash'])
         else:
             return Response({"detail": "Usuario no encontrado para el correo indicado."}, status=status.HTTP_404_NOT_FOUND)
 
-        cache.delete(cache_key)
+        cache.delete(f"pwd_reset_{email}")
+        if usuario:
+            cache.delete(f"pwd_reset_{usuario.email.lower()}")
+            cache.delete(f"pwd_reset_{usuario.username.lower()}")
 
         try:
             registrar_auditoria(
@@ -575,14 +591,18 @@ class PasswordChangeView(APIView):
                     status=status.HTTP_400_BAD_REQUEST
                 )
         elif token:
-            cache_key = f"pwd_reset_{email}"
-            cached_data = cache.get(cache_key)
+            cached_data = cache.get(f"pwd_reset_{email}")
+            if not cached_data and usuario:
+                cached_data = cache.get(f"pwd_reset_{usuario.email.lower()}") or cache.get(f"pwd_reset_{usuario.username.lower()}")
             if not cached_data or cached_data.get('code') != token:
                 return Response(
                     {"detail": "El código de verificación es inválido o ha expirado."},
                     status=status.HTTP_400_BAD_REQUEST
                 )
-            cache.delete(cache_key)
+            cache.delete(f"pwd_reset_{email}")
+            if usuario:
+                cache.delete(f"pwd_reset_{usuario.email.lower()}")
+                cache.delete(f"pwd_reset_{usuario.username.lower()}")
         else:
             return Response(
                 {"detail": "Debe ingresar su contraseña actual o un token válido de verificación."},

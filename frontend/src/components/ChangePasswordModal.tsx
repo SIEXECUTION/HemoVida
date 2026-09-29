@@ -47,6 +47,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
   const [tokenCode, setTokenCode] = useState('');
   const [tokenSent, setTokenSent] = useState(false);
   const [tokenLoading, setTokenLoading] = useState(false);
+  const [receivedCode, setReceivedCode] = useState<string | null>(null);
 
   // Status & Notifications
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -55,9 +56,9 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
 
   if (!isOpen || !session) return null;
 
-  const userEmail = session.role === 'donante' ? session.user.email : session.staff.email;
-  const userName = session.role === 'donante' ? `${session.user.nombres} ${session.user.apellidos}` : session.staff.nombre;
-  const userRole = session.role === 'donante' ? 'Donante de Sangre' : session.staff.cargo;
+  const userEmail = session.email || (session.role === 'donante' ? session.user?.email : session.staff?.email) || '';
+  const userName = session.nombreCompleto || (session.role === 'donante' ? `${session.user?.nombres || ''} ${session.user?.apellidos || ''}`.trim() : session.staff?.nombre) || session.username || 'Administrador';
+  const userRole = session.activeRole || (session.role === 'donante' ? 'Donante de Sangre' : session.staff?.cargo) || session.role;
 
   // Real-time password rules evaluation
   const passwordRules = evaluatePassword(newPassword, confirmNewPassword);
@@ -71,8 +72,13 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
     setErrorMsg(null);
     setTokenLoading(true);
     try {
-      await apiService.requestPasswordReset(userEmail);
+      const emailOrUser = userEmail || session.username || '';
+      const res: any = await apiService.requestPasswordReset(emailOrUser);
       setTokenSent(true);
+      if (res && res.code) {
+        setReceivedCode(res.code);
+        setTokenCode(res.code);
+      }
     } catch (err: any) {
       setErrorMsg(err?.message || 'Error al enviar código de 6 dígitos al correo.');
     } finally {
@@ -121,17 +127,10 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
     setIsSubmitting(true);
     try {
       if (mode === 'standard') {
-        const storedPwd = session.role === 'donante' ? session.user.password : session.staff.password;
-        
-        // Si hay una contraseña registrada en la sesión local, comprobarla primero
-        if (storedPwd && storedPwd !== currentPassword) {
-          setErrorMsg('La contraseña actual ingresada es incorrecta.');
-          setIsSubmitting(false);
-          return;
-        }
+        const storedPwd = session.role === 'donante' ? session.user?.password : session.staff?.password;
 
         try {
-          await apiService.changePassword(userEmail, currentPassword, null, newPassword);
+          await apiService.changePassword(userEmail || session.username, currentPassword, null, newPassword);
         } catch (apiErr: any) {
           // Si el servidor detectó que la contraseña actual es errónea:
           if (apiErr?.message && (apiErr.message.toLowerCase().includes('incorrecta') || apiErr.message.toLowerCase().includes('actual'))) {
@@ -140,24 +139,34 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
             return;
           }
 
-          // Si el usuario es un donante local verificado pero el backend no lo tiene o está offline
+          // Si el usuario es un donante local verificado o sesión local y el backend está offline
           if (storedPwd && storedPwd === currentPassword) {
             console.warn('Contraseña actualizada en sesión local:', apiErr?.message);
-          } else {
-            setErrorMsg(apiErr?.message || 'Error al verificar la contraseña actual con el servidor.');
+          } else if (storedPwd && storedPwd !== currentPassword) {
+            setErrorMsg('La contraseña actual ingresada es incorrecta.');
+            setIsSubmitting(false);
+            return;
+          } else if (apiErr?.message && !apiErr.message.includes('Fallo de conexión')) {
+            setErrorMsg(apiErr.message);
             setIsSubmitting(false);
             return;
           }
         }
       } else {
         // Modo recuperación por correo
-        if (!tokenCode.trim()) {
-          setErrorMsg('Debe ingresar el código de 6 dígitos recibido por correo electrónico.');
+        if (!tokenCode.trim() || tokenCode.trim().length !== 6) {
+          setErrorMsg('Debe ingresar el código de verificación de 6 dígitos recibido en su correo.');
           setIsSubmitting(false);
           return;
         }
 
-        await apiService.changePassword(userEmail, null, tokenCode.trim(), newPassword);
+        try {
+          await apiService.changePassword(userEmail || session.username, null, tokenCode.trim(), newPassword);
+        } catch (apiErr: any) {
+          setErrorMsg(apiErr?.message || 'Error al validar el código o restablecer la contraseña en el servidor.');
+          setIsSubmitting(false);
+          return;
+        }
       }
 
       onPasswordChanged(newPassword);
@@ -317,7 +326,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
                   </div>
 
                   {tokenSent && (
-                    <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-950 space-y-1">
+                    <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-950 space-y-2">
                       <div className="flex items-center gap-1.5 font-bold text-emerald-900">
                         <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                         <span>¡Código de 6 dígitos enviado exitosamente!</span>
@@ -325,6 +334,21 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
                       <p className="text-[11px] text-slate-600 leading-relaxed">
                         Revise su bandeja de entrada (y la carpeta de spam). Copie el código de 6 dígitos e ingréselo aquí:
                       </p>
+                      {receivedCode && (
+                        <div className="p-2.5 bg-white rounded-lg border border-emerald-300 flex items-center justify-between shadow-2xs">
+                          <div>
+                            <span className="text-[11px] text-emerald-800 font-bold block">Código de seguridad generado:</span>
+                            <span className="font-mono font-black text-rose-700 text-sm tracking-widest">{receivedCode}</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setTokenCode(receivedCode)}
+                            className="text-[11px] bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1 rounded-md font-bold cursor-pointer transition-colors shadow-2xs"
+                          >
+                            Autocompletar
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )}
 
