@@ -196,6 +196,11 @@ class SeguridadAPITestCase(TestCase):
         self.assertTrue(Usuario.objects.filter(username='claudia.morales').exists())
         staff_user = Usuario.objects.get(username='claudia.morales')
         self.assertTrue(staff_user.roles.filter(codigoRol='BIOQ_INTEGRAL').exists())
+        # Verificar que la contraseña esté hasheada (no en texto plano) y valide con check_password
+        self.assertNotEqual(staff_user.passwordHash, 'PasswordSeguro#2026')
+        self.assertTrue(staff_user.passwordHash.startswith(('pbkdf2_', 'argon2', 'bcrypt')))
+        self.assertTrue(staff_user.check_password('PasswordSeguro#2026'))
+        self.assertFalse(staff_user.check_password('PasswordIncorrecta#999'))
 
     def test_crear_personal_salud_denegado_sin_admin(self):
         self.client.force_authenticate(user=self.user_inactivo)

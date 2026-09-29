@@ -117,7 +117,10 @@ class Usuario(models.Model):
             return False
 
     def set_password(self, raw_password: str):
-        self.passwordHash = raw_password
+        if raw_password:
+            self.passwordHash = make_password(raw_password)
+        else:
+            self.passwordHash = ''
 
     @property
     def is_authenticated(self):

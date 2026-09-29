@@ -749,7 +749,7 @@ CREATE OR REPLACE PROCEDURE sp_crear_usuario_personal_salud(
     p_registroProfesional VARCHAR,
     p_username VARCHAR,
     p_email VARCHAR,
-    p_passwordTextoPlano VARCHAR,
+    p_passwordHash VARCHAR,
     p_codigoRolAsignar VARCHAR
 )
 LANGUAGE plpgsql
@@ -799,7 +799,7 @@ BEGIN
 
     -- 5. Crear Usuario
     INSERT INTO Usuario (idPersona, username, email, passwordHash, estado)
-    VALUES (v_idPersona, p_username, p_email, p_passwordTextoPlano, 'Activo')
+    VALUES (v_idPersona, p_username, p_email, p_passwordHash, 'Activo')
     RETURNING idUsuario INTO v_idUsuarioNuevo;
 
     -- 6. Asignar Rol Sanitario

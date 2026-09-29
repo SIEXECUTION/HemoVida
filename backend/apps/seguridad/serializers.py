@@ -4,6 +4,7 @@ adaptados al modelo relacional con RBAC múltiple (UsuarioRol) y Stored Procedur
 """
 from rest_framework import serializers
 from django.db import connection, transaction
+from django.contrib.auth.hashers import make_password
 from .models import Usuario, Rol, UsuarioRol, Persona, PersonalSalud, BitacoraAuditoria
 from .validators import validate_password_complexity
 from .utils import generate_tokens_for_usuario, get_client_ip, registrar_auditoria, sincronizar_secuencias_seguridad
@@ -150,6 +151,9 @@ class AutoRegistroPosibleDonadorSerializer(serializers.Serializer):
                     [ci, nombres, apellidos, sexo, fecha_nac, direccion, celular, ocupacion, username, email, password]
                 )
             usuario = Usuario.objects.select_related('persona').prefetch_related('roles').get(username=username)
+            if not usuario.passwordHash.startswith(('pbkdf2_', 'argon2', 'bcrypt')):
+                usuario.set_password(password)
+                usuario.save(update_fields=['passwordHash'])
             return usuario
         except Exception as e:
             # En caso de error, limpiar estado de transacción abortada en PostgreSQL
@@ -267,6 +271,9 @@ class CrearPersonalSaludSerializer(serializers.Serializer):
         password = validated_data['password']
         cod_rol = validated_data['codigoRolAsignar']
 
+        # Hashear la contraseña con el algoritmo de Django (PBKDF2/SHA256)
+        password_hashed = make_password(password)
+
         # Sincronización preventiva de secuencias de clave primaria (evita duplicate key por datos semilla)
         sincronizar_secuencias_seguridad()
 
@@ -281,10 +288,13 @@ class CrearPersonalSaludSerializer(serializers.Serializer):
                     """,
                     [
                         admin_user.idUsuario, ci, nombres, apellidos, sexo, fecha_nac,
-                        celular, cargo, reg_prof, username, email, password, cod_rol
+                        celular, cargo, reg_prof, username, email, password_hashed, cod_rol
                     ]
                 )
             nuevo_usuario = Usuario.objects.select_related('persona').prefetch_related('roles').get(username=username)
+            if not nuevo_usuario.passwordHash.startswith(('pbkdf2_', 'argon2', 'bcrypt')):
+                nuevo_usuario.set_password(password)
+                nuevo_usuario.save(update_fields=['passwordHash'])
             return nuevo_usuario
         except Exception as e:
             # En caso de error, limpiar estado de transacción abortada en PostgreSQL
