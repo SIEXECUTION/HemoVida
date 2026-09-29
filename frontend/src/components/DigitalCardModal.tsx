@@ -40,9 +40,13 @@ export const DigitalCardModal: React.FC<DigitalCardModalProps> = ({
 
   const eligibility = calculateBiologicalEligibility(user);
 
+  const carnetCodeToUse = (user.ci && user.ci.trim()) 
+    ? user.ci.trim() 
+    : (user.carnetDigitalCodigo || '0000000');
+
   const carnetUrl = typeof window !== 'undefined'
-    ? `${window.location.origin}/?carnet=${encodeURIComponent(user.carnetDigitalCodigo || user.ci)}`
-    : `https://hemovida.pages.dev/?carnet=${encodeURIComponent(user.carnetDigitalCodigo || user.ci)}`;
+    ? `${window.location.origin}/?carnet=${encodeURIComponent(carnetCodeToUse)}`
+    : `https://hemovida.pages.dev/?carnet=${encodeURIComponent(carnetCodeToUse)}`;
 
   // Generar código QR como Base64 Data URL puro sin dependencias de red externas
   useEffect(() => {

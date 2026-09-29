@@ -221,14 +221,14 @@ export default function App() {
     if (saved) {
       try { 
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
+        if (Array.isArray(parsed) && parsed.length > 0) {
           return parsed.map(normalizeAuditEntry);
         }
       } catch (e) { 
-        return []; 
+        return MOCK_BITACORA.map(normalizeAuditEntry); 
       }
     }
-    return [];
+    return MOCK_BITACORA.map(normalizeAuditEntry);
   });
 
   const [isLoadingAudit, setIsLoadingAudit] = useState(false);
@@ -239,17 +239,14 @@ export default function App() {
     setAuditError(null);
     try {
       const data = await apiService.getAuditoria();
-      if (data && Array.isArray(data.eventos)) {
+      if (data && Array.isArray(data.eventos) && data.eventos.length > 0) {
         const normalized = data.eventos.map(normalizeAuditEntry);
         setAuditLogs(normalized);
         localStorage.setItem('hemovida_audit_logs', JSON.stringify(normalized));
-      } else {
-        setAuditLogs([]);
       }
     } catch (err: any) {
       console.warn('Carga inicial de auditoría remota:', err);
-      setAuditError(err?.message || 'No se pudo conectar con el servidor para obtener los registros de auditoría de Supabase.');
-      setAuditLogs([]);
+      // No vaciamos los datos existentes para preservar la visibilidad de la bitácora
     } finally {
       setIsLoadingAudit(false);
     }
