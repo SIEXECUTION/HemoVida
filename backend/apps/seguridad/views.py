@@ -379,6 +379,36 @@ class PasswordResetRequestView(APIView):
             except Exception as e_resend:
                 print(f"[ERROR RESEND API]: {e_resend}")
 
+        # 4. Fallback a Brevo (Sendinblue) API vía HTTPS (Puerto 443 - Permite enviar a cualquier destinatario)
+        brevo_key = os.getenv('BREVO_API_KEY')
+        if not email_enviado and brevo_key:
+            try:
+                import urllib.request
+                import json
+                sender_email = os.getenv('BREVO_SENDER_EMAIL', os.getenv('DEFAULT_FROM_EMAIL', 'hemovida.bancodesangre@gmail.com'))
+                brevo_payload = json.dumps({
+                    "sender": {"name": "Banco de Sangre HemoVida", "email": sender_email},
+                    "to": [{"email": email}],
+                    "subject": asunto,
+                    "htmlContent": mensaje_html,
+                    "textContent": mensaje_texto
+                }).encode('utf-8')
+                brevo_req = urllib.request.Request(
+                    "https://api.brevo.com/v3/smtp/email",
+                    data=brevo_payload,
+                    headers={
+                        "api-key": brevo_key,
+                        "Content-Type": "application/json"
+                    }
+                )
+                with urllib.request.urlopen(brevo_req, timeout=10) as res_brevo:
+                    if res_brevo.status in (200, 201):
+                        email_enviado = True
+                        email_error_detalle = None
+                        print(f"[INFO EMAIL] Enviado exitosamente vía Brevo API a {email}")
+            except Exception as e_brevo:
+                print(f"[ERROR BREVO API]: {e_brevo}")
+
         if usuario:
             try:
                 registrar_auditoria(
