@@ -230,10 +230,10 @@ export const LabProcessingView: React.FC<LabProcessingViewProps> = ({
             </div>
 
             <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black font-['Outfit',sans-serif] tracking-tight">
-              Control Serológico, Inmunohematología & Fraccionamiento (CU12 - CU15)
+              Control Serológico, Inmunohematología & Fraccionamiento
             </h1>
             <p className="text-sm text-slate-300 max-w-3xl leading-relaxed">
-              Alta de bolsas madre y tubos piloto en cuarentena (CU12), fraccionamiento mecánico inmediato &lt;6-8h en cámaras frías (CU15), tamizaje paralelo de 6 marcadores infecciosos (CU13), tipificación directa/inversa con Coombs (CU14) y barrera estricta de liberación o baja por descarte.
+              Alta de bolsas madre y tubos piloto en cuarentena, fraccionamiento mecánico inmediato en cámaras frías, tamizaje paralelo de 6 marcadores infecciosos, tipificación directa/inversa con Coombs y barrera estricta de liberación o baja por descarte.
             </p>
           </div>
 
@@ -245,7 +245,7 @@ export const LabProcessingView: React.FC<LabProcessingViewProps> = ({
               }`}
             >
               <Layers className="w-3.5 h-3.5" />
-              <span>Fraccionamiento (CU15)</span>
+              <span>Fraccionamiento Mecánico</span>
             </button>
 
             <button
@@ -255,7 +255,7 @@ export const LabProcessingView: React.FC<LabProcessingViewProps> = ({
               }`}
             >
               <FlaskConical className="w-3.5 h-3.5" />
-              <span>Lab Paralelo & Barrera (CU13/14)</span>
+              <span>Lab Paralelo & Barrera</span>
             </button>
 
             <button
@@ -271,14 +271,14 @@ export const LabProcessingView: React.FC<LabProcessingViewProps> = ({
         </div>
       </div>
 
-      {/* TAB 1: FRACCIONAMIENTO MECÁNICO INMEDIATO (CU15) */}
+      {/* TAB 1: FRACCIONAMIENTO MECÁNICO INMEDIATO */}
       {activeTab === 'fraccionamiento' && (
         <div className="bg-white rounded-3xl border border-slate-200 shadow-xs p-6 space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <h2 className="text-xl font-black text-slate-900 font-['Outfit',sans-serif] flex items-center gap-2">
                 <Layers className="w-5 h-5 text-teal-600" />
-                Regla Biológica: Fraccionamiento Mecánico Inmediato (&lt;6-8 horas) (CU15)
+                Regla Biológica: Fraccionamiento Mecánico Inmediato (&lt;6-8 horas)
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">
                 La bolsa madre de sangre total colectada (450 ml) debe centrifugarse y separarse en sus hemocomponentes derivados, todos naciendo en estado <strong>'En Cuarentena'</strong> en sus respectivas cámaras frías.
@@ -405,7 +405,7 @@ export const LabProcessingView: React.FC<LabProcessingViewProps> = ({
             <div>
               <h2 className="text-xl font-black text-slate-900 font-['Outfit',sans-serif] flex items-center gap-2">
                 <FlaskConical className="w-5 h-5 text-teal-600" />
-                Laboratorio Paralelo: 6 Marcadores Serológicos & Inmunohematología (CU13/14)
+                Laboratorio Paralelo: 6 Marcadores Serológicos & Inmunohematología
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">
                 Barrera de Liberación: Si los 6 marcadores serológicos son No Reactivos y la tipificación ABO concuerda, las bolsas pasan a 'Disponible'. Si alguno resulta Reactivo, todo el lote pasa a 'Baja / Descarte'.
@@ -635,7 +635,7 @@ export const LabProcessingView: React.FC<LabProcessingViewProps> = ({
             <div>
               <h2 className="text-xl font-black text-slate-900 font-['Outfit',sans-serif] flex items-center gap-2">
                 <Flame className="w-5 h-5 text-rose-600" />
-                Registro Oficial de Bajas e Incineración por Descarte Serológico (CU14)
+                Registro Oficial de Bajas e Incineración por Descarte Serológico
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">
                 Actas oficiales de destrucción biosegura para lotes hemáticos reactivos a marcadores infecciosos.

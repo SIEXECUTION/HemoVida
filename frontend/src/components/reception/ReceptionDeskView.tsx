@@ -189,10 +189,10 @@ export const ReceptionDeskView: React.FC<ReceptionDeskViewProps> = ({
             </div>
 
             <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black font-['Outfit',sans-serif] tracking-tight">
-              Admisión, Asistencia Física (CU08), Viabilidad & Incentivos (CU09)
+              Admisión, Asistencia Física, Viabilidad & Incentivos
             </h1>
             <p className="text-sm text-slate-300 max-w-3xl leading-relaxed">
-              Verificación del intervalo biológico por C.I. (90d varones / 120d mujeres CU05), confirmación de asistencia en ventanilla para generar turnos médicos (CU08), entrega de incentivos exclusivamente post-flebotomía (CU09) y gestión de reposición de pacientes internados (CU20).
+              Verificación del intervalo biológico por C.I. (90d varones / 120d mujeres), confirmación de asistencia en ventanilla para generar turnos médicos, entrega de incentivos exclusivamente post-flebotomía y gestión de reposición de pacientes internados.
             </p>
           </div>
 
@@ -213,7 +213,7 @@ export const ReceptionDeskView: React.FC<ReceptionDeskViewProps> = ({
               className="px-5 py-3 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-all shadow-md shadow-rose-950/40"
             >
               <Heart className="w-4 h-4 fill-white" />
-              <span>+ Registrar Flebotomía (CU12)</span>
+              <span>+ Registrar Flebotomía</span>
             </button>
           </div>
         </div>
@@ -258,7 +258,7 @@ export const ReceptionDeskView: React.FC<ReceptionDeskViewProps> = ({
           }`}
         >
           <Clock className="w-4 h-4" />
-          <span>Asistencia Física & Turnos (CU08)</span>
+          <span>Asistencia Física & Turnos</span>
           <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono ${
             activeTab === 'asistencia' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'
           }`}>
@@ -273,7 +273,7 @@ export const ReceptionDeskView: React.FC<ReceptionDeskViewProps> = ({
           }`}
         >
           <Gift className="w-4 h-4" />
-          <span>Incentivos Post-Extracción (CU09)</span>
+          <span>Incentivos Post-Extracción</span>
           <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono ${
             activeTab === 'incentivos' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'
           }`}>
@@ -288,7 +288,7 @@ export const ReceptionDeskView: React.FC<ReceptionDeskViewProps> = ({
           }`}
         >
           <UserCheck className="w-4 h-4" />
-          <span>Historial de Reposición (CU20)</span>
+          <span>Historial de Reposición</span>
           <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono ${
             activeTab === 'reposiciones' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'
           }`}>
@@ -338,7 +338,7 @@ export const ReceptionDeskView: React.FC<ReceptionDeskViewProps> = ({
             <div>
               <h2 className="text-xl font-black text-slate-900 font-['Outfit',sans-serif] flex items-center gap-2">
                 <Clock className="w-5 h-5 text-rose-600" />
-                Confirmación de Asistencia Física en Ventanilla (CU08)
+                Confirmación de Asistencia Física en Ventanilla
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">
                 Al presentarse el postulante con su C.I. física, Ventanilla confirma su llegada y le genera un número oficial de turno médico hacia el área de Triaje Clínico.
@@ -407,17 +407,17 @@ export const ReceptionDeskView: React.FC<ReceptionDeskViewProps> = ({
         </div>
       )}
 
-      {/* TAB 3: ENTREGA DE INCENTIVOS Y REFRIGERIO POST-EXTRACCIÓN (CU09) */}
+      {/* TAB 3: ENTREGA DE INCENTIVOS Y REFRIGERIO POST-EXTRACCIÓN */}
       {activeTab === 'incentivos' && (
         <div className="bg-white rounded-3xl border border-slate-200 shadow-xs p-6 space-y-5">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <h2 className="text-xl font-black text-slate-900 font-['Outfit',sans-serif] flex items-center gap-2">
                 <Gift className="w-5 h-5 text-rose-600" />
-                Entrega de Incentivos y Refrigerio Post-Extracción (CU09)
+                Entrega de Incentivos y Refrigerio Post-Extracción
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">
-                Regla obligatoria: La entrega del incentivo oficial (vaso conmemorativo o llavero oficial) y refrigerio clínico ocurre <strong>estrictamente después de completada la flebotomía en CU12</strong>.
+                Regla obligatoria: La entrega del incentivo oficial (vaso conmemorativo o llavero oficial) y refrigerio clínico ocurre <strong>estrictamente después de completada la flebotomía</strong>.
               </p>
             </div>
           </div>
@@ -458,7 +458,7 @@ export const ReceptionDeskView: React.FC<ReceptionDeskViewProps> = ({
         </div>
       )}
 
-      {/* TAB 4: REPOSICIONES (CU20) */}
+      {/* TAB 4: REPOSICIONES */}
       {activeTab === 'reposiciones' && (
         <PatientReplacementSection
           replacements={replacements}

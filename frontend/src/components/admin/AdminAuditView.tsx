@@ -16,7 +16,12 @@ import {
   Printer, 
   Sparkles,
   ArrowUpRight,
-  TrendingDown
+  TrendingDown,
+  UserCheck,
+  X,
+  Stethoscope,
+  FlaskConical,
+  Truck
 } from 'lucide-react';
 import { 
   StaffAccount, 
@@ -34,6 +39,9 @@ interface AdminAuditViewProps {
   stockThresholds: StockThresholdConfig[];
   onUpdateStockThresholds: (newThresholds: StockThresholdConfig[]) => void;
   inventory: BloodInventoryItem[];
+  pendingStaffRequests?: StaffAccount[];
+  onApproveStaff?: (staffId: string) => void;
+  onRejectStaff?: (staffId: string) => void;
 }
 
 export const AdminAuditView: React.FC<AdminAuditViewProps> = ({
@@ -42,9 +50,12 @@ export const AdminAuditView: React.FC<AdminAuditViewProps> = ({
   auditLogs,
   stockThresholds,
   onUpdateStockThresholds,
-  inventory
+  inventory,
+  pendingStaffRequests = [],
+  onApproveStaff,
+  onRejectStaff
 }) => {
-  const [activeTab, setActiveTab] = useState<'bitacora' | 'umbrales' | 'rbac'>('bitacora');
+  const [activeTab, setActiveTab] = useState<'bitacora' | 'umbrales' | 'solicitudes' | 'rbac'>('bitacora');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedEventType, setSelectedEventType] = useState<string>('all');
 
@@ -104,11 +115,11 @@ export const AdminAuditView: React.FC<AdminAuditViewProps> = ({
               Bitácora de Auditoría Forense & Parametrización de Stock
             </h1>
             <p className="text-sm text-slate-300 max-w-3xl leading-relaxed">
-              Supervisión de control de acceso basado en roles (RBAC CU01/CU02), bitácora inmutable de eventos sensibles con registro de IPs (CU03) y calibración de umbrales mínimos de stock de seguridad (CU04).
+              Supervisión de control de acceso basado en roles (RBAC), bitácora inmutable de eventos sensibles con registro de IPs, validación de solicitudes de personal y calibración de umbrales mínimos de stock de seguridad.
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => setActiveTab('bitacora')}
               className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
@@ -116,7 +127,7 @@ export const AdminAuditView: React.FC<AdminAuditViewProps> = ({
               }`}
             >
               <Server className="w-3.5 h-3.5" />
-              <span>Bitácora Forense (CU03)</span>
+              <span>Bitácora Forense</span>
             </button>
 
             <button
@@ -126,7 +137,22 @@ export const AdminAuditView: React.FC<AdminAuditViewProps> = ({
               }`}
             >
               <Sliders className="w-3.5 h-3.5" />
-              <span>Umbrales de Stock (CU04)</span>
+              <span>Umbrales de Stock</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('solicitudes')}
+              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                activeTab === 'solicitudes' ? 'bg-rose-600 text-white shadow-md' : 'bg-white/10 text-white/80 hover:bg-white/20'
+              }`}
+            >
+              <UserCheck className="w-3.5 h-3.5" />
+              <span>Solicitudes de Personal</span>
+              {pendingStaffRequests.length > 0 && (
+                <span className="bg-amber-400 text-slate-950 text-[10px] font-black px-1.5 py-0.5 rounded-full ml-0.5">
+                  {pendingStaffRequests.length}
+                </span>
+              )}
             </button>
 
             <button
@@ -136,7 +162,7 @@ export const AdminAuditView: React.FC<AdminAuditViewProps> = ({
               }`}
             >
               <Users className="w-3.5 h-3.5" />
-              <span>Roles RBAC (CU01/02)</span>
+              <span>Cuentas RBAC</span>
             </button>
           </div>
         </div>
@@ -270,14 +296,14 @@ export const AdminAuditView: React.FC<AdminAuditViewProps> = ({
         </div>
       )}
 
-      {/* TAB 2: PARAMETRIZACIÓN DE UMBRALES DE STOCK (CU04) */}
+      {/* TAB 2: PARAMETRIZACIÓN DE UMBRALES DE STOCK */}
       {activeTab === 'umbrales' && (
         <div className="bg-white rounded-3xl border border-slate-200 shadow-xs p-6 space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <h2 className="text-xl font-black text-slate-900 font-['Outfit',sans-serif] flex items-center gap-2">
                 <Sliders className="w-5 h-5 text-rose-600" />
-                Parametrización de Umbrales Mínimos de Stock y Alerta Crítica (CU04)
+                Parametrización de Umbrales Mínimos de Stock y Alerta Crítica
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">
                 Defina los límites de seguridad por grupo ABO/Rh. Si el inventario disponible cae por debajo de la alerta crítica, el sistema emite señales de urgencia hospitalaria.
@@ -385,13 +411,131 @@ export const AdminAuditView: React.FC<AdminAuditViewProps> = ({
         </div>
       )}
 
-      {/* TAB 3: ROLES RBAC & SEGURIDAD DE CUENTAS */}
+      {/* TAB 3: SOLICITUDES DE APROBACIÓN DE CUENTAS DE PERSONAL DE SALUD */}
+      {activeTab === 'solicitudes' && (
+        <div className="bg-white rounded-3xl border border-slate-200 shadow-xs p-6 space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-black text-slate-900 font-['Outfit',sans-serif] flex items-center gap-2">
+                <UserCheck className="w-5 h-5 text-rose-600" />
+                Aprobación de Solicitudes de Personal de Salud
+              </h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Revise y valide las solicitudes de registro institucional para habilitar credenciales de acceso a médicos, bioquímicos y personal hospitalario.
+              </p>
+            </div>
+            <span className="text-xs bg-amber-50 text-amber-800 font-bold px-3 py-1.5 rounded-xl border border-amber-200 self-start sm:self-auto flex items-center gap-1.5">
+              <Clock className="w-4 h-4 text-amber-600" />
+              {pendingStaffRequests.length} solicitudes pendientes
+            </span>
+          </div>
+
+          {pendingStaffRequests.length === 0 ? (
+            <div className="p-12 text-center border-2 border-dashed border-slate-200 rounded-3xl space-y-3">
+              <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto shadow-inner">
+                <CheckCircle2 className="w-8 h-8" />
+              </div>
+              <h3 className="font-bold text-slate-800 text-base">No hay solicitudes pendientes de validación</h3>
+              <p className="text-xs text-slate-500 max-w-md mx-auto">
+                Todas las cuentas de médicos, bioquímicos y personal de soporte han sido debidamente procesadas o no existen solicitudes nuevas en cola.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {pendingStaffRequests.map((req) => (
+                <div 
+                  key={req.id}
+                  className="p-5 rounded-2xl border-2 border-amber-200 bg-amber-50/20 hover:border-amber-300 transition-all flex flex-col justify-between space-y-4 shadow-2xs"
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-10 h-10 rounded-xl bg-slate-900 text-amber-300 flex items-center justify-center font-bold text-sm shadow-xs">
+                          {req.rol === 'medico' && <Stethoscope className="w-5 h-5 text-amber-300" />}
+                          {req.rol === 'bioquimico' && <FlaskConical className="w-5 h-5 text-teal-300" />}
+                          {req.rol === 'despacho' && <Truck className="w-5 h-5 text-rose-300" />}
+                          {req.rol === 'recepcion' && <ShieldCheck className="w-5 h-5 text-blue-300" />}
+                          {req.rol === 'administrador' && <KeyRound className="w-5 h-5 text-amber-400" />}
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-slate-900 text-sm">{req.nombre}</h4>
+                          <span className="text-[10px] uppercase font-bold bg-amber-100 text-amber-900 px-2 py-0.5 rounded-md inline-block">
+                            {req.cargo || req.rol.toUpperCase()}
+                          </span>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-bold text-amber-700 bg-amber-100/80 px-2 py-1 rounded-lg flex items-center gap-1 shrink-0">
+                        <Clock className="w-3 h-3 text-amber-600" />
+                        Pendiente
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-xs bg-white/80 p-3 rounded-xl border border-amber-100 text-slate-700">
+                      <div>
+                        <span className="text-[10px] text-slate-400 block font-bold uppercase">Cédula de Identidad</span>
+                        <span className="font-semibold">{req.ci}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-400 block font-bold uppercase">Matrícula / Registro</span>
+                        <span className="font-semibold text-rose-700 font-mono">{req.matricula || 'En trámite SEDES'}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-400 block font-bold uppercase">Correo Electrónico</span>
+                        <span className="font-medium truncate block" title={req.email}>{req.email}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-400 block font-bold uppercase">Teléfono</span>
+                        <span className="font-medium">{req.telefono || '+591 700-00000'}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-400 block font-bold uppercase">Sede Asignada</span>
+                        <span className="font-medium truncate block">{req.sede || 'Banco Central'}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-400 block font-bold uppercase">Turno</span>
+                        <span className="font-medium truncate block">{req.turno || 'Mañana'}</span>
+                      </div>
+                    </div>
+
+                    {req.fechaSolicitud && (
+                      <p className="text-[11px] text-slate-500">
+                        <strong>Fecha de Registro:</strong> {req.fechaSolicitud}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-2 border-t border-amber-200/60">
+                    <button
+                      type="button"
+                      onClick={() => onApproveStaff && onApproveStaff(req.id)}
+                      className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span>Aprobar y Habilitar Acceso</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onRejectStaff && onRejectStaff(req.id)}
+                      className="px-3.5 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                      <span>Rechazar</span>
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB 4: ROLES RBAC & SEGURIDAD DE CUENTAS */}
       {activeTab === 'rbac' && (
         <div className="bg-white rounded-3xl border border-slate-200 shadow-xs p-6 space-y-5">
           <div>
             <h2 className="text-xl font-black text-slate-900 font-['Outfit',sans-serif] flex items-center gap-2">
               <Users className="w-5 h-5 text-rose-600" />
-              Auditoría de Roles RBAC y Cuentas de Personal (CU01 / CU02)
+              Auditoría de Roles RBAC y Cuentas de Personal
             </h2>
             <p className="text-xs text-slate-500 mt-0.5">
               Control de privilegios y separación estricta: ninguna cuenta puede cambiar de rol sin autenticación formal con credenciales vigentes.

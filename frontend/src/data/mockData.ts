@@ -1077,7 +1077,7 @@ export const MOCK_BITACORA: BitacoraAuditoria[] = [
     actorCi: '4729103 SC',
     ipSimulada: '181.188.14.92',
     tipoEvento: 'ASISTENCIA_CONFIRMADA',
-    accion: 'Confirmación de Asistencia Física (CU08)',
+    accion: 'Confirmación de Asistencia Física',
     detalles: 'Donante Carlos Andrés Pimentel (C.I. 7894561 SC) presente en ventanilla. Asignado Turno Médico TURNO-MED-01.',
     entidadId: 'CITA-2026-0925'
   },
@@ -1089,7 +1089,7 @@ export const MOCK_BITACORA: BitacoraAuditoria[] = [
     actorCi: '5190422 SC',
     ipSimulada: '192.168.10.45',
     tipoEvento: 'FLEBOTOMIA_REGISTRADA',
-    accion: 'Triaje Clínico y Extracción de 450 ml Aprobada (CU10/12)',
+    accion: 'Triaje Clínico y Extracción de 450 ml Aprobada',
     detalles: 'Signos vitales normales (PA: 120/80, Pulso: 72, Peso: 74 kg, Hb: 15.2 g/dL). Bolsa madre MAD-20260927-4421-O+ dada de alta en CUARENTENA con 2 tubos piloto.',
     entidadId: 'MAD-20260927-4421-O+'
   },
@@ -1101,7 +1101,7 @@ export const MOCK_BITACORA: BitacoraAuditoria[] = [
     actorCi: '4820199 SC',
     ipSimulada: '192.168.10.88',
     tipoEvento: 'FRACCIONAMIENTO',
-    accion: 'Fraccionamiento Mecánico Inmediato < 6h (CU15)',
+    accion: 'Fraccionamiento Mecánico Inmediato < 6h',
     detalles: 'Centrifugación de bolsa madre en CGR (250 ml, cámara fría 4°C) y PFC (150 ml, congelador -25°C). Nacen en CUARENTENA.',
     entidadId: 'MAD-20260927-4421-O+'
   },
@@ -1113,7 +1113,7 @@ export const MOCK_BITACORA: BitacoraAuditoria[] = [
     actorCi: '4820199 SC',
     ipSimulada: '192.168.10.88',
     tipoEvento: 'DESCARTE_SEROLOGICO',
-    accion: 'Baja y Descarte por Reactividad Serológica (CU14)',
+    accion: 'Baja y Descarte por Reactividad Serológica',
     detalles: 'Muestra reactiva para Chagas (ELISA positivo). Todo el lote derivado EXT-2026-8812 pasó a BAJA / DESCARTE para autoclave e incineración.',
     entidadId: 'EXT-2026-8812'
   },
@@ -1125,7 +1125,7 @@ export const MOCK_BITACORA: BitacoraAuditoria[] = [
     actorCi: '3948201 SC',
     ipSimulada: '181.188.14.95',
     tipoEvento: 'CODIGO_ROJO_EMERGENCIA',
-    accion: 'Despacho Inmediato Código Rojo (CU17)',
+    accion: 'Despacho Inmediato Código Rojo',
     detalles: 'Paciente shock hemorrágico obstétrico. 2 unidades O Rh- despachadas sin prueba cruzada previa bajo Acta de Responsabilidad Médica ACT-URG-0926.',
     entidadId: 'DSP-2026-8819'
   },
@@ -1137,7 +1137,7 @@ export const MOCK_BITACORA: BitacoraAuditoria[] = [
     actorCi: '3948201 SC',
     ipSimulada: '181.188.14.95',
     tipoEvento: 'PRUEBA_CRUZADA_INCOMPATIBLE',
-    accion: 'Prueba Cruzada Incompatible Auditada (CU18)',
+    accion: 'Prueba Cruzada Incompatible Auditada',
     detalles: 'Aglutinación en prueba mayor con unidad CGR-2026-0810-A+. LA BOLSA NO FUE DESCARTADA: desbloqueada a Disponible. Seleccionada unidad alterna.',
     entidadId: 'CGR-2026-0810-A+'
   },
@@ -1149,7 +1149,7 @@ export const MOCK_BITACORA: BitacoraAuditoria[] = [
     actorCi: '2981044 SC',
     ipSimulada: '190.181.25.10',
     tipoEvento: 'CAMBIO_UMBRAL_STOCK',
-    accion: 'Actualización de Umbrales de Stock de Seguridad (CU04)',
+    accion: 'Actualización de Umbrales de Stock de Seguridad',
     detalles: 'Ajustado umbral crítico de O- Negativo de 3 a 5 unidades por alta demanda traumatológica departamental.'
   }
 ];

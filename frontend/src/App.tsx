@@ -130,6 +130,31 @@ export default function App() {
     return MOCK_STAFF_ACCOUNTS;
   });
 
+  const [pendingStaffRequests, setPendingStaffRequests] = useState<StaffAccount[]>(() => {
+    const saved = localStorage.getItem('hemovida_pending_staff_requests');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) { return []; }
+    }
+    return [
+      {
+        id: 'STAFF-REQ-001',
+        rol: 'medico',
+        nombre: 'Dr. Alejandro Vaca Moreno',
+        cargo: 'Médico Hemoterapeuta & Encargado de Triaje Clínico',
+        ci: '4912084 SC',
+        matricula: 'MP-8831-SC',
+        credencial: 'MEDICO-2026-AUTOGEN',
+        email: 'alejandro.vaca@hemovida.org',
+        turno: 'Turno Mañana (07:00 - 15:00)',
+        sede: 'Hospital Japonés (Sede Tercer Nivel)',
+        telefono: '+591 780-33211',
+        password: 'Password#2026',
+        fechaSolicitud: '28 Sep 2026, 09:30',
+        estadoAprobacion: 'pendiente'
+      }
+    ];
+  });
+
   const [allDonations, setAllDonations] = useState<DonationRecord[]>(() => {
     const saved = localStorage.getItem('hemovida_all_donations');
     if (saved) {
@@ -241,6 +266,10 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('hemovida_staff_accounts', JSON.stringify(staffAccounts));
   }, [staffAccounts]);
+
+  useEffect(() => {
+    localStorage.setItem('hemovida_pending_staff_requests', JSON.stringify(pendingStaffRequests));
+  }, [pendingStaffRequests]);
 
   useEffect(() => {
     localStorage.setItem('hemovida_all_donations', JSON.stringify(allDonations));
@@ -383,6 +412,86 @@ export default function App() {
     setIsLoginModalOpen(true);
   };
 
+  const handleRequestStaffAccount = (newStaff: StaffAccount) => {
+    setPendingStaffRequests(prev => {
+      const exists = prev.some(s => s.ci === newStaff.ci || s.email.toLowerCase() === newStaff.email.toLowerCase());
+      if (exists) {
+        return prev.map(s => (s.ci === newStaff.ci || s.email.toLowerCase() === newStaff.email.toLowerCase()) ? newStaff : s);
+      }
+      return [newStaff, ...prev];
+    });
+
+    const auditEntry: BitacoraAuditoria = {
+      idEvento: `EVT-${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      actorNombre: newStaff.nombre,
+      actorRol: newStaff.rol,
+      actorCi: newStaff.ci,
+      ipSimulada: generateForensicIp(),
+      tipoEvento: 'SOLICITUD_PERSONAL',
+      accion: `Solicitud de Cuenta de Personal de Salud (${newStaff.rol.toUpperCase()})`,
+      detalles: `El profesional ${newStaff.nombre} (Matrícula: ${newStaff.matricula || newStaff.matriculaProfesional || 'N/A'}) solicitó alta institucional. Pendiente de aprobación administrativa.`
+    };
+    setAuditLogs(prev => [auditEntry, ...prev]);
+  };
+
+  const handleApproveStaff = (staffId: string) => {
+    const staffToApprove = pendingStaffRequests.find(s => s.id === staffId);
+    if (!staffToApprove) return;
+
+    const approvedStaff: StaffAccount = {
+      ...staffToApprove,
+      estadoAprobacion: 'aprobado'
+    };
+
+    setPendingStaffRequests(prev => prev.filter(s => s.id !== staffId));
+    setStaffAccounts(prev => {
+      const exists = prev.some(s => s.id === approvedStaff.id || s.email.toLowerCase() === approvedStaff.email.toLowerCase() || s.ci === approvedStaff.ci);
+      if (exists) {
+        return prev.map(s => (s.id === approvedStaff.id || s.email.toLowerCase() === approvedStaff.email.toLowerCase() || s.ci === approvedStaff.ci) ? approvedStaff : s);
+      }
+      return [approvedStaff, ...prev];
+    });
+
+    const adminActor = (session && session.role !== 'donante') ? session.staff : { nombre: 'Administrador del Sistema', ci: '1000000 SC' };
+
+    const auditEntry: BitacoraAuditoria = {
+      idEvento: `EVT-${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      actorNombre: adminActor.nombre,
+      actorRol: 'administrador',
+      actorCi: adminActor.ci,
+      ipSimulada: generateForensicIp(),
+      tipoEvento: 'APROBACION_PERSONAL',
+      accion: `Aprobación de Cuenta de Personal: ${approvedStaff.nombre} (${approvedStaff.rol.toUpperCase()})`,
+      detalles: `El administrador aprobó la solicitud institucional. Matrícula: ${approvedStaff.matricula || approvedStaff.matriculaProfesional || 'N/A'}, Sede: ${approvedStaff.sede || 'Central'}. Acceso habilitado.`
+    };
+    setAuditLogs(prev => [auditEntry, ...prev]);
+    alert(`Cuenta de ${approvedStaff.nombre} aprobada exitosamente. Ahora puede iniciar sesión con sus credenciales.`);
+  };
+
+  const handleRejectStaff = (staffId: string) => {
+    const staffToReject = pendingStaffRequests.find(s => s.id === staffId);
+    setPendingStaffRequests(prev => prev.filter(s => s.id !== staffId));
+
+    if (staffToReject) {
+      const adminActor = (session && session.role !== 'donante') ? session.staff : { nombre: 'Administrador del Sistema', ci: '1000000 SC' };
+
+      const auditEntry: BitacoraAuditoria = {
+        idEvento: `EVT-${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        actorNombre: adminActor.nombre,
+        actorRol: 'administrador',
+        actorCi: adminActor.ci,
+        ipSimulada: generateForensicIp(),
+        tipoEvento: 'RECHAZO_PERSONAL',
+        accion: `Rechazo de Solicitud de Personal: ${staffToReject.nombre}`,
+        detalles: `El administrador rechazó la solicitud de registro institucional.`
+      };
+      setAuditLogs(prev => [auditEntry, ...prev]);
+    }
+  };
+
   const handleAddAppointment = (newApp: Appointment) => {
     setAppointments(prev => [newApp, ...prev]);
   };
@@ -516,7 +625,7 @@ export default function App() {
                     </span>
                     <h2 className="text-lg font-bold text-slate-900 mt-1">Donador de Sangre</h2>
                     <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                      Carnet digital con QR, autoevaluación web (CU06), reserva de citas por modalidad (CU07) e historial personal.
+                      Carnet digital con QR, autoevaluación médica en línea, reserva de citas y seguimiento de historial hematológico.
                     </p>
                     <div className="mt-2 text-[11px] bg-slate-50 border border-slate-200 px-2.5 py-1.5 rounded-lg text-slate-600">
                       <strong>Correo Demo:</strong> <code className="text-rose-700 font-bold">carlos.pimentel@hemovida.org</code>
@@ -555,7 +664,7 @@ export default function App() {
                     </span>
                     <h2 className="text-lg font-bold text-slate-900 mt-1">Recepción & Admisión</h2>
                     <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                      Confirmación de asistencia física (CU08), viabilidad por C.I. (CU05), entrega de incentivos (CU09) y reposición (CU20).
+                      Confirmación de asistencia física en ventanilla, validación biológica por C.I., entrega de incentivos y reposición de pacientes internados.
                     </p>
                     <div className="mt-2 text-[11px] bg-slate-50 border border-slate-200 px-2.5 py-1.5 rounded-lg text-slate-600">
                       <strong>Correo Demo:</strong> <code className="text-amber-800 font-bold">recepcion@hemovida.org</code>
@@ -592,7 +701,7 @@ export default function App() {
                     </span>
                     <h2 className="text-lg font-bold text-slate-900 mt-1">Despacho Transfusional</h2>
                     <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                      Código Rojo (CU17), pruebas cruzadas in vitro (CU18), aranceles de procesamiento (CU19) y monitoreo de cámaras.
+                      Gestión de Código Rojo transfusional, pruebas de compatibilidad cruzada, aranceles y monitoreo de cadena de frío.
                     </p>
                     <div className="mt-2 text-[11px] bg-slate-50 border border-slate-200 px-2.5 py-1.5 rounded-lg text-slate-600">
                       <strong>Correo Demo:</strong> <code className="text-red-700 font-bold">despacho@hemovida.org</code>
@@ -629,7 +738,7 @@ export default function App() {
                     </span>
                     <h2 className="text-lg font-bold text-slate-900 mt-1">Médico de Triaje Clínico</h2>
                     <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                      Control de signos vitales, peso (&gt;50kg), hemoglobina y dictamen de aptitud o diferimiento temporal (CU10/11).
+                      Control de signos vitales, peso (&gt;50kg), hemoglobina capilar y dictamen de aptitud clínica o diferimiento.
                     </p>
                     <div className="mt-2 text-[11px] bg-slate-50 border border-slate-200 px-2.5 py-1.5 rounded-lg text-slate-600">
                       <strong>Correo Demo:</strong> <code className="text-blue-700 font-bold">medico@hemovida.org</code>
@@ -666,7 +775,7 @@ export default function App() {
                     </span>
                     <h2 className="text-lg font-bold text-slate-900 mt-1">Bioquímica & Fraccionamiento</h2>
                     <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                      Fraccionamiento &lt;6-8h (CU15), serología 6 marcadores (CU13), Coombs (CU14) y Barrera de Liberación / Baja.
+                      Fraccionamiento mecánico &lt;6h, panel serológico de 6 marcadores, pruebas inmunohematológicas y barrera de liberación.
                     </p>
                     <div className="mt-2 text-[11px] bg-slate-50 border border-slate-200 px-2.5 py-1.5 rounded-lg text-slate-600">
                       <strong>Correo Demo:</strong> <code className="text-teal-700 font-bold">laboratorio@hemovida.org</code>
@@ -703,7 +812,7 @@ export default function App() {
                     </span>
                     <h2 className="text-lg font-bold text-slate-900 mt-1">Administrador & Auditor RBAC</h2>
                     <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                      Bitácora forense de solo lectura (CU03), parametrización de umbrales de stock mínimo de seguridad (CU04) y roles.
+                      Bitácora inmutable de auditoría forense, validación y aprobación de personal, y parametrización de umbrales mínimos de stock.
                     </p>
                     <div className="mt-2 text-[11px] bg-slate-50 border border-slate-200 px-2.5 py-1.5 rounded-lg text-slate-600">
                       <strong>Correo Demo:</strong> <code className="text-rose-400 font-bold">admin@hemovida.org</code>
@@ -776,7 +885,7 @@ export default function App() {
         {session?.role === 'administrador' && (
           <AdminAuditView
             staffAccount={session.staff}
-            allStaff={MOCK_STAFF_ACCOUNTS}
+            allStaff={staffAccounts}
             auditLogs={auditLogs}
             stockThresholds={stockThresholds}
             onUpdateStockThresholds={(newThresholds) => {
@@ -790,12 +899,15 @@ export default function App() {
                 actorCi: session.staff.ci,
                 ipSimulada: generateForensicIp(),
                 tipoEvento: 'CAMBIO_UMBRAL_STOCK',
-                accion: 'Actualización de Umbrales Mínimos de Stock (CU04)',
+                accion: 'Actualización de Umbrales Mínimos de Stock',
                 detalles: 'Parametrización modificada por el administrador.'
               };
               setAuditLogs(prev => [auditEntry, ...prev]);
             }}
             inventory={inventory}
+            pendingStaffRequests={pendingStaffRequests}
+            onApproveStaff={handleApproveStaff}
+            onRejectStaff={handleRejectStaff}
           />
         )}
 
@@ -893,7 +1005,7 @@ export default function App() {
               </span>
             </div>
             <p className="text-slate-400 leading-relaxed text-[11px]">
-              Banco de Sangre y Servicio de Transfusión HemoVida. Cobertura completa de los 20 Casos de Uso (CU01 a CU20), separación estricta de roles RBAC y trazabilidad hemática total.
+              Banco de Sangre y Servicio de Transfusión HemoVida. Trazabilidad hematológica de extremo a extremo, separación estricta de roles institucionales y seguridad transfusional certificada.
             </p>
             <p className="text-[10px] text-slate-500">
               Calle Warnes N° 271, Santa Cruz de la Sierra, Bolivia.
@@ -902,15 +1014,15 @@ export default function App() {
 
           <div>
             <h4 className="text-white font-bold text-xs uppercase tracking-wider mb-3">
-              Perfiles RBAC del Sistema
+              Perfiles Institucionales
             </h4>
             <ul className="space-y-1.5 text-slate-400 text-[11px]">
-              <li><strong>Donador:</strong> Carnet digital & agendamiento (CU05-CU07)</li>
-              <li><strong>Recepción:</strong> Asistencia física e incentivos (CU08/09)</li>
-              <li><strong>Médico:</strong> Triaje clínico & aptitud (CU10/11)</li>
-              <li><strong>Bioquímico:</strong> Fraccionamiento & lab paralelo (CU12-15)</li>
-              <li><strong>Despacho:</strong> Código Rojo O- & aranceles (CU16-19)</li>
-              <li><strong>Admin:</strong> Bitácora forense & umbrales de stock (CU01-04)</li>
+              <li><strong>Donador:</strong> Carnet digital y agendamiento inteligente</li>
+              <li><strong>Recepción:</strong> Asistencia física, viabilidad e incentivos</li>
+              <li><strong>Médico:</strong> Triaje clínico, signos vitales y dictamen</li>
+              <li><strong>Bioquímico:</strong> Fraccionamiento y panel serológico</li>
+              <li><strong>Despacho:</strong> Código Rojo, compatibilidad y cadena de frío</li>
+              <li><strong>Admin:</strong> Auditoría forense, aprobación de personal y stock</li>
             </ul>
           </div>
 
@@ -948,7 +1060,7 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 pt-6 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between text-[11px] text-slate-500">
           <p>© 2026 Banco de Sangre HemoVida • Santa Cruz de la Sierra.</p>
           <p className="flex items-center gap-1 text-slate-400 mt-2 sm:mt-0">
-            <span>20 Casos de Uso (CU01 - CU20) con Bioseguridad Estricta</span>
+            <span>Seguridad Transfusional & Bioseguridad Hospitalaria</span>
             <Heart className="w-3 h-3 text-rose-500 fill-rose-500" />
           </p>
         </div>
@@ -965,6 +1077,7 @@ export default function App() {
         initialMode={loginModalInitialMode}
         initialEmail={loginModalInitialEmail}
         initialRegisterType={loginModalInitialRegisterType}
+        onRequestStaffAccount={handleRequestStaffAccount}
       />
 
       {currentDonorUser && (

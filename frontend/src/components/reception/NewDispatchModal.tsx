@@ -176,7 +176,7 @@ export const NewDispatchModal: React.FC<NewDispatchModalProps> = ({
       // Unselect bag automatically to prevent dangerous dispatch
       setSelectedBagIds(prev => prev.filter(id => id !== bagId));
 
-      alert(`⚠️ RESULTADO ADVERSO AUDITADO (CU18):\nLa unidad ${bag.codigoBolsa} resultó INCOMPATIBLE in vitro con el suero del paciente.\n\n🛡️ REGLA BIOLÓGICA CUMPLIDA:\nLa bolsa NO se descarta. Ha sido liberada de vuelta a stock Disponible para otro paciente compatible. Por favor elija otra unidad idéntica.`);
+      alert(`⚠️ RESULTADO ADVERSO AUDITADO:\nLa unidad ${bag.codigoBolsa} resultó INCOMPATIBLE in vitro con el suero del paciente.\n\n🛡️ REGLA BIOLÓGICA CUMPLIDA:\nLa bolsa NO se descarta. Ha sido liberada de vuelta a stock Disponible para otro paciente compatible. Por favor elija otra unidad idéntica.`);
     } else {
       setCrossmatchResults(prev => ({ ...prev, [bagId]: 'Compatible' }));
     }
@@ -375,7 +375,7 @@ export const NewDispatchModal: React.FC<NewDispatchModalProps> = ({
                   )}
                 </div>
                 <p className="text-xs text-red-200/90 font-medium mt-0.5">
-                  Cobertura de CU16 (Programados), CU17 (Código Rojo O-), CU18 (Pruebas Cruzadas in vitro), CU19 (Aranceles de procesamiento) y CU20 (Reposición 1 a 1).
+                  Gestión integral de despachos programados, emergencias Código Rojo, pruebas cruzadas y reposición institucional.
                 </p>
               </div>
             </div>
@@ -426,15 +426,15 @@ export const NewDispatchModal: React.FC<NewDispatchModalProps> = ({
         <div className="p-6">
           {!completedDispatch ? (
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* WARNING BANNER FOR CÓDIGO ROJO (CU17) */}
+              {/* WARNING BANNER FOR CÓDIGO ROJO */}
               {isCodigoRojo && (
                 <div className="p-4 bg-red-50 border-2 border-red-500 rounded-2xl space-y-2 text-xs text-red-950">
                   <div className="flex items-center gap-2 font-black text-sm text-red-900 uppercase tracking-wide">
                     <AlertTriangle className="w-5 h-5 text-red-600 shrink-0" />
-                    <span>Protocolo de Extrema Urgencia Vital: Código Rojo Transfusional (CU17)</span>
+                    <span>Protocolo de Extrema Urgencia Vital: Código Rojo Transfusional</span>
                   </div>
                   <p className="leading-relaxed">
-                    Se autoriza la <strong>omisión de la espera de pruebas cruzadas previas (CU16)</strong> y se despachan de inmediato unidades de donante universal <strong>O Rh- Negativo (CGR)</strong> para salvar la vida del paciente en shock hemorrágico, bajo suscripción obligatoria del Acta de Responsabilidad Médica.
+                    Se autoriza la <strong>omisión de la espera de pruebas cruzadas previas</strong> y se despachan de inmediato unidades de donante universal <strong>O Rh- Negativo (CGR)</strong> para salvar la vida del paciente en shock hemorrágico, bajo suscripción obligatoria del Acta de Responsabilidad Médica.
                   </p>
                 </div>
               )}
@@ -501,11 +501,11 @@ export const NewDispatchModal: React.FC<NewDispatchModalProps> = ({
                 </div>
               </div>
 
-              {/* SECTION 2: DATOS DEL PACIENTE RECEPTOR & TUTOR RESPONSABLE (CU20) */}
+              {/* SECTION 2: DATOS DEL PACIENTE RECEPTOR & TUTOR RESPONSABLE */}
               <div className="space-y-3">
                 <h4 className="font-bold text-xs uppercase tracking-wider text-red-800 flex items-center gap-1.5 border-b border-slate-100 pb-2">
                   <UserCheck className="w-4 h-4" />
-                  2. Datos del Paciente Receptor & Tutor Responsable (CU20)
+                  2. Datos del Paciente Receptor & Tutor Responsable
                 </h4>
 
                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
@@ -564,7 +564,7 @@ export const NewDispatchModal: React.FC<NewDispatchModalProps> = ({
                   </div>
                 </div>
 
-                {/* Tutor Responsable Toggle if patient is incapacitated (CU20) */}
+                {/* Tutor Responsable Toggle if patient is incapacitated */}
                 <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl space-y-2 text-xs">
                   <div className="flex items-center justify-between">
                     <label className="flex items-center gap-2 cursor-pointer font-bold text-slate-800">
@@ -574,7 +574,7 @@ export const NewDispatchModal: React.FC<NewDispatchModalProps> = ({
                         onChange={(e) => setPacienteIncapacitado(e.target.checked)}
                         className="rounded text-red-600 focus:ring-red-500 w-4 h-4 cursor-pointer"
                       />
-                      <span>¿El paciente está incapacitado, en coma o en quirófano de emergencia? (Firma Tutor Responsable CU20)</span>
+                      <span>¿El paciente está incapacitado, en coma o en quirófano de emergencia? (Firma Tutor Responsable)</span>
                     </label>
                   </div>
 
@@ -621,12 +621,12 @@ export const NewDispatchModal: React.FC<NewDispatchModalProps> = ({
                 </div>
               </div>
 
-              {/* SECTION 3: SELECCIÓN DE UNIDADES & PRUEBAS CRUZADAS IN VITRO (CU18) */}
+              {/* SECTION 3: SELECCIÓN DE UNIDADES & PRUEBAS CRUZADAS IN VITRO */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between border-b border-slate-100 pb-2">
                   <h4 className="font-bold text-xs uppercase tracking-wider text-red-800 flex items-center gap-1.5">
                     <Layers className="w-4 h-4" />
-                    3. Unidades en Stock & Pruebas Cruzadas de Compatibilidad in vitro (CU18)
+                    3. Unidades en Stock & Pruebas Cruzadas de Compatibilidad in vitro
                   </h4>
                   <span className="text-[11px] font-bold text-slate-600">
                     {selectedBagIds.length} seleccionada(s)
@@ -666,11 +666,11 @@ export const NewDispatchModal: React.FC<NewDispatchModalProps> = ({
                             <p>{bag.volumenMl} ml • {bag.ubicacionCamara}</p>
                           </div>
 
-                          {/* Interactive Crossmatching Controls (CU18) */}
+                          {/* Interactive Crossmatching Controls */}
                           {!isCodigoRojo && (
                             <div className="pt-1.5 border-t border-slate-100 space-y-1">
                               <span className="text-[10px] text-slate-500 block font-semibold">
-                                Prueba Cruzada (CU18): {crossResult ? (
+                                Prueba Cruzada: {crossResult ? (
                                   <strong className={crossResult === 'Compatible' ? 'text-emerald-700' : 'text-rose-700'}>
                                     {crossResult}
                                   </strong>
@@ -749,11 +749,11 @@ export const NewDispatchModal: React.FC<NewDispatchModalProps> = ({
                 </div>
               )}
 
-              {/* SECTION 5: FACTURACIÓN DE ARANCELES & CADENA DE FRÍO (CU19) */}
+              {/* SECTION 5: FACTURACIÓN DE ARANCELES & CADENA DE FRÍO */}
               <div className="space-y-3">
                 <h4 className="font-bold text-xs uppercase tracking-wider text-red-800 flex items-center gap-1.5 border-b border-slate-100 pb-2">
                   <DollarSign className="w-4 h-4" />
-                  4. Aranceles de Procesamiento y Cadena de Frío (CU19 - Nunca Venta de Sangre)
+                  4. Aranceles de Procesamiento y Cadena de Frío (Nunca Venta de Sangre)
                 </h4>
 
                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
@@ -875,7 +875,7 @@ export const NewDispatchModal: React.FC<NewDispatchModalProps> = ({
                 <div className="p-3 bg-white rounded-xl border border-slate-200 text-[11px] text-slate-700">
                   <p><strong>Concepto:</strong> {completedDispatch.cobroServicio.concepto}</p>
                   <p><strong>Régimen:</strong> {completedDispatch.cobroServicio.estadoPago} ({completedDispatch.cobroServicio.montoTotalBs} Bs.)</p>
-                  <p><strong>Deuda Biológica (CU20):</strong> Aperturada en el padrón de reposición con equivalencia 1 a 1 ({completedDispatch.unidadesDespachadas.length} donante(s) requeridos).</p>
+                  <p><strong>Deuda Biológica:</strong> Aperturada en el padrón de reposición con equivalencia 1 a 1 ({completedDispatch.unidadesDespachadas.length} donante(s) requeridos).</p>
                 </div>
               </div>
 

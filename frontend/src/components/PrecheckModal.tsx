@@ -116,7 +116,7 @@ export const PrecheckModal: React.FC<PrecheckModalProps> = ({
             <CheckCircle2 className="w-6 h-6" />
             <div>
               <h3 className="font-bold text-lg font-['Outfit',sans-serif]">
-                Prefiltro Web de Autoexclusión (CU06)
+                Prefiltro Web de Autoexclusión Médica
               </h3>
               <p className="text-xs text-rose-100">
                 Diferenciación de Exclusión Temporal vs. Definitiva • HemoVida
@@ -192,13 +192,13 @@ export const PrecheckModal: React.FC<PrecheckModalProps> = ({
                     ¡Apto en Prefiltro Web Preliminar!
                   </h4>
                   <p className="text-xs text-slate-600 mt-2 max-w-sm mx-auto leading-relaxed">
-                    No presentas criterios de exclusión temporal ni definitiva. Ahora selecciona la modalidad para agendar tu cita oficial de donación (CU07).
+                    No presentas criterios de exclusión temporal ni definitiva. Ahora selecciona la modalidad para agendar tu cita oficial de donación.
                   </p>
 
                   {/* Modalidad Selection */}
                   <div className="mt-4 p-3 bg-slate-50 border border-slate-200 rounded-2xl text-left text-xs space-y-2">
                     <label className="block text-[11px] font-bold text-slate-700">
-                      Modalidad de Donación (CU07):
+                      Modalidad de Donación:
                     </label>
                     <select
                       value={modalidadSeleccionada}

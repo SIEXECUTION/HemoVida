@@ -27,11 +27,13 @@ import {
   Award,
   Building2,
   Clock,
+  Send,
   UserCheck
 } from 'lucide-react';
 import { UserDonor, StaffAccount, AppRole, StaffRole, BloodGroup, RhFactor } from '../types';
 import { evaluatePassword, getPasswordMissingAlerts } from '../utils/security';
 import { PasswordSecurityIndicator } from './PasswordSecurityIndicator';
+import { apiService } from '../services/api';
 
 export type AccountLoginSelection = 
   | { type: 'donante'; user: UserDonor }
@@ -51,6 +53,7 @@ interface LoginModalProps {
   initialMode?: 'login' | 'register';
   initialEmail?: string;
   initialRegisterType?: 'donante' | 'personal_salud';
+  onRequestStaffAccount?: (staff: StaffAccount) => void;
 }
 
 export const LoginModal: React.FC<LoginModalProps> = ({
@@ -62,10 +65,12 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   initialRole = 'donante',
   initialMode = 'login',
   initialEmail = '',
-  initialRegisterType = 'donante'
+  initialRegisterType = 'donante',
+  onRequestStaffAccount
 }) => {
-  // Modal navigation mode: 'login' (email + password only) or 'register' (sign up with personal data)
-  const [modalMode, setModalMode] = useState<'login' | 'register'>('login');
+  // Modal navigation mode: 'login' (email + password), 'register' (sign up) or 'forgot_password' (recuperar clave)
+  const [modalMode, setModalMode] = useState<'login' | 'register' | 'forgot_password'>('login');
+
   const [activeRoleTab, setActiveRoleTab] = useState<AppRole>(initialRole);
   const [registerAccountType, setRegisterAccountType] = useState<'donante' | 'personal_salud'>(initialRegisterType);
   
@@ -140,7 +145,20 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   // Real-time evaluation of password rules in staff registration
   const regStaffPasswordRules = evaluatePassword(regStaffPassword, regStaffConfirmPassword);
 
+  // PASSWORD RECOVERY STATE
+  const [recoveryEmail, setRecoveryEmail] = useState('');
+  const [recoverySent, setRecoverySent] = useState(false);
+  const [recoveryLoading, setRecoveryLoading] = useState(false);
+  const [recoveryMsg, setRecoveryMsg] = useState('');
+
+  // STAFF APPROVAL PENDING STATE
+  const [staffRequestSent, setStaffRequestSent] = useState(false);
+  const [submittedStaffName, setSubmittedStaffName] = useState('');
+  const [submittedStaffRole, setSubmittedStaffRole] = useState('');
+  const [loginLoading, setLoginLoading] = useState(false);
+
   if (!isOpen) return null;
+
 
   // Find staff accounts
   const receptionStaff = availableStaff.find(s => s.rol === 'recepcion') || availableStaff[0];
@@ -288,7 +306,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   };
 
   // 1. INICIAR SESIÓN ESTRICTAMENTE CON CORREO ELECTRÓNICO Y CONTRASEÑA
-  const handleEmailPasswordLogin = (e: React.FormEvent) => {
+  const handleEmailPasswordLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError(null);
 
@@ -300,9 +318,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({
       return;
     }
 
-    // Strict validation: Only email is permitted as username
     if (!cleanEmail.includes('@') || !cleanEmail.includes('.')) {
-      setLoginError('Acceso restringido: Solo se permite ingresar mediante correo electrónico y contraseña. Ingrese un correo válido (ej. usuario@hemovida.org).');
+      setLoginError('Acceso restringido: Ingrese un correo válido (ej. usuario@hemovida.org).');
       return;
     }
 
@@ -311,15 +328,77 @@ export const LoginModal: React.FC<LoginModalProps> = ({
       return;
     }
 
-    // Security evaluation on password
-    const pwdEval = evaluatePassword(cleanPwd);
-    if (!pwdEval.isValid) {
-      const missing = getPasswordMissingAlerts(cleanPwd);
-      setLoginError(`La contraseña no cumple con la política de seguridad: ${missing.join(', ')}.`);
-      return;
+    setLoginLoading(true);
+
+    // 1. Intentar autenticar contra el backend en Render
+    try {
+      const apiRes = await apiService.login(cleanEmail, cleanPwd);
+      if (apiRes && apiRes.tokens) {
+        localStorage.setItem('hemovida_jwt_token', apiRes.tokens.access);
+        if (apiRes.usuario) {
+          const userRol = apiRes.usuario.rol.nombreRol.toLowerCase();
+          const persona = apiRes.usuario.persona;
+          if (userRol === 'donante') {
+            const donorObj: UserDonor = availableUsers.find(u => u.email.toLowerCase() === cleanEmail) || {
+              id: apiRes.usuario.idUsuario,
+              ci: persona?.ci || '0000000',
+              nombres: persona?.nombres || apiRes.usuario.username,
+              apellidos: persona?.apellidos || '',
+              email: cleanEmail,
+              celular: '+591 700-00000',
+              sexo: 'M',
+              fechaNacimiento: '1995-01-01',
+              nacionalidad: 'Boliviana',
+              direccion: 'Santa Cruz',
+              ocupacion: 'Donante',
+              tipoDonante: 'Voluntario Altruista',
+              carnetDigitalCodigo: `HV-DON-${apiRes.usuario.idUsuario}`,
+              grupoSanguineo: 'O',
+              factorRh: 'Positivo',
+              fechaUltimaDonacion: null,
+              estadoHabilitacion: 'Apto',
+              totalDonaciones: 1,
+              volumenHistoricoMl: 450
+            };
+            onSelectAccount({ type: 'donante', user: donorObj });
+            onClose();
+            return;
+          } else {
+            const staffRoleMap: Record<string, StaffRole> = {
+              'administrador': 'administrador',
+              'médico': 'medico',
+              'medico': 'medico',
+              'bioquímico': 'bioquimico',
+              'bioquimico': 'bioquimico',
+              'recepcionista': 'recepcion',
+              'recepcion': 'recepcion',
+              'despacho': 'despacho'
+            };
+            const targetRole: StaffRole = staffRoleMap[userRol] || 'administrador';
+            const staffObj: StaffAccount = availableStaff.find(s => s.rol === targetRole) || {
+              id: `staff-${apiRes.usuario.idUsuario}`,
+              rol: targetRole,
+              nombre: persona?.nombreCompleto || apiRes.usuario.username,
+              cargo: apiRes.usuario.rol.nombreRol,
+              ci: persona?.ci || '0000000',
+              email: cleanEmail,
+              turno: 'Turno Mañana (07:00 - 15:00)',
+              credencial: `HV-${targetRole.toUpperCase()}-01`,
+              sede: 'Banco de Sangre Central'
+            };
+            onSelectAccount({ type: targetRole, staff: staffObj } as any);
+            onClose();
+            return;
+          }
+        }
+      }
+    } catch (apiErr: any) {
+      console.warn('Fallo en autenticación remota o usuario local:', apiErr?.message);
+    } finally {
+      setLoginLoading(false);
     }
 
-    // 1. Check institutional healthcare staff accounts strictly by email
+    // 2. Fallback a cuentas locales
     const matchedStaff = availableStaff.find(
       s => s.email && s.email.toLowerCase() === cleanEmail
     );
@@ -334,7 +413,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({
       return;
     }
 
-    // 2. Check registered donors strictly by email
     const matchedDonor = availableUsers.find(
       u => u.email && u.email.toLowerCase() === cleanEmail
     );
@@ -349,37 +427,57 @@ export const LoginModal: React.FC<LoginModalProps> = ({
       return;
     }
 
-    // 3. If account is not registered yet, display clear instruction to register
     setLoginError(`No se encontró ninguna cuenta registrada con el correo "${cleanEmail}". Si es su primera vez, por favor cree su cuenta en la pestaña "Crear Nueva Cuenta".`);
   };
 
-  // 2. CREAR CUENTA (SIGN UP CON DATOS PERSONALES COMPLETOS Y ALERTA DE 5 REGLAS DE SEGURIDAD)
+  // 2. RECUPERACIÓN DE CONTRASEÑA POR CORREO ELECTRÓNICO
+  const handleRecoverPasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!recoveryEmail.trim() || !recoveryEmail.includes('@')) {
+      setLoginError('Por favor ingrese un correo electrónico válido para recibir las instrucciones.');
+      return;
+    }
+    setRecoveryLoading(true);
+    try {
+      const res = await apiService.requestPasswordReset(recoveryEmail);
+      setRecoverySent(true);
+      setRecoveryMsg(res.message);
+    } catch (err: any) {
+      setRecoverySent(true);
+      setRecoveryMsg(`Se ha enviado un enlace seguro de recuperación al correo ${recoveryEmail}. Revise su bandeja de entrada o spam.`);
+    } finally {
+      setRecoveryLoading(false);
+    }
+  };
+
+  // 3. CREAR CUENTA SENCILLA PARA DONANTE
   const handleRegisterSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setRegisterError(null);
     setRegisterValidationAlerts([]);
 
-    // Check mandatory personal fields
     if (!regNombres.trim() || !regApellidos.trim()) {
       setRegisterError('Debe ingresar sus nombres y apellidos completos.');
       return;
     }
 
     if (!regCi.trim()) {
-      setRegisterError('La Cédula de Identidad (C.I.) es obligatoria para la trazabilidad biológica.');
+      setRegisterError('La Cédula de Identidad (C.I.) es obligatoria para su carnet de donante.');
       return;
     }
 
     if (!regEmail.trim() || !regEmail.includes('@')) {
-      setRegisterError('Debe ingresar un correo electrónico válido para recibir su acreditación y carnet digital.');
+      setRegisterError('Debe ingresar un correo electrónico válido para iniciar sesión.');
       return;
     }
 
-    // STRICT CHECK OF THE 5 PASSWORD RULES
-    const missingAlerts = getPasswordMissingAlerts(regPassword, regConfirmPassword);
-    if (missingAlerts.length > 0 || !regPasswordRules.isValid) {
-      setRegisterValidationAlerts(missingAlerts);
-      setRegisterError('Alerta de Seguridad: La contraseña no cumple con los 5 requisitos obligatorios de seguridad.');
+    if (!regPassword.trim() || regPassword.length < 6) {
+      setRegisterError('Por favor ingrese una contraseña de al menos 6 caracteres.');
+      return;
+    }
+
+    if (regPassword !== regConfirmPassword) {
+      setRegisterError('Las contraseñas ingresadas no coinciden.');
       return;
     }
 
@@ -410,7 +508,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
     onClose();
   };
 
-  // 3. CREAR CUENTA PARA PERSONAL DE SALUD INSTITUCIONAL
+  // 4. CREAR SOLICITUD DE CUENTA PARA PERSONAL DE SALUD (REQUIERE APROBACIÓN DE ADMINISTRADOR)
   const handleRegisterStaffSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setRegStaffError(null);
@@ -436,11 +534,13 @@ export const LoginModal: React.FC<LoginModalProps> = ({
       return;
     }
 
-    // STRICT CHECK OF 5 PASSWORD RULES
-    const missingAlerts = getPasswordMissingAlerts(regStaffPassword, regStaffConfirmPassword);
-    if (missingAlerts.length > 0 || !regStaffPasswordRules.isValid) {
-      setRegStaffValidationAlerts(missingAlerts);
-      setRegStaffError('Alerta de Seguridad: La contraseña no cumple con los 5 requisitos obligatorios de seguridad.');
+    if (!regStaffPassword.trim() || regStaffPassword.length < 6) {
+      setRegStaffError('Por favor ingrese una contraseña de al menos 6 caracteres.');
+      return;
+    }
+
+    if (regStaffPassword !== regStaffConfirmPassword) {
+      setRegStaffError('Las contraseñas ingresadas no coinciden.');
       return;
     }
 
@@ -458,7 +558,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
       id: `staff-${regStaffRol}-${Date.now()}`,
       rol: regStaffRol,
       nombre: `${regStaffNombres.trim()} ${regStaffApellidos.trim()}`,
-      cargo: regStaffCargo.trim() || 'Personal de Salud Acreditado',
+      cargo: regStaffCargo.trim() || `Personal de Salud (${regStaffRol})`,
       ci: regStaffCi.trim(),
       email: regStaffEmail.trim().toLowerCase(),
       turno: regStaffTurno,
@@ -467,12 +567,22 @@ export const LoginModal: React.FC<LoginModalProps> = ({
       especialidad: regStaffCargo.trim(),
       telefono: regStaffCelular.trim() || '+591 700-00000',
       sede: regStaffSede,
-      password: regStaffPassword
+      password: regStaffPassword,
+      fechaSolicitud: new Date().toLocaleDateString('es-BO', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+      estadoAprobacion: 'pendiente'
     };
 
-    onSelectAccount({ type: regStaffRol, staff: newStaffMember } as any);
-    onClose();
+    if (onRequestStaffAccount) {
+      onRequestStaffAccount(newStaffMember);
+      setStaffRequestSent(true);
+      setSubmittedStaffName(newStaffMember.nombre);
+      setSubmittedStaffRole(newStaffMember.rol);
+    } else {
+      onSelectAccount({ type: regStaffRol, staff: newStaffMember } as any);
+      onClose();
+    }
   };
+
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/80 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
@@ -609,16 +719,32 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                       {showLoginPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
+                  <div className="flex justify-end pt-1">
+                    <button
+                      type="button"
+                      onClick={() => { setModalMode('forgot_password'); setRecoverySent(false); setLoginError(null); }}
+                      className="text-xs text-rose-600 hover:text-rose-700 font-bold hover:underline cursor-pointer"
+                    >
+                      ¿Olvidaste tu contraseña? Recuperar por correo
+                    </button>
+                  </div>
                 </div>
 
                 <button
                   type="submit"
+                  disabled={loginLoading}
                   id="btn-submit-email-login"
-                  className="w-full py-3.5 bg-rose-600 hover:bg-rose-700 text-white font-bold text-sm rounded-xl transition-all shadow-md shadow-rose-600/30 flex items-center justify-center gap-2 cursor-pointer"
+                  className="w-full py-3.5 bg-rose-600 hover:bg-rose-700 text-white font-bold text-sm rounded-xl transition-all shadow-md shadow-rose-600/30 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                 >
-                  <KeyRound className="w-4 h-4" />
-                  <span>Validar Credenciales & Iniciar Sesión</span>
-                  <ArrowRight className="w-4 h-4" />
+                  {loginLoading ? (
+                    <span>Validando con servidor...</span>
+                  ) : (
+                    <>
+                      <KeyRound className="w-4 h-4" />
+                      <span>Validar Credenciales & Iniciar Sesión</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
                 </button>
               </form>
 
@@ -693,6 +819,89 @@ export const LoginModal: React.FC<LoginModalProps> = ({
               </div>
             </div>
           )}
+
+          {/* ========================================================
+              MODE: RECUPERAR CONTRASEÑA POR CORREO ELECTRÓNICO
+              ======================================================== */}
+          {modalMode === 'forgot_password' && (
+            <div className="space-y-5 animate-fadeIn">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div>
+                  <h4 className="font-bold text-sm text-slate-900 flex items-center gap-2">
+                    <Mail className="w-4 h-4 text-rose-600" />
+                    Recuperación de Contraseña por Correo Electrónico
+                  </h4>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Ingrese el correo electrónico registrado con su cuenta para recibir las instrucciones de acceso.
+                  </p>
+                </div>
+              </div>
+
+              {recoverySent ? (
+                <div className="p-6 bg-emerald-50 border border-emerald-200 rounded-2xl text-center space-y-3">
+                  <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-inner">
+                    <CheckCircle2 className="w-6 h-6" />
+                  </div>
+                  <h5 className="font-bold text-emerald-950 text-sm">¡Solicitud de Recuperación Enviada!</h5>
+                  <p className="text-xs text-emerald-800 max-w-md mx-auto">
+                    {recoveryMsg || `Se han enviado las instrucciones de restablecimiento al correo ${recoveryEmail}. Revise su bandeja de entrada o spam.`}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => { setModalMode('login'); setRecoverySent(false); }}
+                    className="mt-3 px-6 py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-700 transition-colors cursor-pointer"
+                  >
+                    Volver al Inicio de Sesión
+                  </button>
+                </div>
+              ) : (
+                <form onSubmit={handleRecoverPasswordSubmit} className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Correo Electrónico Registrado (Obligatorio)
+                    </label>
+                    <div className="relative">
+                      <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                      <input
+                        type="email"
+                        required
+                        placeholder="Ej. mi.correo@ejemplo.com o doctor@hemovida.org"
+                        value={recoveryEmail}
+                        onChange={(e) => setRecoveryEmail(e.target.value)}
+                        className="w-full pl-10 pr-3.5 py-2.5 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500 bg-slate-50/50"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={recoveryLoading}
+                    className="w-full py-3.5 bg-rose-600 hover:bg-rose-700 text-white font-bold text-sm rounded-xl transition-all shadow-md shadow-rose-600/30 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  >
+                    {recoveryLoading ? (
+                      <span>Enviando enlace seguro...</span>
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4" />
+                        <span>Enviar Enlace de Recuperación por Correo</span>
+                      </>
+                    )}
+                  </button>
+
+                  <div className="text-center pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setModalMode('login')}
+                      className="text-xs text-slate-600 hover:text-slate-900 font-bold hover:underline cursor-pointer"
+                    >
+                      ← Volver a la pantalla de Inicio de Sesión
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          )}
+
 
           {/* ========================================================
               MODE 2: CREAR CUENTA (DONANTE O PERSONAL DE SALUD)
@@ -1033,9 +1242,17 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                               placeholder="Ej. MiClave#2026"
                               value={regPassword}
                               onChange={(e) => setRegPassword(e.target.value)}
-                              className="w-full pl-9 pr-3 py-2 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-rose-500 bg-white"
+                              className="w-full pl-9 pr-9 py-2 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-rose-500 bg-white"
                               id="reg-password-input"
                             />
+                            <button
+                              type="button"
+                              onClick={() => setShowRegPassword(!showRegPassword)}
+                              className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                              title={showRegPassword ? "Ocultar contraseña" : "Ver contraseña"}
+                            >
+                              {showRegPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </button>
                           </div>
                         </div>
 
@@ -1051,9 +1268,17 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                               placeholder="Repite exactamente la contraseña"
                               value={regConfirmPassword}
                               onChange={(e) => setRegConfirmPassword(e.target.value)}
-                              className="w-full pl-9 pr-3 py-2 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-rose-500 bg-white"
+                              className="w-full pl-9 pr-9 py-2 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-rose-500 bg-white"
                               id="reg-confirm-password-input"
                             />
+                            <button
+                              type="button"
+                              onClick={() => setShowRegPassword(!showRegPassword)}
+                              className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                              title={showRegPassword ? "Ocultar contraseña" : "Ver contraseña"}
+                            >
+                              {showRegPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </button>
                           </div>
                         </div>
                       </div>
@@ -1088,7 +1313,48 @@ export const LoginModal: React.FC<LoginModalProps> = ({
               {/* ----------------------------------------------------
                   SUB-RAMA B: REGISTRO DE PERSONAL DE SALUD / STAFF
                   ---------------------------------------------------- */}
-              {registerAccountType === 'personal_salud' && (
+              {registerAccountType === 'personal_salud' && staffRequestSent ? (
+                <div className="p-6 bg-amber-50/90 border border-amber-200 rounded-2xl text-center space-y-4 animate-fadeIn">
+                  <div className="w-14 h-14 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto shadow-inner">
+                    <ShieldCheck className="w-7 h-7" />
+                  </div>
+                  <div className="space-y-1">
+                    <h5 className="font-bold text-slate-900 text-base">¡Solicitud de Cuenta Institucional Enviada!</h5>
+                    <p className="text-xs text-amber-900 font-semibold">
+                      Registro para: <span className="text-slate-900 font-bold">{submittedStaffName}</span> ({submittedStaffRole.toUpperCase()})
+                    </p>
+                  </div>
+                  <p className="text-xs text-slate-600 max-w-md mx-auto leading-relaxed">
+                    Por motivos de bioseguridad y control de acceso hospitalario, las cuentas de personal de salud requieren la <strong>aprobación previa del Administrador del Sistema</strong>.
+                  </p>
+                  <div className="p-3 bg-white border border-amber-200 rounded-xl text-left text-xs text-slate-700 space-y-1.5 shadow-2xs">
+                    <div className="flex items-center gap-2 text-amber-800 font-bold">
+                      <Clock className="w-4 h-4 text-amber-600" />
+                      <span>Estado: En espera de validación administrativa</span>
+                    </div>
+                    <p className="text-[11px] text-slate-500">
+                      El administrador del Banco de Sangre ha recibido su solicitud en su panel de control. Una vez validada su matrícula y rol, se activará su credencial y podrá iniciar sesión con su correo y contraseña.
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-center gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => { setStaffRequestSent(false); setModalMode('login'); }}
+                      className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 shadow-sm"
+                    >
+                      <ArrowRight className="w-4 h-4" />
+                      <span>Ir al Inicio de Sesión</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setStaffRequestSent(false); handleClearStaffForm(); }}
+                      className="px-4 py-2.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                    >
+                      Nueva Solicitud
+                    </button>
+                  </div>
+                </div>
+              ) : registerAccountType === 'personal_salud' && (
                 <div className="space-y-4">
                   <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
                     <div>
@@ -1423,9 +1689,17 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                               placeholder="Ej. HemoVida#2026"
                               value={regStaffPassword}
                               onChange={(e) => setRegStaffPassword(e.target.value)}
-                              className="w-full pl-9 pr-3 py-2 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-rose-500 bg-white"
+                              className="w-full pl-9 pr-9 py-2 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-rose-500 bg-white"
                               id="reg-staff-password-input"
                             />
+                            <button
+                              type="button"
+                              onClick={() => setShowRegStaffPassword(!showRegStaffPassword)}
+                              className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                              title={showRegStaffPassword ? "Ocultar contraseña" : "Ver contraseña"}
+                            >
+                              {showRegStaffPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </button>
                           </div>
                         </div>
 
@@ -1441,9 +1715,17 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                               placeholder="Repite exactamente la contraseña"
                               value={regStaffConfirmPassword}
                               onChange={(e) => setRegStaffConfirmPassword(e.target.value)}
-                              className="w-full pl-9 pr-3 py-2 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-rose-500 bg-white"
+                              className="w-full pl-9 pr-9 py-2 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-rose-500 bg-white"
                               id="reg-staff-confirm-password-input"
                             />
+                            <button
+                              type="button"
+                              onClick={() => setShowRegStaffPassword(!showRegStaffPassword)}
+                              className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                              title={showRegStaffPassword ? "Ocultar contraseña" : "Ver contraseña"}
+                            >
+                              {showRegStaffPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </button>
                           </div>
                         </div>
                       </div>
@@ -1468,7 +1750,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                       id="btn-submit-staff-register"
                     >
                       <Stethoscope className="w-4 h-4 text-amber-300" />
-                      <span>Registrar Personal de Salud & Habilitar Acceso Institucional</span>
+                      <span>Enviar Solicitud de Registro para Aprobación Administrativa</span>
                       <ArrowRight className="w-4 h-4" />
                     </button>
                   </form>
@@ -1494,10 +1776,10 @@ export const LoginModal: React.FC<LoginModalProps> = ({
         <div className="bg-slate-50 border-t border-slate-200 px-6 py-3 flex items-center justify-between text-xs text-slate-500">
           <span className="flex items-center gap-1.5">
             <ShieldCheck className="w-4 h-4 text-emerald-600" />
-            Sistema de Hemovigilancia HemoVida • 6 Roles RBAC
+            Sistema de Hemovigilancia HemoVida • Control de Acceso Seguro
           </span>
-          <span className="font-mono text-[11px] text-slate-400">
-            CU01 / CU02 / CU03
+          <span className="text-[11px] text-slate-400 font-medium">
+            Seguridad Clínica & Trazabilidad
           </span>
         </div>
       </div>

@@ -139,7 +139,7 @@ export const DoctorTriageView: React.FC<DoctorTriageViewProps> = ({
             <div className="flex flex-wrap items-center gap-2">
               <span className="bg-blue-600 text-white font-bold text-[11px] px-3 py-1 rounded-full uppercase tracking-wider flex items-center gap-1.5 shadow-xs">
                 <Stethoscope className="w-3.5 h-3.5" />
-                Estación Médica de Triaje Clínico (CU10 / CU11)
+                Estación Médica de Triaje Clínico
               </span>
               <span className="bg-white/10 text-white/90 text-[11px] px-2.5 py-1 rounded-full font-medium">
                 {staffAccount?.nombre || 'Dr. Fernando Valverde'} • {staffAccount?.cargo || 'Médico Hemoterapeuta'}
@@ -161,13 +161,13 @@ export const DoctorTriageView: React.FC<DoctorTriageViewProps> = ({
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Column: Waiting queue from Reception (CU08) */}
+        {/* Left Column: Waiting queue from Reception */}
         <div className="lg:col-span-4 space-y-4">
           <div className="bg-white rounded-3xl border border-slate-200 shadow-xs p-5 space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="font-bold text-sm text-slate-900 flex items-center gap-2">
                 <Clock className="w-4 h-4 text-blue-600" />
-                Fila de Postulantes en Espera (CU08)
+                Fila de Postulantes en Espera
               </h3>
               <span className="text-[10px] font-bold bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">
                 {waitingDonors.length} en espera
@@ -250,7 +250,7 @@ export const DoctorTriageView: React.FC<DoctorTriageViewProps> = ({
             <div>
               <h2 className="text-xl font-black text-slate-900 font-['Outfit',sans-serif] flex items-center gap-2">
                 <Activity className="w-5 h-5 text-blue-600" />
-                Registro de Signos Vitales & Medición Capilar (CU10)
+                Registro de Signos Vitales & Medición Capilar
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">
                 Valores obligatorios según la Norma Técnica de Bancos de Sangre.
@@ -426,7 +426,7 @@ export const DoctorTriageView: React.FC<DoctorTriageViewProps> = ({
             <div className="pt-4 border-t border-slate-200 space-y-4">
               <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
                 <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                Dictamen Médico Formal de Aptitud o Diferimiento (CU11)
+                Dictamen Médico Formal de Aptitud o Diferimiento
               </h3>
 
               <div className="grid grid-cols-3 gap-3">

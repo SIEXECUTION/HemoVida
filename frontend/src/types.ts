@@ -24,9 +24,12 @@ export interface StaffAccount {
   credencial: string;
   password?: string;
   matriculaProfesional?: string;
+  matricula?: string;
   especialidad?: string;
   telefono?: string;
   sede?: string;
+  fechaSolicitud?: string;
+  estadoAprobacion?: 'pendiente' | 'aprobado' | 'rechazado';
 }
 
 export interface UserDonor {
@@ -279,7 +282,7 @@ export interface BitacoraAuditoria {
   actorRol: StaffRole | 'donante' | 'sistema';
   actorCi: string;
   ipSimulada: string;
-  tipoEvento: 'LOGIN' | 'LOGOUT' | 'FLEBOTOMIA_REGISTRADA' | 'FRACCIONAMIENTO' | 'DESCARTE_SEROLOGICO' | 'DESPACHO_AUTORIZADO' | 'CODIGO_ROJO_EMERGENCIA' | 'PRUEBA_CRUZADA_INCOMPATIBLE' | 'CAMBIO_UMBRAL_STOCK' | 'ASISTENCIA_CONFIRMADA';
+  tipoEvento: 'LOGIN' | 'LOGOUT' | 'FLEBOTOMIA_REGISTRADA' | 'FRACCIONAMIENTO' | 'DESCARTE_SEROLOGICO' | 'DESPACHO_AUTORIZADO' | 'CODIGO_ROJO_EMERGENCIA' | 'PRUEBA_CRUZADA_INCOMPATIBLE' | 'CAMBIO_UMBRAL_STOCK' | 'ASISTENCIA_CONFIRMADA' | 'CREACION_USUARIO' | 'SOLICITUD_PERSONAL' | 'APROBACION_PERSONAL' | 'RECHAZO_PERSONAL';
   accion: string;
   detalles: string;
   entidadId?: string;

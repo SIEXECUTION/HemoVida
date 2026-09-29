@@ -84,7 +84,7 @@ export const PatientReplacementSection: React.FC<PatientReplacementSectionProps>
           <div>
             <div className="flex items-center gap-2 mb-1">
               <span className="text-[11px] font-bold text-rose-700 bg-rose-50 px-2.5 py-0.5 rounded-full border border-rose-200">
-                Padrón de Pacientes Receptores (CU20)
+                Padrón de Pacientes Receptores
               </span>
               <span className="text-[11px] text-slate-400">• Equivalencia Estricta 1:1</span>
             </div>
@@ -347,14 +347,14 @@ export const PatientReplacementSection: React.FC<PatientReplacementSectionProps>
         </div>
       </div>
 
-      {/* Modal for authorising scarce group substitution (CU20) */}
+      {/* Modal for authorising scarce group substitution */}
       {selectedPatientForSubstitution && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4 border border-slate-200">
             <div className="flex items-center justify-between">
               <h3 className="font-bold text-base text-slate-900 flex items-center gap-2">
                 <Award className="w-5 h-5 text-teal-600" />
-                Autorizar Sustitución por Grupo Escaso (CU20)
+                Autorizar Sustitución por Grupo Escaso
               </h3>
               <button 
                 onClick={() => setSelectedPatientForSubstitution(null)}
