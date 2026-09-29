@@ -14,7 +14,8 @@ import {
   ArrowRight,
   Sparkles,
   Calendar,
-  AlertCircle
+  AlertCircle,
+  KeyRound
 } from 'lucide-react';
 import { 
   ClinicalTriageRecord, 
@@ -33,6 +34,7 @@ interface DoctorTriageViewProps {
     updatedDonor: UserDonor,
     updatedAppointment?: Appointment
   ) => void;
+  onOpenChangePassword?: () => void;
 }
 
 export const DoctorTriageView: React.FC<DoctorTriageViewProps> = ({
@@ -40,7 +42,8 @@ export const DoctorTriageView: React.FC<DoctorTriageViewProps> = ({
   appointments,
   donors,
   triajes,
-  onConfirmTriage
+  onConfirmTriage,
+  onOpenChangePassword
 }) => {
   // Pending donors who confirmed attendance (CU08) or are scheduled
   const waitingDonors = appointments.filter(a => a.asistenciaConfirmada && a.estadoCita === 'En Espera Triaje' || a.estadoCita === 'Programada');
@@ -157,6 +160,20 @@ export const DoctorTriageView: React.FC<DoctorTriageViewProps> = ({
               Examen físico previo a la flebotomía: control de tensión arterial, pulso, temperatura, peso corporal (&gt;50 kg), hemoglobina capilar y venopunción antecubital para emitir la aptitud clínica obligatoria o el diferimiento temporal con fecha de reactivación.
             </p>
           </div>
+
+          {onOpenChangePassword && (
+            <div className="shrink-0">
+              <button
+                type="button"
+                onClick={onOpenChangePassword}
+                className="w-full sm:w-auto px-4 py-3 bg-white/10 hover:bg-white/20 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-colors"
+                title="Cambiar contraseña de acceso a la cuenta"
+              >
+                <KeyRound className="w-4 h-4 text-blue-300" />
+                <span>Cambiar Contraseña</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

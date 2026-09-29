@@ -921,6 +921,7 @@ export default function App() {
             incentivosEntrega={incentivosEntrega}
             setIncentivosEntrega={setIncentivosEntrega}
             staffAccount={session.staff}
+            onOpenChangePassword={() => setIsChangePasswordOpen(true)}
           />
         )}
 
@@ -936,6 +937,7 @@ export default function App() {
             replacements={replacements}
             setReplacements={setReplacements}
             staffAccount={session.staff}
+            onOpenChangePassword={() => setIsChangePasswordOpen(true)}
           />
         )}
 
@@ -968,6 +970,7 @@ export default function App() {
             pendingStaffRequests={pendingStaffRequests}
             onApproveStaff={handleApproveStaff}
             onRejectStaff={handleRejectStaff}
+            onOpenChangePassword={() => setIsChangePasswordOpen(true)}
           />
         )}
 
@@ -981,6 +984,7 @@ export default function App() {
             donors={donors}
             triajes={triajes}
             onConfirmTriage={handleConfirmDoctorTriage}
+            onOpenChangePassword={() => setIsChangePasswordOpen(true)}
           />
         )}
 
@@ -998,6 +1002,7 @@ export default function App() {
             setLabAnalyses={setLabAnalyses}
             bajasInventario={bajasInventario}
             setBajasInventario={setBajasInventario}
+            onOpenChangePassword={() => setIsChangePasswordOpen(true)}
           />
         )}
 

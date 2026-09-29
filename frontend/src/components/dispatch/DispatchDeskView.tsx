@@ -12,7 +12,8 @@ import {
   Thermometer,
   Calendar,
   Sparkles,
-  ArrowRight
+  ArrowRight,
+  KeyRound
 } from 'lucide-react';
 import { 
   BloodInventoryItem, 
@@ -32,6 +33,7 @@ interface DispatchDeskViewProps {
   replacements: PatientReplacementRecord[];
   setReplacements: React.Dispatch<React.SetStateAction<PatientReplacementRecord[]>>;
   staffAccount?: StaffAccount;
+  onOpenChangePassword?: () => void;
 }
 
 export type DispatchTab = 'inventario' | 'despachos' | 'distribucion';
@@ -43,7 +45,8 @@ export const DispatchDeskView: React.FC<DispatchDeskViewProps> = ({
   setDispatches,
   replacements,
   setReplacements,
-  staffAccount
+  staffAccount,
+  onOpenChangePassword
 }) => {
   const [activeTab, setActiveTab] = useState<DispatchTab>('inventario');
   const [isDispatchModalOpen, setIsDispatchModalOpen] = useState(false);
@@ -118,7 +121,18 @@ export const DispatchDeskView: React.FC<DispatchDeskViewProps> = ({
           </div>
 
           {/* Quick Action Button */}
-          <div className="shrink-0">
+          <div className="flex flex-col sm:flex-row gap-2.5 shrink-0">
+            {onOpenChangePassword && (
+              <button
+                type="button"
+                onClick={onOpenChangePassword}
+                className="w-full sm:w-auto px-4 py-3.5 bg-white/10 hover:bg-white/20 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-colors"
+                title="Cambiar contraseña de acceso a la cuenta"
+              >
+                <KeyRound className="w-4 h-4 text-red-300" />
+                <span>Cambiar Contraseña</span>
+              </button>
+            )}
             <button
               onClick={() => setIsDispatchModalOpen(true)}
               className="w-full sm:w-auto px-5 py-3.5 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-xl flex items-center justify-center gap-2.5 cursor-pointer transition-all shadow-lg shadow-red-950/50 hover:scale-[1.02]"

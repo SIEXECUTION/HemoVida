@@ -13,7 +13,8 @@ import {
   ArrowRight,
   RefreshCw,
   Flame,
-  FileText
+  FileText,
+  KeyRound
 } from 'lucide-react';
 import { 
   BloodInventoryItem, 
@@ -37,6 +38,7 @@ interface LabProcessingViewProps {
   setLabAnalyses: React.Dispatch<React.SetStateAction<LaboratoryAnalysisRecord[]>>;
   bajasInventario: BajaInventarioRecord[];
   setBajasInventario: React.Dispatch<React.SetStateAction<BajaInventarioRecord[]>>;
+  onOpenChangePassword?: () => void;
 }
 
 export const LabProcessingView: React.FC<LabProcessingViewProps> = ({
@@ -48,7 +50,8 @@ export const LabProcessingView: React.FC<LabProcessingViewProps> = ({
   labAnalyses,
   setLabAnalyses,
   bajasInventario,
-  setBajasInventario
+  setBajasInventario,
+  onOpenChangePassword
 }) => {
   const [activeTab, setActiveTab] = useState<'fraccionamiento' | 'serologia' | 'bajas'>('fraccionamiento');
 
@@ -237,7 +240,19 @@ export const LabProcessingView: React.FC<LabProcessingViewProps> = ({
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {onOpenChangePassword && (
+              <button
+                type="button"
+                onClick={onOpenChangePassword}
+                className="px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 bg-white/10 text-white/90 hover:bg-white/20 border border-white/10"
+                title="Cambiar contraseña de acceso a la cuenta"
+              >
+                <KeyRound className="w-3.5 h-3.5 text-teal-300" />
+                <span>Cambiar Contraseña</span>
+              </button>
+            )}
+
             <button
               onClick={() => setActiveTab('fraccionamiento')}
               className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${

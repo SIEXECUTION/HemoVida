@@ -16,7 +16,8 @@ import {
   AlertTriangle,
   Gift,
   CheckCircle2,
-  Stethoscope
+  Stethoscope,
+  KeyRound
 } from 'lucide-react';
 import { 
   BloodInventoryItem, 
@@ -53,6 +54,7 @@ interface ReceptionDeskViewProps {
   incentivosEntrega: IncentivoEntregaRecord[];
   setIncentivosEntrega: React.Dispatch<React.SetStateAction<IncentivoEntregaRecord[]>>;
   staffAccount?: StaffAccount;
+  onOpenChangePassword?: () => void;
 }
 
 export type ReceptionTab = 'viabilidad' | 'asistencia' | 'incentivos' | 'reposiciones' | 'estadisticas' | 'inventario';
@@ -72,7 +74,8 @@ export const ReceptionDeskView: React.FC<ReceptionDeskViewProps> = ({
   setAppointments,
   incentivosEntrega,
   setIncentivosEntrega,
-  staffAccount
+  staffAccount,
+  onOpenChangePassword
 }) => {
   const [activeTab, setActiveTab] = useState<ReceptionTab>('viabilidad');
 
@@ -197,6 +200,18 @@ export const ReceptionDeskView: React.FC<ReceptionDeskViewProps> = ({
           </div>
 
           <div className="flex flex-col sm:flex-row gap-2.5 shrink-0">
+            {onOpenChangePassword && (
+              <button
+                type="button"
+                onClick={onOpenChangePassword}
+                className="px-4 py-3 bg-white/10 hover:bg-white/20 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-colors"
+                title="Cambiar contraseña de acceso a la cuenta"
+              >
+                <KeyRound className="w-4 h-4 text-rose-300" />
+                <span>Cambiar Contraseña</span>
+              </button>
+            )}
+
             <button
               onClick={() => setIsNewDonorModalOpen(true)}
               className="px-4 py-3 bg-white/10 hover:bg-white/20 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-colors"

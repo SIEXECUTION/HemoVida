@@ -42,6 +42,7 @@ interface AdminAuditViewProps {
   pendingStaffRequests?: StaffAccount[];
   onApproveStaff?: (staffId: string) => void;
   onRejectStaff?: (staffId: string) => void;
+  onOpenChangePassword?: () => void;
 }
 
 export const AdminAuditView: React.FC<AdminAuditViewProps> = ({
@@ -53,7 +54,8 @@ export const AdminAuditView: React.FC<AdminAuditViewProps> = ({
   inventory,
   pendingStaffRequests = [],
   onApproveStaff,
-  onRejectStaff
+  onRejectStaff,
+  onOpenChangePassword
 }) => {
   const [activeTab, setActiveTab] = useState<'bitacora' | 'umbrales' | 'solicitudes' | 'rbac'>('bitacora');
   const [searchTerm, setSearchTerm] = useState('');
@@ -120,6 +122,18 @@ export const AdminAuditView: React.FC<AdminAuditViewProps> = ({
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            {onOpenChangePassword && (
+              <button
+                type="button"
+                onClick={onOpenChangePassword}
+                className="px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 bg-white/10 text-white/90 hover:bg-white/20 border border-white/10"
+                title="Cambiar contraseña de acceso a la cuenta"
+              >
+                <KeyRound className="w-3.5 h-3.5 text-rose-300" />
+                <span>Cambiar Contraseña</span>
+              </button>
+            )}
+
             <button
               onClick={() => setActiveTab('bitacora')}
               className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
