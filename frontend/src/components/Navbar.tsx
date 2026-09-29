@@ -19,7 +19,8 @@ import {
   FlaskConical,
   User,
   KeyRound,
-  Clock
+  Clock,
+  Briefcase
 } from 'lucide-react';
 import { UserSession, RoleCode } from '../types';
 
@@ -33,6 +34,7 @@ interface NavbarProps {
   onOpenPrecheck: () => void;
   onOpenChangePassword?: () => void;
   onSwitchRole?: (roleCode: RoleCode) => void;
+  onOpenOtherRoles?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -44,7 +46,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   onLogout,
   onOpenPrecheck,
   onOpenChangePassword,
-  onSwitchRole
+  onSwitchRole,
+  onOpenOtherRoles
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -303,6 +306,19 @@ export const Navbar: React.FC<NavbarProps> = ({
                   </div>
                 )}
 
+                {/* Botón Explorar Otros Roles (Área de Salud y Movilidad Hospitalaria) */}
+                {onOpenOtherRoles && (
+                  <button
+                    id="btn-otros-roles-nav"
+                    onClick={onOpenOtherRoles}
+                    className="px-2.5 sm:px-3 py-1.5 text-xs font-bold text-slate-800 hover:text-rose-700 bg-white hover:bg-rose-50 border border-slate-300 hover:border-rose-300 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs"
+                    title="Explorar o solicitar otros roles del área de salud (Médico, Bioquímico, Recepción, Despacho)"
+                  >
+                    <Briefcase className="w-3.5 h-3.5 text-rose-600" />
+                    <span className="font-extrabold text-[11px] sm:text-xs">Otros Roles</span>
+                  </button>
+                )}
+
                 {/* Account 0: Posible Donador Info */}
                 {activeRole === 'POSIBLE_DONADOR' && (
                   <div 
@@ -548,6 +564,21 @@ export const Navbar: React.FC<NavbarProps> = ({
                     ))}
                   </select>
                 </div>
+              )}
+
+              {/* Explorar Otros Roles Mobile */}
+              {onOpenOtherRoles && (
+                <button
+                  id="btn-otros-roles-mobile"
+                  onClick={() => {
+                    onOpenOtherRoles();
+                    setMobileMenuOpen(false);
+                  }}
+                  className="w-full text-left px-3 py-2 rounded-lg text-sm font-semibold text-rose-700 hover:bg-rose-50 flex items-center gap-2 cursor-pointer"
+                >
+                  <Briefcase className="w-4 h-4 text-rose-600" />
+                  <span>Otros Roles (Área de Salud)</span>
+                </button>
               )}
 
               {/* Modificar Contraseña Mobile */}

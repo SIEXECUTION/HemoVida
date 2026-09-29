@@ -12,7 +12,8 @@ import {
   ArrowRight,
   Sparkles,
   Award,
-  KeyRound
+  KeyRound,
+  Briefcase
 } from 'lucide-react';
 import { UserDonor, Appointment } from '../types';
 import { calculateBiologicalEligibility, formatDateTime } from '../utils/donationCalculator';
@@ -25,6 +26,7 @@ interface DashboardSummaryProps {
   onOpenDigitalCard: () => void;
   onOpenPrecheck: () => void;
   onOpenChangePassword?: () => void;
+  onOpenOtherRoles?: () => void;
 }
 
 export const DashboardSummary: React.FC<DashboardSummaryProps> = ({
@@ -34,7 +36,8 @@ export const DashboardSummary: React.FC<DashboardSummaryProps> = ({
   onOpenNewAppointment,
   onOpenDigitalCard,
   onOpenPrecheck,
-  onOpenChangePassword
+  onOpenChangePassword,
+  onOpenOtherRoles
 }) => {
   const eligibility = calculateBiologicalEligibility(user);
   const nextAppointment = upcomingAppointments.find(a => a.estadoCita === 'Programada');
@@ -112,6 +115,18 @@ export const DashboardSummary: React.FC<DashboardSummaryProps> = ({
                 <Award className="w-4 h-4 text-amber-400" />
                 Ver Carnet Digital
               </button>
+
+              {onOpenOtherRoles && (
+                <button
+                  id="btn-hero-otros-roles"
+                  onClick={onOpenOtherRoles}
+                  className="bg-white/20 hover:bg-white/30 text-white font-semibold text-sm px-4 py-2.5 rounded-xl backdrop-blur-xs transition-colors cursor-pointer flex items-center gap-2 border border-white/20"
+                  title="Explorar o solicitar otros roles del área de salud"
+                >
+                  <Briefcase className="w-4 h-4 text-amber-300" />
+                  <span>Otros Roles (Área de Salud)</span>
+                </button>
+              )}
 
               {onOpenChangePassword && (
                 <button

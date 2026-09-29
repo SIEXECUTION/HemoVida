@@ -14,6 +14,7 @@ import { DoctorTriageView } from './components/doctor/DoctorTriageView';
 import { LabProcessingView } from './components/lab/LabProcessingView';
 import { ChangePasswordModal } from './components/ChangePasswordModal';
 import { PosibleDonadorView } from './components/PosibleDonadorView';
+import { OtherRolesModal } from './components/OtherRolesModal';
 import { 
   MOCK_USERS, 
   MOCK_STAFF_ACCOUNTS,
@@ -315,6 +316,7 @@ export default function App() {
   const [isDigitalCardOpen, setIsDigitalCardOpen] = useState(false);
   const [isPrecheckOpen, setIsPrecheckOpen] = useState(false);
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
+  const [isOtherRolesOpen, setIsOtherRolesOpen] = useState(false);
   const [preselectedCenterId, setPreselectedCenterId] = useState<string | null>(null);
 
   // Carnet Digital QR Public Verification State
@@ -462,9 +464,27 @@ export default function App() {
   // Conmutador de perfil en caliente para usuarios multi-rol (Págs 20-21 del PDF)
   const handleSwitchRole = (newRole: RoleCode) => {
     if (!session) return;
-    const targetRolInfo = session.rolesDisponibles?.find(r => r.codigo === newRole);
-    if (!targetRolInfo && session.rolesDisponibles && session.rolesDisponibles.length > 0) {
-      console.warn(`Rol ${newRole} no encontrado en roles autorizados.`);
+    let targetRolInfo = session.rolesDisponibles?.find(r => r.codigo === newRole);
+    
+    // Si el rol aún no estaba en la lista de roles autorizados de la sesión, incorporarlo dinámicamente
+    const roleNames: Record<RoleCode, string> = {
+      'ADMIN': 'Administrador del Sistema',
+      'DOC_TRIAJE': 'Médico Triaje Clínico',
+      'BIOQ_INTEGRAL': 'Bioquímica de Laboratorio',
+      'PERS_COLECTA': 'Recepción y Colecta',
+      'TEC_LOGISTICA': 'Despacho Transfusional',
+      'DONANTE': 'Donante de Sangre',
+      'POSIBLE_DONADOR': 'Posible Donador',
+      'RECEPTOR': 'Receptor de Sangre',
+      'MED_SOLICITANTE': 'Médico Solicitante'
+    };
+
+    if (!targetRolInfo) {
+      targetRolInfo = {
+        id: Math.floor(100 + Math.random() * 900),
+        codigo: newRole,
+        nombre: roleNames[newRole] || newRole
+      };
     }
 
     const staffRoleMap: Record<RoleCode, StaffRole> = {
@@ -484,26 +504,32 @@ export default function App() {
     let updatedStaff = session.staff;
     if (['ADMIN', 'DOC_TRIAJE', 'PERS_COLECTA', 'BIOQ_INTEGRAL', 'TEC_LOGISTICA'].includes(newRole)) {
       updatedStaff = {
-        id: session.staff?.id || `staff-${session.usuarioId}`,
+        id: session.staff?.id || `staff-${newRole.toLowerCase()}-${session.usuarioId || Date.now()}`,
         rol: newAppRole,
-        nombre: session.nombreCompleto,
+        nombre: session.nombreCompleto || 'Personal HemoVida',
         cargo: targetRolInfo?.nombre || newRole,
-        ci: session.staff?.ci || session.user?.ci || '0000000',
+        ci: session.staff?.ci || session.user?.ci || '0000000 SC',
         email: session.email,
-        turno: 'Turno Mañana (07:00 - 15:00)',
-        credencial: `HV-${newRole}-01`,
-        sede: 'Banco de Sangre Central'
+        turno: session.staff?.turno || 'Turno Mañana (07:00 - 15:00)',
+        credencial: session.staff?.credencial || `HV-${newRole}-01`,
+        sede: session.staff?.sede || 'Banco de Sangre Central (Calle Warnes)'
       };
     }
+
+    const existingRoles = session.rolesDisponibles || [];
+    const hasRoleInList = existingRoles.some(r => r.codigo === newRole);
+    const updatedRolesList = hasRoleInList ? existingRoles : [...existingRoles, targetRolInfo];
 
     const newSession: UserSession = {
       ...session,
       role: newAppRole,
       activeRole: newRole,
+      rolesDisponibles: updatedRolesList,
       staff: updatedStaff
     };
 
     setSession(newSession);
+    localStorage.setItem('hemovida_session', JSON.stringify(newSession));
     setActiveTab('inicio');
 
     // Registrar en bitácora forense de auditoría
@@ -515,8 +541,61 @@ export default function App() {
       actorCi: session.user?.ci || session.staff?.ci || '0000000',
       ipSimulada: generateForensicIp(),
       tipoEvento: 'CAMBIO_ROL_ACTIVO',
-      accion: `Conmutación de perfil activo a ${targetRolInfo?.nombre || newRole}`,
-      detalles: `El usuario alternó su rol activo dentro de la misma sesión autorizada.`
+      accion: `Conmutación de perfil activo a ${targetRolInfo.nombre}`,
+      detalles: `El usuario alternó su rol activo a ${targetRolInfo.nombre} dentro del sistema hospitalario.`
+    };
+    setAuditLogs(prev => [auditEntry, ...prev]);
+  };
+
+  // Manejo de solicitud de nuevo rol del área de salud (Movilidad institucional y prueba de áreas)
+  const handleRequestHealthRole = (roleCode: RoleCode, details: { motivo: string; especialidad?: string; sede?: string }) => {
+    if (!session) return;
+
+    const roleTitles: Record<RoleCode, string> = {
+      'DOC_TRIAJE': 'Médico Triaje Clínico',
+      'BIOQ_INTEGRAL': 'Bioquímica de Laboratorio',
+      'PERS_COLECTA': 'Recepción y Colecta',
+      'TEC_LOGISTICA': 'Despacho Transfusional',
+      'ADMIN': 'Administrador del Sistema',
+      'DONANTE': 'Donante Calificado',
+      'POSIBLE_DONADOR': 'Posible Donador',
+      'RECEPTOR': 'Receptor',
+      'MED_SOLICITANTE': 'Médico Solicitante'
+    };
+
+    const targetTitle = roleTitles[roleCode] || roleCode;
+
+    // Crear solicitud en pendingStaffRequests para aprobación formal del administrador
+    const newStaffReq: StaffAccount = {
+      id: `REQ-${roleCode}-${Date.now()}`,
+      rol: (roleCode === 'DOC_TRIAJE' ? 'medico' : roleCode === 'BIOQ_INTEGRAL' ? 'bioquimico' : roleCode === 'PERS_COLECTA' ? 'recepcion' : 'despacho') as StaffRole,
+      nombre: session.nombreCompleto,
+      cargo: targetTitle,
+      ci: session.user?.ci || session.staff?.ci || '0000000 SC',
+      email: session.email,
+      turno: 'Turno Mañana (07:00 - 15:00)',
+      credencial: `HV-SOL-${roleCode}-${Math.floor(1000 + Math.random() * 9000)}`,
+      matriculaProfesional: details.especialidad || 'Registro en trámite',
+      especialidad: details.especialidad || targetTitle,
+      telefono: session.user?.celular || session.staff?.telefono || '+591 700-00000',
+      sede: details.sede || 'Banco de Sangre Central (Calle Warnes)',
+      fechaSolicitud: new Date().toLocaleDateString('es-BO', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+      estadoAprobacion: 'pendiente'
+    };
+
+    setPendingStaffRequests(prev => [newStaffReq, ...prev]);
+
+    // Registrar en auditoría
+    const auditEntry: BitacoraAuditoria = {
+      idEvento: `EVT-${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      actorNombre: session.nombreCompleto,
+      actorRol: session.activeRole,
+      actorCi: session.user?.ci || session.staff?.ci || '0000000',
+      ipSimulada: generateForensicIp(),
+      tipoEvento: 'SOLICITUD_ROL_SALUD',
+      accion: `Solicitud de Integración a ${targetTitle}`,
+      detalles: `El usuario (${session.activeRole}) solicitó desempeñarse y probar en ${targetTitle}. Motivo: ${details.motivo}. Sede: ${details.sede || 'Central'}.`
     };
     setAuditLogs(prev => [auditEntry, ...prev]);
   };
@@ -906,6 +985,7 @@ export default function App() {
         onOpenPrecheck={() => setIsPrecheckOpen(true)}
         onOpenChangePassword={() => setIsChangePasswordOpen(true)}
         onSwitchRole={handleSwitchRole}
+        onOpenOtherRoles={() => setIsOtherRolesOpen(true)}
       />
 
       {/* Main Content Area */}
@@ -1157,6 +1237,7 @@ export default function App() {
             onOpenPrecheck={() => setIsPrecheckOpen(true)}
             onOpenAppointments={() => setActiveTab('citas')}
             onOpenDigitalCard={() => setIsDigitalCardOpen(true)}
+            onOpenOtherRoles={() => setIsOtherRolesOpen(true)}
           />
         )}
 
@@ -1288,6 +1369,7 @@ export default function App() {
                 onOpenDigitalCard={() => setIsDigitalCardOpen(true)}
                 onOpenPrecheck={() => setIsPrecheckOpen(true)}
                 onOpenChangePassword={() => setIsChangePasswordOpen(true)}
+                onOpenOtherRoles={() => setIsOtherRolesOpen(true)}
               />
             )}
 
@@ -1481,6 +1563,16 @@ export default function App() {
           }
         }}
       />
+
+      {session && (
+        <OtherRolesModal
+          isOpen={isOtherRolesOpen}
+          onClose={() => setIsOtherRolesOpen(false)}
+          session={session}
+          onSwitchRole={handleSwitchRole}
+          onRequestRole={handleRequestHealthRole}
+        />
+      )}
     </div>
   );
 }
