@@ -34,8 +34,9 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-hemovida-bloodbank-secret-
 # Modo depuración
 DEBUG = os.getenv('DEBUG', 'True').lower() in ('true', '1', 't')
 
-# Hosts permitidos (Permite Koyeb, localhost y cualquier dominio en producción)
-ALLOWED_HOSTS = ['*']
+# Hosts permitidos (Permite configurar dominios o comodín '*')
+allowed_hosts_env = os.getenv('ALLOWED_HOSTS')
+ALLOWED_HOSTS = [h.strip() for h in allowed_hosts_env.split(',') if h.strip()] if allowed_hosts_env else ['*']
 
 # Aplicaciones instaladas
 INSTALLED_APPS = [
