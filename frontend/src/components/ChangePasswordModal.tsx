@@ -9,7 +9,8 @@ import {
   Eye, 
   EyeOff, 
   Send, 
-  ShieldCheck 
+  ShieldCheck,
+  ArrowLeft
 } from 'lucide-react';
 import { UserSession } from '../types';
 import { evaluatePassword, getPasswordMissingAlerts } from '../utils/security';
@@ -29,25 +30,25 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
   session,
   onPasswordChanged
 }) => {
-  // Method: 'current_password' | 'email_token'
-  const [method, setMethod] = useState<'current_password' | 'email_token'>('current_password');
+  // Mode: 'standard' (contraseña actual + 2 veces la nueva) | 'forgot_password' (recuperar por código a correo)
+  const [mode, setMode] = useState<'standard' | 'forgot_password'>('standard');
 
-  // Fields for Method 1: Current Password
+  // Standard Mode Fields
   const [currentPassword, setCurrentPassword] = useState('');
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
 
-  // Fields for Method 2: Email Token
-  const [tokenSent, setTokenSent] = useState(false);
-  const [tokenLoading, setTokenLoading] = useState(false);
-  const [tokenCode, setTokenCode] = useState('');
-
-  // Common New Password Fields
+  // New Password Fields (Common to both modes)
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  // Status & Error
+  // Forgot Password Mode Fields (Email Token)
+  const [tokenCode, setTokenCode] = useState('');
+  const [tokenSent, setTokenSent] = useState(false);
+  const [tokenLoading, setTokenLoading] = useState(false);
+
+  // Status & Notifications
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -61,6 +62,11 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
   // Real-time password rules evaluation
   const passwordRules = evaluatePassword(newPassword, confirmNewPassword);
 
+  // Real-time password match evaluation
+  const hasTypedBoth = newPassword.length > 0 && confirmNewPassword.length > 0;
+  const passwordsMatch = hasTypedBoth && newPassword === confirmNewPassword;
+  const passwordsMismatch = hasTypedBoth && newPassword !== confirmNewPassword;
+
   const handleRequestToken = async () => {
     setErrorMsg(null);
     setTokenLoading(true);
@@ -68,7 +74,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
       await apiService.requestPasswordReset(userEmail);
       setTokenSent(true);
     } catch (err: any) {
-      setErrorMsg(err?.message || 'Error al enviar código al correo.');
+      setErrorMsg(err?.message || 'Error al enviar código de 6 dígitos al correo.');
     } finally {
       setTokenLoading(false);
     }
@@ -78,28 +84,35 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
     e.preventDefault();
     setErrorMsg(null);
 
-    // Validar políticas de seguridad
-    if (!passwordRules.isValid) {
-      const missing = getPasswordMissingAlerts(newPassword, confirmNewPassword);
-      setErrorMsg(`La nueva contraseña debe cumplir con todos los requisitos de seguridad: ${missing.join(', ')}`);
+    // 1. Validar que ambas contraseñas nuevas sean idénticas
+    if (newPassword !== confirmNewPassword) {
+      setErrorMsg('Las dos contraseñas nuevas no coinciden. Verifique que sean exactamente iguales.');
       return;
     }
 
-    if (newPassword !== confirmNewPassword) {
-      setErrorMsg('Las contraseñas no coinciden.');
+    // 2. Validar que cumpla con los 8 caracteres, mayúscula, minúscula, número y símbolo
+    if (!passwordRules.isValid) {
+      const missing = getPasswordMissingAlerts(newPassword, confirmNewPassword);
+      setErrorMsg(`La nueva contraseña no cumple con los requisitos de seguridad: ${missing.join(', ')}`);
+      return;
+    }
+
+    // 3. Validar que no sea igual a la actual
+    if (mode === 'standard' && currentPassword && newPassword === currentPassword) {
+      setErrorMsg('La nueva contraseña debe ser diferente a su contraseña actual.');
       return;
     }
 
     setIsSubmitting(true);
     try {
-      if (method === 'current_password') {
+      if (mode === 'standard') {
         if (!currentPassword) {
           setErrorMsg('Por favor ingrese su contraseña actual.');
           setIsSubmitting(false);
           return;
         }
 
-        // Comprobación local de contraseña actual si existe en sesión
+        // Comprobación local previa si la sesión tiene contraseña almacenada
         const storedPwd = session.role === 'donante' ? session.user.password : session.staff.password;
         if (storedPwd && storedPwd !== currentPassword) {
           setErrorMsg('La contraseña actual ingresada es incorrecta.');
@@ -109,8 +122,9 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
 
         await apiService.changePassword(userEmail, currentPassword, null, newPassword);
       } else {
+        // Modo recuperación por correo
         if (!tokenCode.trim()) {
-          setErrorMsg('Debe ingresar el código de verificación recibido por correo.');
+          setErrorMsg('Debe ingresar el código de 6 dígitos recibido por correo electrónico.');
           setIsSubmitting(false);
           return;
         }
@@ -119,9 +133,9 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
       }
 
       onPasswordChanged(newPassword);
-      setSuccessMsg('¡Contraseña actualizada exitosamente! Se ha registrado el cambio en la bitácora de seguridad.');
+      setSuccessMsg('¡Contraseña modificada exitosamente! Se ha registrado el evento en la bitácora de auditoría.');
     } catch (err: any) {
-      setErrorMsg(err?.message || 'Error al actualizar la contraseña.');
+      setErrorMsg(err?.message || 'Error al actualizar la contraseña. Verifique los datos ingresados.');
     } finally {
       setIsSubmitting(false);
     }
@@ -135,13 +149,14 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
     setTokenSent(false);
     setErrorMsg(null);
     setSuccessMsg(null);
+    setMode('standard');
   };
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
       <div className="bg-white rounded-3xl max-w-lg w-full shadow-2xl border border-slate-200 overflow-hidden my-8 animate-fadeIn">
         
-        {/* Header */}
+        {/* Header Institucional */}
         <div className="bg-gradient-to-r from-slate-900 via-rose-950 to-slate-900 text-white p-6 relative">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -150,7 +165,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
               </div>
               <div>
                 <h3 className="text-lg font-bold font-['Outfit',sans-serif]">
-                  Modificar Contraseña de Acceso
+                  {mode === 'standard' ? 'Cambiar Contraseña' : 'Recuperar Contraseña por Correo'}
                 </h3>
                 <p className="text-xs text-rose-200/90 font-medium">
                   {userName} • <span className="font-semibold">{userRole}</span>
@@ -186,53 +201,24 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
               <button
                 type="button"
                 onClick={() => { handleResetForm(); onClose(); }}
-                className="mt-3 px-6 py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-700 transition-colors cursor-pointer"
+                className="mt-3 px-6 py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-700 transition-colors cursor-pointer shadow-sm"
               >
                 Aceptar y Continuar
               </button>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} autoComplete="off" className="space-y-4">
               
-              {/* Method Selector Tabs */}
-              <div className="bg-slate-100 p-1.5 rounded-2xl grid grid-cols-2 gap-1.5 text-xs font-bold border border-slate-200">
-                <button
-                  type="button"
-                  onClick={() => { setMethod('current_password'); setErrorMsg(null); }}
-                  className={`py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                    method === 'current_password'
-                      ? 'bg-white text-slate-900 shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  <KeyRound className="w-3.5 h-3.5 text-rose-600" />
-                  <span>Con Contraseña Actual</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => { setMethod('email_token'); setErrorMsg(null); }}
-                  className={`py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                    method === 'email_token'
-                      ? 'bg-white text-slate-900 shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  <Mail className="w-3.5 h-3.5 text-rose-600" />
-                  <span>Con Token al Correo</span>
-                </button>
-              </div>
-
-              {/* Error Alert */}
+              {/* Alerta de Error */}
               {errorMsg && (
-                <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 text-xs rounded-xl flex items-start gap-2">
+                <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 text-xs rounded-xl flex items-start gap-2 animate-shake">
                   <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-                  <span>{errorMsg}</span>
+                  <span className="font-medium">{errorMsg}</span>
                 </div>
               )}
 
-              {/* METHOD 1: CON CONTRASEÑA ACTUAL */}
-              {method === 'current_password' && (
+              {/* MODO ESTÁNDAR: CONTRASEÑA ACTUAL */}
+              {mode === 'standard' && (
                 <div className="space-y-1.5">
                   <label className="block text-xs font-bold text-slate-700">
                     Contraseña Actual *
@@ -242,25 +228,46 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
                     <input
                       type={showCurrentPassword ? 'text' : 'password'}
                       required
+                      autoComplete="off"
                       placeholder="Ingrese su contraseña actual"
                       value={currentPassword}
                       onChange={(e) => setCurrentPassword(e.target.value)}
                       className="w-full pl-10 pr-10 py-2.5 text-xs border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500 bg-white font-medium"
+                      id="input-current-password"
                     />
                     <button
                       type="button"
                       onClick={() => setShowCurrentPassword(!showCurrentPassword)}
                       className="absolute right-3.5 top-3 text-slate-400 hover:text-slate-600 cursor-pointer"
+                      title={showCurrentPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
                     >
                       {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+
+                  {/* Opción destacada: ¿Has olvidado tu contraseña? */}
+                  <div className="flex justify-end pt-0.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMode('forgot_password');
+                        setErrorMsg(null);
+                        setTokenSent(false);
+                        setTokenCode('');
+                      }}
+                      className="text-xs text-rose-600 hover:text-rose-700 font-bold hover:underline cursor-pointer flex items-center gap-1"
+                      id="btn-forgot-password-in-modal"
+                    >
+                      <Mail className="w-3.5 h-3.5" />
+                      <span>¿Has olvidado tu contraseña actual? Recuperar con código a mi correo</span>
                     </button>
                   </div>
                 </div>
               )}
 
-              {/* METHOD 2: CON TOKEN AL CORREO */}
-              {method === 'email_token' && (
-                <div className="space-y-3 p-3.5 bg-slate-50 border border-slate-200 rounded-2xl">
+              {/* MODO RECUPERACIÓN: TOKEN DE 6 DÍGITOS AL CORREO */}
+              {mode === 'forgot_password' && (
+                <div className="space-y-3 p-3.5 bg-slate-50 border border-slate-200 rounded-2xl animate-fadeIn">
                   <div className="flex items-center justify-between gap-2">
                     <div>
                       <p className="text-xs font-bold text-slate-800">
@@ -285,17 +292,17 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
                     <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-950 space-y-1">
                       <div className="flex items-center gap-1.5 font-bold text-emerald-900">
                         <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                        <span>¡Código de 6 dígitos enviado!</span>
+                        <span>¡Código de 6 dígitos enviado exitosamente!</span>
                       </div>
                       <p className="text-[11px] text-slate-600 leading-relaxed">
-                        Hemos enviado un código a <strong>{userEmail}</strong>. Revise su bandeja de entrada (y la carpeta de spam) e ingréselo a continuación.
+                        Revise su bandeja de entrada (y la carpeta de spam). Copie el código de 6 dígitos e ingréselo aquí:
                       </p>
                     </div>
                   )}
 
                   <div>
                     <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                      Ingresar Código de 6 Dígitos *
+                      Código de 6 Dígitos Recibido *
                     </label>
                     <input
                       type="text"
@@ -307,73 +314,121 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
                       className="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500 bg-white font-mono text-center tracking-widest font-bold"
                     />
                   </div>
+
+                  {/* Volver al modo estándar */}
+                  <div className="pt-1 text-right">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMode('standard');
+                        setErrorMsg(null);
+                      }}
+                      className="text-xs text-slate-600 hover:text-slate-900 font-bold hover:underline cursor-pointer flex items-center gap-1 ml-auto"
+                    >
+                      <ArrowLeft className="w-3 h-3" />
+                      <span>Volver a cambiar con mi contraseña actual</span>
+                    </button>
+                  </div>
                 </div>
               )}
 
-              {/* COMMON: NUEVA CONTRASEÑA */}
+              {/* CAMPO 2: NUEVA CONTRASEÑA */}
               <div className="space-y-1.5">
                 <label className="block text-xs font-bold text-slate-700">
-                  Nueva Contraseña Segura *
+                  Nueva Contraseña *
                 </label>
                 <div className="relative">
                   <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
                   <input
                     type={showNewPassword ? 'text' : 'password'}
                     required
+                    autoComplete="off"
                     placeholder="Mínimo 8 caracteres (mayúscula, minúscula, número y especial)"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     className="w-full pl-10 pr-10 py-2.5 text-xs border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500 bg-white font-medium"
+                    id="input-new-password"
                   />
                   <button
                     type="button"
                     onClick={() => setShowNewPassword(!showNewPassword)}
                     className="absolute right-3.5 top-3 text-slate-400 hover:text-slate-600 cursor-pointer"
+                    title={showNewPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
                   >
                     {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
               </div>
 
-              {/* COMMON: CONFIRMAR NUEVA CONTRASEÑA */}
+              {/* CAMPO 3: CONFIRMAR NUEVA CONTRASEÑA (DOS VECES LA NUEVA PARA CONFIRMAR) */}
               <div className="space-y-1.5">
-                <label className="block text-xs font-bold text-slate-700">
-                  Confirmar Nueva Contraseña *
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-slate-700">
+                    Confirmar Nueva Contraseña *
+                  </label>
+                  <span className="text-[11px] text-slate-400">Repita la nueva contraseña</span>
+                </div>
                 <div className="relative">
                   <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
                   <input
                     type={showConfirmPassword ? 'text' : 'password'}
                     required
+                    autoComplete="off"
                     placeholder="Repita exactamente la nueva contraseña"
                     value={confirmNewPassword}
                     onChange={(e) => setConfirmNewPassword(e.target.value)}
-                    className="w-full pl-10 pr-10 py-2.5 text-xs border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500 bg-white font-medium"
+                    className={`w-full pl-10 pr-10 py-2.5 text-xs border rounded-xl focus:outline-none focus:ring-2 bg-white font-medium ${
+                      passwordsMismatch 
+                        ? 'border-rose-400 focus:ring-rose-500 text-rose-900 bg-rose-50/20' 
+                        : (passwordsMatch ? 'border-emerald-400 focus:ring-emerald-500' : 'border-slate-300 focus:ring-rose-500')
+                    }`}
+                    id="input-confirm-password"
                   />
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                     className="absolute right-3.5 top-3 text-slate-400 hover:text-slate-600 cursor-pointer"
+                    title={showConfirmPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
                   >
                     {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
+
+                {/* INDICADOR VISUAL DESTACADO EN EL FORMULARIO DE QUE AMBAS COINCIDEN */}
+                {passwordsMatch && (
+                  <div className="flex items-center gap-1.5 text-xs text-emerald-800 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl font-bold animate-fadeIn">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>✓ Las dos contraseñas coinciden perfectamente.</span>
+                  </div>
+                )}
+
+                {passwordsMismatch && (
+                  <div className="flex items-center gap-1.5 text-xs text-rose-800 bg-rose-50 border border-rose-200 px-3 py-1.5 rounded-xl font-bold animate-fadeIn">
+                    <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                    <span>✗ Las contraseñas no coinciden. Ambas deben ser exactamente iguales.</span>
+                  </div>
+                )}
               </div>
 
-              {/* Real-time Password Security Rules Indicator */}
+              {/* Indicador de Complejidad de Contraseña en Tiempo Real */}
               <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl">
-                <PasswordSecurityIndicator rules={passwordRules} />
+                <PasswordSecurityIndicator rules={passwordRules} showMatchRule={true} isCreationMode={false} />
               </div>
 
-              {/* Submit Buttons */}
+              {/* Botones de Acción */}
               <div className="flex gap-2 pt-2">
                 <button
                   type="submit"
-                  disabled={isSubmitting || !passwordRules.isValid}
+                  disabled={isSubmitting || !passwordRules.isValid || !passwordsMatch || (mode === 'standard' && !currentPassword) || (mode === 'forgot_password' && !tokenCode)}
                   className="flex-1 py-3 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl transition-all shadow-md shadow-rose-600/30 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  id="btn-submit-change-password"
                 >
                   <KeyRound className="w-4 h-4" />
-                  <span>{isSubmitting ? 'Guardando...' : 'Actualizar Contraseña'}</span>
+                  <span>
+                    {isSubmitting 
+                      ? 'Actualizando...' 
+                      : (mode === 'standard' ? 'Actualizar Contraseña' : 'Validar Código y Actualizar Contraseña')}
+                  </span>
                 </button>
                 <button
                   type="button"
