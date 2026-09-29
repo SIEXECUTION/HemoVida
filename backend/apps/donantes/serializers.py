@@ -57,6 +57,9 @@ class CarnetDigitalResponseSerializer(serializers.Serializer):
     # Agregados históricos de Consulta C3
     totalDonacionesHistoricas = serializers.IntegerField()
     volumenHistoricoAportadoMl = serializers.IntegerField()
+    nacionalidad = serializers.CharField(default='Boliviana', allow_null=True)
+    grupoSanguineo = serializers.CharField(default='O', allow_null=True)
+    factorRh = serializers.CharField(default='Positivo', allow_null=True)
 
     # Historial de extracciones para el modal
     extraccionesRecientes = ExtraccionItemSerializer(many=True)

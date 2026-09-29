@@ -262,6 +262,24 @@ export const apiService = {
       console.warn('Error al registrar auditoría en backend:', e);
     }
     return null;
+  },
+
+  /**
+   * Consultar verificación pública oficial de carnet digital del donante
+   */
+  async getCarnetDigital(ciOrCode: string): Promise<any> {
+    try {
+      const res = await fetch(`${API_BASE_URL}/donantes/${encodeURIComponent(ciOrCode.trim())}/carnet/`, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' }
+      });
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch (e) {
+      console.warn('Consulta pública de carnet en backend:', e);
+    }
+    return null;
   }
 };
 

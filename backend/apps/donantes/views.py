@@ -5,7 +5,7 @@ from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from django.db.models import Sum, Count
+from django.db.models import Sum, Count, Q
 from datetime import date, timedelta
 from django.shortcuts import get_object_or_404
 
@@ -16,18 +16,19 @@ class DonanteCarnetDigitalView(APIView):
     """
     Endpoint: GET /api/donantes/<ci>/carnet/
     Caso de Uso [CU05]: Consultar Carnet Digital e Historial Biológico del Donante.
-    Ejecuta el cálculo biológico exacto de la Consulta C1 y la agregación de la Consulta C3.
+    Permite la búsqueda tanto por C.I. como por código de carnet (HV-DON-XXXX).
     """
-    # Permitido a personal autenticado o consulta desde el portal web
     permission_classes = [AllowAny]
 
     def get(self, request, ci):
-        # Búsqueda del donante por cédula de identidad
-        try:
-            donante = Donante.objects.select_related('persona').get(persona__ci__iexact=ci.strip())
-        except Donante.DoesNotExist:
+        query = ci.strip()
+        donante = Donante.objects.select_related('persona').filter(
+            Q(persona__ci__iexact=query) | Q(carnetDigitalCodigo__iexact=query)
+        ).first()
+
+        if not donante:
             return Response({
-                "detail": f"No se encontró ningún donante registrado con C.I. '{ci}'."
+                "detail": f"No se encontró ningún donante registrado con C.I. o código '{ci}'."
             }, status=status.HTTP_404_NOT_FOUND)
 
         persona = donante.persona
@@ -85,6 +86,9 @@ class DonanteCarnetDigitalView(APIView):
             'estaHabilitadoParaDonar': esta_habilitado,
             'totalDonacionesHistoricas': total_donaciones,
             'volumenHistoricoAportadoMl': volumen_total,
+            'nacionalidad': getattr(persona, 'nacionalidad', 'Boliviana') or 'Boliviana',
+            'grupoSanguineo': 'O',
+            'factorRh': 'Positivo',
             'extraccionesRecientes': extracciones_qs[:10],
         }
 

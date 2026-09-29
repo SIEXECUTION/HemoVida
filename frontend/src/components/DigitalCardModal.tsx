@@ -75,7 +75,7 @@ export const DigitalCardModal: React.FC<DigitalCardModalProps> = ({
     <div class="details">
       <div class="meta">DONANTE ACREDITADO</div>
       <div class="name">${user.nombres} ${user.apellidos}</div>
-      <div class="meta">C.I.: <strong>${user.ci}</strong></div>
+      <div class="meta">C.I.: <strong>${user.ci}</strong> | Nacionalidad: <strong>${user.nacionalidad || 'Boliviana'}</strong></div>
       <div class="meta">Modalidad: <strong>${user.tipoDonante}</strong></div>
       <div class="meta">Donaciones registradas: <strong>${user.totalDonaciones}</strong></div>
       <div class="meta">Enlace de verificación: <a href="${carnetUrl}" style="color:#fecdd3;">${carnetUrl}</a></div>
@@ -90,7 +90,7 @@ export const DigitalCardModal: React.FC<DigitalCardModalProps> = ({
         <div class="status">✓ HABILITADO</div>
       </div>
     </div>
-    <div class="footer">Calle Warnes N° 271, Santa Cruz de la Sierra, Bolivia</div>
+    <div class="footer">Banco de Sangre Regional HemoVida • Santa Cruz de la Sierra, Bolivia</div>
   </div>
 </body>
 </html>`;
@@ -117,126 +117,151 @@ export const DigitalCardModal: React.FC<DigitalCardModalProps> = ({
     return `${n}${a}`.toUpperCase();
   };
 
+  const estimatedLivesSaved = Math.max(1, (user.totalDonaciones || 1) * 3);
+  const totalVolumeMl = user.volumenHistoricoMl || (user.totalDonaciones || 1) * 450;
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xs">
-      <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/75 backdrop-blur-xs overflow-y-auto">
+      <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden my-auto">
         {/* Modal Top Bar */}
-        <div className="bg-slate-900 px-6 py-4 flex items-center justify-between text-white">
+        <div className="bg-slate-900 px-5 sm:px-6 py-4 flex items-center justify-between text-white">
           <div className="flex items-center gap-2">
-            <Award className="w-5 h-5 text-rose-500" />
-            <span className="font-bold text-sm font-['Outfit',sans-serif]">
-              {isPublicVerification ? 'Verificación Oficial de Carnet Digital' : 'Carnet Digital del Donante'}
+            <Award className="w-5 h-5 text-rose-500 shrink-0" />
+            <span className="font-bold text-sm font-['Outfit',sans-serif] truncate">
+              {isPublicVerification ? 'Validación Oficial de Carnet Digital' : 'Carnet Digital del Donante'}
             </span>
           </div>
           <button
             onClick={onClose}
             className="p-1 rounded-lg hover:bg-white/20 text-white transition-colors cursor-pointer"
+            aria-label="Cerrar modal"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
+        {/* Public Verification Medical Status Banner */}
         {isPublicVerification && (
-          <div className="bg-emerald-600 text-white px-6 py-2.5 flex items-center gap-2.5 text-xs font-semibold shadow-inner">
-            <CheckCircle2 className="w-4 h-4 shrink-0 text-white" />
-            <span>Documento oficial validado y registrado en el Banco de Sangre HemoVida.</span>
+          <div className={`${eligibility.habilitado ? 'bg-emerald-600' : 'bg-amber-600'} text-white px-5 sm:px-6 py-3 flex items-start gap-2.5 text-xs shadow-inner`}>
+            {eligibility.habilitado ? (
+              <CheckCircle2 className="w-5 h-5 shrink-0 text-white mt-0.5" />
+            ) : (
+              <Calendar className="w-5 h-5 shrink-0 text-white mt-0.5" />
+            )}
+            <div>
+              <p className="font-bold tracking-tight text-xs sm:text-sm">
+                {eligibility.habilitado 
+                  ? '✓ CERTIFICACIÓN OFICIAL: HABILITADO PARA DONAR' 
+                  : '⏳ EN PERÍODO DE RECUPERACIÓN BIOLÓGICA'}
+              </p>
+              <p className="text-[11px] opacity-90 mt-0.5 leading-snug">
+                {eligibility.habilitado
+                  ? `Donante apto y verificado en la base de datos central de HemoVida Santa Cruz (${user.sexo === 'M' ? '90 días' : '120 días'} de intervalo biológico reglamentario).`
+                  : `Reposo celular en curso. Próxima fecha autorizada: ${eligibility.fechaProximaHabilitada.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })} (${eligibility.diasRestantes} días restantes).`
+                }
+              </p>
+            </div>
           </div>
         )}
 
-        <div className="p-6 space-y-4">
+        <div className="p-5 sm:p-6 space-y-4 max-h-[80vh] overflow-y-auto">
           {/* THE DIGITAL CREDENTIAL CARD (SIN FOTO DE PERSONA) */}
           <div 
             id="printable-donor-card"
-            className="bg-gradient-to-br from-rose-700 via-rose-600 to-red-800 text-white rounded-3xl p-6 shadow-xl relative overflow-hidden border border-rose-400/40 select-none"
+            className="bg-gradient-to-br from-rose-700 via-rose-600 to-red-800 text-white rounded-3xl p-5 sm:p-6 shadow-xl relative overflow-hidden border border-rose-400/40 select-none"
           >
             {/* Background Pattern */}
             <div className="absolute -right-8 -bottom-8 w-44 h-44 bg-white/10 rounded-full blur-xl pointer-events-none" />
             <div className="absolute -left-10 -top-10 w-36 h-36 bg-black/15 rounded-full blur-lg pointer-events-none" />
 
             {/* Card Header */}
-            <div className="relative z-10 flex items-center justify-between border-b border-white/20 pb-3 mb-4">
+            <div className="relative z-10 flex items-center justify-between border-b border-white/20 pb-3 mb-3">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-white text-rose-700 flex items-center justify-center shadow-xs">
+                <div className="w-8 h-8 rounded-lg bg-white text-rose-700 flex items-center justify-center shadow-xs shrink-0">
                   <Droplet className="w-5 h-5 fill-rose-700" />
                 </div>
                 <div>
-                  <h4 className="font-black text-sm tracking-tight font-['Outfit',sans-serif]">
+                  <h4 className="font-black text-xs sm:text-sm tracking-tight font-['Outfit',sans-serif]">
                     HEMOVIDA • SANTA CRUZ
                   </h4>
-                  <p className="text-[10px] text-rose-200 uppercase tracking-wider font-semibold">
+                  <p className="text-[9px] sm:text-[10px] text-rose-200 uppercase tracking-wider font-semibold">
                     Banco de Sangre & Transfusión
                   </p>
                 </div>
               </div>
 
-              <span className="bg-white/20 text-[10px] font-mono font-bold px-2 py-0.5 rounded border border-white/30">
+              <span className="bg-white/20 text-[10px] font-mono font-bold px-2 py-0.5 rounded border border-white/30 truncate max-w-[120px]">
                 {user.carnetDigitalCodigo}
               </span>
             </div>
 
             {/* Card Main Body: EMBLEMA BIOMÉTRICO INSTITUCIONAL */}
-            <div className="relative z-10 grid grid-cols-12 gap-4 items-center">
+            <div className="relative z-10 grid grid-cols-12 gap-3 sm:gap-4 items-center">
               <div className="col-span-4 text-center flex flex-col items-center">
                 {/* Emblema Vectorial Biométrico de Seguridad Institucional */}
-                <div className="relative w-20 h-20 rounded-2xl bg-gradient-to-b from-white/25 via-white/10 to-rose-950/40 border-2 border-white/70 shadow-lg flex flex-col items-center justify-center overflow-hidden p-1 backdrop-blur-xs">
+                <div className="relative w-18 h-18 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-b from-white/25 via-white/10 to-rose-950/40 border-2 border-white/70 shadow-lg flex flex-col items-center justify-center overflow-hidden p-1 backdrop-blur-xs">
                   {/* Patrón de seguridad de fondo */}
                   <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-white/20 via-transparent to-black/25 pointer-events-none" />
                   <div className="absolute -top-3 -right-3 w-8 h-8 rounded-full border border-white/25 pointer-events-none" />
                   <div className="absolute -bottom-3 -left-3 w-8 h-8 rounded-full border border-white/25 pointer-events-none" />
 
                   {/* Escudo Vectorial Oficial */}
-                  <div className="relative z-10 w-9 h-9 rounded-xl bg-white text-rose-700 shadow-md flex items-center justify-center">
-                    <ShieldCheck className="w-6 h-6 text-rose-600 fill-rose-100" />
+                  <div className="relative z-10 w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-white text-rose-700 shadow-md flex items-center justify-center">
+                    <ShieldCheck className="w-5 h-5 sm:w-6 sm:h-6 text-rose-600 fill-rose-100" />
                   </div>
 
                   {/* Monograma y chip biométrico */}
                   <div className="relative z-10 mt-1 flex items-center gap-1">
-                    <span className="font-mono font-black text-[10px] text-white tracking-widest bg-black/30 px-1.5 py-0.2 rounded border border-white/20">
+                    <span className="font-mono font-black text-[9px] sm:text-[10px] text-white tracking-widest bg-black/30 px-1 py-0.2 rounded border border-white/20">
                       {getInitials(user.nombres, user.apellidos)}
                     </span>
-                    <span className="text-[7px] font-mono text-rose-200 uppercase font-extrabold tracking-tight">
+                    <span className="text-[6px] sm:text-[7px] font-mono text-rose-200 uppercase font-extrabold tracking-tight">
                       BIO-ID
                     </span>
                   </div>
                 </div>
 
-                <span className="inline-block mt-1.5 text-[9px] font-bold bg-white/20 px-2 py-0.5 rounded-full text-white border border-white/20">
+                <span className="inline-block mt-1.5 text-[8px] sm:text-[9px] font-bold bg-white/20 px-2 py-0.5 rounded-full text-white border border-white/20 truncate">
                   {user.sexo === 'M' ? 'Varón (90d)' : 'Mujer (120d)'}
                 </span>
               </div>
 
-              <div className="col-span-8 space-y-1.5">
+              <div className="col-span-8 space-y-1">
                 <div>
-                  <p className="text-[10px] text-rose-200 uppercase tracking-wider font-semibold">
+                  <p className="text-[9px] sm:text-[10px] text-rose-200 uppercase tracking-wider font-semibold">
                     Donante Acreditado
                   </p>
-                  <p className="font-black text-base leading-tight tracking-tight">
+                  <p className="font-black text-sm sm:text-base leading-tight tracking-tight">
                     {user.nombres} {user.apellidos}
                   </p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="grid grid-cols-2 gap-1.5 text-xs pt-1">
                   <div>
-                    <span className="text-[10px] text-rose-200 block">C.I.:</span>
-                    <strong className="font-mono text-sm">{user.ci}</strong>
+                    <span className="text-[9px] text-rose-200 block">C.I.:</span>
+                    <strong className="font-mono text-xs sm:text-sm">{user.ci}</strong>
                   </div>
                   <div>
-                    <span className="text-[10px] text-rose-200 block">Modalidad:</span>
-                    <strong className="text-[11px] truncate block">{user.tipoDonante.split(' ')[0]}</strong>
+                    <span className="text-[9px] text-rose-200 block">Nacionalidad:</span>
+                    <strong className="text-xs truncate block">{user.nacionalidad || 'Boliviana'}</strong>
+                  </div>
+                  <div className="col-span-2">
+                    <span className="text-[9px] text-rose-200 block">Modalidad:</span>
+                    <strong className="text-xs truncate block">{user.tipoDonante}</strong>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Blood Type Big Badge & Real Scannable QR */}
-            <div className="relative z-10 mt-4 pt-3 border-t border-white/20 flex items-center justify-between">
+            <div className="relative z-10 mt-3 pt-3 border-t border-white/20 flex items-center justify-between">
               <div>
-                <span className="text-[10px] text-rose-200 uppercase tracking-wider block">Grupo & Factor</span>
+                <span className="text-[9px] text-rose-200 uppercase tracking-wider block">Grupo & Factor</span>
                 <div className="flex items-baseline gap-1">
-                  <span className="text-3xl font-black tracking-tight text-white">
+                  <span className="text-2xl sm:text-3xl font-black tracking-tight text-white">
                     {user.grupoSanguineo}
                   </span>
-                  <span className="text-sm font-extrabold bg-white text-rose-800 px-1.5 py-0.5 rounded">
+                  <span className="text-xs sm:text-sm font-extrabold bg-white text-rose-800 px-1.5 py-0.5 rounded">
                     {user.factorRh === 'Positivo' ? 'Rh+' : 'Rh-'}
                   </span>
                 </div>
@@ -244,7 +269,7 @@ export const DigitalCardModal: React.FC<DigitalCardModalProps> = ({
 
               {/* Código QR Real y Escaneable */}
               <div className="bg-white p-1.5 rounded-xl text-slate-900 flex items-center gap-2 shadow-md">
-                <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center p-0.5 border border-slate-200 shrink-0">
+                <div className="w-11 h-11 sm:w-12 sm:h-12 bg-white rounded-lg flex items-center justify-center p-0.5 border border-slate-200 shrink-0">
                   <img 
                     src={qrCodeImageUrl} 
                     alt={`QR de Verificación ${user.carnetDigitalCodigo}`}
@@ -252,20 +277,20 @@ export const DigitalCardModal: React.FC<DigitalCardModalProps> = ({
                   />
                 </div>
                 <div className="text-left pr-1">
-                  <span className="text-[8px] uppercase tracking-wider text-slate-500 font-bold block">
-                    Escanear QR
+                  <span className="text-[7px] sm:text-[8px] uppercase tracking-wider text-slate-500 font-bold block">
+                    Código QR
                   </span>
-                  <span className="text-[10px] font-bold text-emerald-700 flex items-center gap-0.5">
-                    <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Habilitado
+                  <span className="text-[9px] sm:text-[10px] font-bold text-emerald-700 flex items-center gap-0.5">
+                    <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Oficial
                   </span>
                 </div>
               </div>
             </div>
 
             {/* Bottom Footer Details */}
-            <div className="relative z-10 mt-3 flex items-center justify-between text-[10px] text-rose-200">
+            <div className="relative z-10 mt-3 flex items-center justify-between text-[9px] sm:text-[10px] text-rose-200">
               <span>Santa Cruz de la Sierra, Bolivia</span>
-              <span>{user.totalDonaciones} donaciones registradas</span>
+              <span>{user.totalDonaciones} donación(es)</span>
             </div>
           </div>
 
@@ -277,12 +302,28 @@ export const DigitalCardModal: React.FC<DigitalCardModalProps> = ({
             </div>
           )}
 
-          {/* Additional Donor Status Note */}
-          <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-xs text-slate-600 space-y-1.5">
+          {/* Solidarity Impact Statistics */}
+          <div className="grid grid-cols-3 gap-2 bg-rose-50/70 p-3 rounded-2xl border border-rose-100 text-center">
+            <div className="p-1">
+              <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold block">Donaciones</span>
+              <strong className="text-base sm:text-lg font-black text-rose-700">{user.totalDonaciones || 1}</strong>
+            </div>
+            <div className="p-1 border-x border-rose-200/60">
+              <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold block">Volumen</span>
+              <strong className="text-base sm:text-lg font-black text-rose-700">{totalVolumeMl} <span className="text-[10px] font-medium">ml</span></strong>
+            </div>
+            <div className="p-1">
+              <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold block">Vidas Salvadas</span>
+              <strong className="text-base sm:text-lg font-black text-emerald-600">~{estimatedLivesSaved}</strong>
+            </div>
+          </div>
+
+          {/* Additional Donor Clinical Status Note */}
+          <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 text-xs text-slate-600 space-y-1.5">
             <div className="flex justify-between items-center">
-              <span className="font-semibold text-slate-700">Estado Clínico de Habilitación:</span>
-              <strong className="text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded font-bold">
-                {user.estadoHabilitacion}
+              <span className="font-semibold text-slate-700">Estado de Habilitación:</span>
+              <strong className={`px-2 py-0.5 rounded font-bold ${eligibility.habilitado ? 'text-emerald-700 bg-emerald-100' : 'text-amber-800 bg-amber-100'}`}>
+                {eligibility.habilitado ? 'Habilitado' : 'Diferido Temporal'}
               </strong>
             </div>
             <div className="flex justify-between items-center">
@@ -290,7 +331,7 @@ export const DigitalCardModal: React.FC<DigitalCardModalProps> = ({
               <span className="font-semibold text-slate-800">{user.fechaUltimaDonacion || 'Sin donación previa'}</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-slate-500">Próxima fecha biológica:</span>
+              <span className="text-slate-500">Próxima fecha autorizada:</span>
               <span className="font-bold text-rose-700">
                 {eligibility.fechaProximaHabilitada.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
               </span>
@@ -301,7 +342,7 @@ export const DigitalCardModal: React.FC<DigitalCardModalProps> = ({
           <div className="bg-slate-100/80 p-3 rounded-2xl border border-slate-200 text-xs space-y-1.5">
             <div className="flex items-center justify-between">
               <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">
-                Enlace de Verificación del QR
+                Enlace Oficial de Verificación
               </span>
               <button
                 type="button"
@@ -329,16 +370,26 @@ export const DigitalCardModal: React.FC<DigitalCardModalProps> = ({
             </div>
           </div>
 
-          {/* Download button ONLY (Opción de imprimir removida) */}
-          <div>
+          {/* Action Buttons: Download + Close */}
+          <div className="space-y-2 pt-1">
             <button
               onClick={handleDownloadDigital}
-              className="w-full py-3 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-colors shadow-md shadow-rose-600/20"
+              className="w-full py-2.5 sm:py-3 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-colors shadow-md shadow-rose-600/20"
               id="btn-download-carnet-digital"
             >
               <Download className="w-4 h-4" />
               <span>Descargar Carnet Digital</span>
             </button>
+
+            {isPublicVerification && (
+              <button
+                type="button"
+                onClick={onClose}
+                className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl flex items-center justify-center gap-1 cursor-pointer transition-colors border border-slate-200"
+              >
+                <span>Cerrar Verificación</span>
+              </button>
+            )}
           </div>
         </div>
       </div>

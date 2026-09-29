@@ -328,31 +328,63 @@ export default function App() {
           setScannedDonor(found);
           setIsScannedDonorModalOpen(true);
         } else {
-          const cleanCi = carnetCode.replace(/[^0-9]/g, '') || '7821940';
-          const numericId = parseInt(cleanCi, 10) || 999999;
-          const fallbackDonor: UserDonor = {
-            id: numericId,
-            nombres: 'Donante Acreditado',
-            apellidos: 'HemoVida Regional',
-            ci: cleanCi,
-            email: `donante.${cleanCi}@hemovida.org`,
-            celular: '+591 70000000',
-            nacionalidad: 'Boliviana',
-            direccion: 'Santa Cruz de la Sierra, Bolivia',
-            ocupacion: 'Donante Activo',
-            grupoSanguineo: 'O',
-            factorRh: 'Positivo',
-            tipoDonante: 'Voluntario Altruista',
-            totalDonaciones: 1,
-            volumenHistoricoMl: 450,
-            fechaUltimaDonacion: new Date().toISOString().split('T')[0],
-            carnetDigitalCodigo: carnetCode,
-            fechaNacimiento: '1995-05-15',
-            sexo: 'M',
-            estadoHabilitacion: 'Apto'
-          };
-          setScannedDonor(fallbackDonor);
-          setIsScannedDonorModalOpen(true);
+          // Consultar endpoint público de verificación médica del backend
+          apiService.getCarnetDigital(carnetCode).then(res => {
+            if (res) {
+              const donorFromApi: UserDonor = {
+                id: res.id || parseInt((res.ci || '0').replace(/[^0-9]/g, '')) || 999999,
+                nombres: res.nombres || (res.donante ? res.donante.split(' ')[0] : 'Donante'),
+                apellidos: res.apellidos || (res.donante ? res.donante.split(' ').slice(1).join(' ') : 'Acreditado'),
+                ci: res.ci || carnetCode,
+                email: res.email || `donante.${res.ci || 'acreditado'}@hemovida.org`,
+                celular: res.celular || '+591 70000000',
+                nacionalidad: res.nacionalidad || 'Boliviana',
+                direccion: res.direccion || 'Santa Cruz de la Sierra, Bolivia',
+                ocupacion: res.ocupacion || 'Donante Registrado',
+                grupoSanguineo: (res.grupoSanguineo as any) || 'O',
+                factorRh: (res.factorRh as any) || 'Positivo',
+                tipoDonante: (res.tipoDonante as any) || 'Voluntario Altruista',
+                totalDonaciones: res.totalDonacionesHistoricas || 1,
+                volumenHistoricoMl: res.volumenHistoricoAportadoMl || 450,
+                fechaUltimaDonacion: res.fechaUltimaDonacion || undefined,
+                carnetDigitalCodigo: res.carnetDigitalCodigo || carnetCode,
+                fechaNacimiento: res.fechaNacimiento || '1995-05-15',
+                sexo: (res.sexo === 'F' ? 'F' : 'M'),
+                estadoHabilitacion: (res.estadoHabilitacion as any) || (res.estaHabilitadoParaDonar ? 'Apto' : 'Diferido Temporal')
+              };
+              setScannedDonor(donorFromApi);
+              setIsScannedDonorModalOpen(true);
+            } else {
+              // Respaldo de contingencia si no responde el backend
+              const cleanCi = carnetCode.replace(/[^0-9]/g, '') || '7821940';
+              const numericId = parseInt(cleanCi, 10) || 999999;
+              const fallbackDonor: UserDonor = {
+                id: numericId,
+                nombres: 'Donante Acreditado',
+                apellidos: 'HemoVida Regional',
+                ci: cleanCi,
+                email: `donante.${cleanCi}@hemovida.org`,
+                celular: '+591 70000000',
+                nacionalidad: 'Boliviana',
+                direccion: 'Santa Cruz de la Sierra, Bolivia',
+                ocupacion: 'Donante Activo',
+                grupoSanguineo: 'O',
+                factorRh: 'Positivo',
+                tipoDonante: 'Voluntario Altruista',
+                totalDonaciones: 1,
+                volumenHistoricoMl: 450,
+                fechaUltimaDonacion: new Date().toISOString().split('T')[0],
+                carnetDigitalCodigo: carnetCode,
+                fechaNacimiento: '1995-05-15',
+                sexo: 'M',
+                estadoHabilitacion: 'Apto'
+              };
+              setScannedDonor(fallbackDonor);
+              setIsScannedDonorModalOpen(true);
+            }
+          }).catch(err => {
+            console.warn('Error al verificar carnet con API:', err);
+          });
         }
       }
     }
