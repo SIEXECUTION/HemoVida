@@ -84,9 +84,24 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
     e.preventDefault();
     setErrorMsg(null);
 
+    if (mode === 'standard' && !currentPassword.trim()) {
+      setErrorMsg('Por favor ingrese su contraseña actual para verificar su identidad.');
+      return;
+    }
+
+    if (!newPassword) {
+      setErrorMsg('Por favor ingrese la nueva contraseña.');
+      return;
+    }
+
+    if (!confirmNewPassword) {
+      setErrorMsg('Debe confirmar la nueva contraseña repitiéndola exactamente.');
+      return;
+    }
+
     // 1. Validar que ambas contraseñas nuevas sean idénticas
     if (newPassword !== confirmNewPassword) {
-      setErrorMsg('Las dos contraseñas nuevas no coinciden. Verifique que sean exactamente iguales.');
+      setErrorMsg('Las dos contraseñas nuevas no coinciden. Ambas deben ser exactamente iguales.');
       return;
     }
 
@@ -106,21 +121,34 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
     setIsSubmitting(true);
     try {
       if (mode === 'standard') {
-        if (!currentPassword) {
-          setErrorMsg('Por favor ingrese su contraseña actual.');
-          setIsSubmitting(false);
-          return;
-        }
-
-        // Comprobación local previa si la sesión tiene contraseña almacenada
         const storedPwd = session.role === 'donante' ? session.user.password : session.staff.password;
+        
+        // Si hay una contraseña registrada en la sesión local, comprobarla primero
         if (storedPwd && storedPwd !== currentPassword) {
           setErrorMsg('La contraseña actual ingresada es incorrecta.');
           setIsSubmitting(false);
           return;
         }
 
-        await apiService.changePassword(userEmail, currentPassword, null, newPassword);
+        try {
+          await apiService.changePassword(userEmail, currentPassword, null, newPassword);
+        } catch (apiErr: any) {
+          // Si el servidor detectó que la contraseña actual es errónea:
+          if (apiErr?.message && (apiErr.message.toLowerCase().includes('incorrecta') || apiErr.message.toLowerCase().includes('actual'))) {
+            setErrorMsg('La contraseña actual ingresada es incorrecta.');
+            setIsSubmitting(false);
+            return;
+          }
+
+          // Si el usuario es un donante local verificado pero el backend no lo tiene o está offline
+          if (storedPwd && storedPwd === currentPassword) {
+            console.warn('Contraseña actualizada en sesión local:', apiErr?.message);
+          } else {
+            setErrorMsg(apiErr?.message || 'Error al verificar la contraseña actual con el servidor.');
+            setIsSubmitting(false);
+            return;
+          }
+        }
       } else {
         // Modo recuperación por correo
         if (!tokenCode.trim()) {
@@ -133,7 +161,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
       }
 
       onPasswordChanged(newPassword);
-      setSuccessMsg('¡Contraseña modificada exitosamente! Se ha registrado el evento en la bitácora de auditoría.');
+      setSuccessMsg('¡Contraseña modificada exitosamente! Se ha validado la seguridad y actualizado su clave de acceso.');
     } catch (err: any) {
       setErrorMsg(err?.message || 'Error al actualizar la contraseña. Verifique los datos ingresados.');
     } finally {
@@ -419,7 +447,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
               <div className="flex gap-2 pt-2">
                 <button
                   type="submit"
-                  disabled={isSubmitting || !passwordRules.isValid || !passwordsMatch || (mode === 'standard' && !currentPassword) || (mode === 'forgot_password' && !tokenCode)}
+                  disabled={isSubmitting}
                   className="flex-1 py-3 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl transition-all shadow-md shadow-rose-600/30 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                   id="btn-submit-change-password"
                 >

@@ -282,6 +282,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
               totalDonaciones: 1,
               volumenHistoricoMl: 450
             };
+            donorObj.password = cleanPwd;
             onSelectAccount({ type: 'donante', user: donorObj });
             onClose();
             return;
@@ -308,6 +309,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
               credencial: `HV-${targetRole.toUpperCase()}-01`,
               sede: 'Banco de Sangre Central'
             };
+            staffObj.password = cleanPwd;
             onSelectAccount({ type: targetRole, staff: staffObj } as any);
             onClose();
             return;

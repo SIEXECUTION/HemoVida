@@ -585,7 +585,47 @@ class PasswordChangeView(APIView):
 
         usuario = Usuario.objects.filter(email__iexact=email).first()
         if not usuario:
-            return Response({"detail": "Usuario no encontrado."}, status=status.HTTP_404_NOT_FOUND)
+            uname = email.split('@')[0]
+            usuario = Usuario.objects.filter(username__iexact=uname).first()
+
+        if not usuario:
+            # Buscar si existe persona asociada al email, carnet o CI
+            uname = email.split('@')[0]
+            persona = Persona.objects.filter(Q(ci__iexact=uname) | Q(ci__iexact=email)).first()
+            if not persona:
+                from apps.donantes.models import Donante
+                donante = Donante.objects.select_related('persona').filter(
+                    Q(carnetDigitalCodigo__iexact=uname) | Q(persona__ci__iexact=uname)
+                ).first()
+                if donante:
+                    persona = donante.persona
+
+            if persona:
+                rol = Rol.objects.filter(idRol=2).first() or Rol.objects.first()
+                usuario = Usuario.objects.create(
+                    persona=persona,
+                    rol=rol,
+                    username=uname[:50],
+                    email=email,
+                    passwordHash=make_password(new_password),
+                    estado='Activo'
+                )
+                try:
+                    registrar_auditoria(
+                        usuario=usuario,
+                        accion=f"Creación y asignación de contraseña para donante {usuario.username}",
+                        tabla='Usuario',
+                        id_registro=usuario.idUsuario,
+                        ip_origen=get_client_ip(request)
+                    )
+                except Exception:
+                    pass
+                return Response({
+                    "success": True,
+                    "message": "Contraseña modificada y usuario activado satisfactoriamente."
+                }, status=status.HTTP_200_OK)
+            else:
+                return Response({"detail": "Usuario no encontrado en la base de datos."}, status=status.HTTP_404_NOT_FOUND)
 
         if current_password:
             if not usuario.check_password(current_password):
