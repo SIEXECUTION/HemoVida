@@ -168,6 +168,36 @@ export const AdminAuditView: React.FC<AdminAuditViewProps> = ({
         </div>
       </div>
 
+      {/* Alerta Destacada para el Administrador: Solicitudes de Personal de Salud Pendientes */}
+      {pendingStaffRequests.length > 0 && activeTab !== 'solicitudes' && (
+        <div className="bg-amber-50 border-2 border-amber-300 rounded-3xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-amber-950 shadow-sm animate-fadeIn">
+          <div className="flex items-start sm:items-center gap-3.5">
+            <div className="w-10 h-10 rounded-2xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-md">
+              <UserCheck className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="font-black text-sm text-slate-900 flex items-center gap-2">
+                <span>Solicitudes de Personal de Salud Pendientes ({pendingStaffRequests.length})</span>
+                <span className="bg-amber-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full">
+                  Acción requerida
+                </span>
+              </h4>
+              <p className="text-xs text-slate-600 mt-0.5">
+                Profesionales de salud han solicitado registrarse. Solo usted como Administrador puede habilitar sus credenciales institucionales.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setActiveTab('solicitudes')}
+            className="px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl transition-all cursor-pointer shrink-0 shadow-md shadow-amber-600/20 flex items-center gap-1.5"
+          >
+            <span>Revisar y Validar</span>
+            <span className="bg-white/25 px-1.5 py-0.5 rounded text-[10px]">{pendingStaffRequests.length}</span>
+          </button>
+        </div>
+      )}
+
       {/* TAB 1: BITÁCORA FORENSE */}
       {activeTab === 'bitacora' && (
         <div className="bg-white rounded-3xl border border-slate-200 shadow-xs p-6 space-y-5">

@@ -240,6 +240,50 @@ export default function App() {
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
   const [preselectedCenterId, setPreselectedCenterId] = useState<string | null>(null);
 
+  // Carnet Digital QR Public Verification State
+  const [scannedDonor, setScannedDonor] = useState<UserDonor | null>(null);
+  const [isScannedDonorModalOpen, setIsScannedDonorModalOpen] = useState(false);
+
+  // Detect ?carnet=... when user scans QR code with mobile camera
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const carnetCode = params.get('carnet');
+      if (carnetCode) {
+        const found = donors.find(d => 
+          (d.carnetDigitalCodigo && d.carnetDigitalCodigo.toLowerCase() === carnetCode.toLowerCase()) || 
+          d.ci === carnetCode ||
+          d.id === carnetCode
+        );
+        if (found) {
+          setScannedDonor(found);
+          setIsScannedDonorModalOpen(true);
+        } else {
+          const cleanCi = carnetCode.replace(/[^0-9]/g, '') || '7821940';
+          const fallbackDonor: UserDonor = {
+            id: carnetCode,
+            nombres: 'Donante Acreditado',
+            apellidos: 'HemoVida Regional',
+            ci: cleanCi,
+            email: `donante.${cleanCi}@hemovida.org`,
+            telefono: '+591 70000000',
+            grupoSanguineo: 'O',
+            factorRh: 'Positivo',
+            tipoDonante: 'Voluntario Altruista',
+            totalDonaciones: 1,
+            fechaUltimaDonacion: new Date().toISOString().split('T')[0],
+            carnetDigitalCodigo: carnetCode,
+            fechaNacimiento: '1995-05-15',
+            sexo: 'M',
+            estadoHabilitacion: 'Habilitado'
+          };
+          setScannedDonor(fallbackDonor);
+          setIsScannedDonorModalOpen(true);
+        }
+      }
+    }
+  }, [donors]);
+
   // Persistence effects
   useEffect(() => {
     if (session) {
@@ -1104,6 +1148,21 @@ export default function App() {
           isOpen={isDigitalCardOpen}
           onClose={() => setIsDigitalCardOpen(false)}
           user={currentDonorUser}
+        />
+      )}
+
+      {scannedDonor && (
+        <DigitalCardModal
+          isOpen={isScannedDonorModalOpen}
+          onClose={() => {
+            setIsScannedDonorModalOpen(false);
+            if (window.history.pushState) {
+              const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+              window.history.pushState({ path: cleanUrl }, '', cleanUrl);
+            }
+          }}
+          user={scannedDonor}
+          isPublicVerification={true}
         />
       )}
 
