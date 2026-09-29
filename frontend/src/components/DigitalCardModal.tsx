@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   X, 
   Award, 
@@ -12,8 +12,11 @@ import {
   Fingerprint,
   Sparkles,
   Copy,
-  ExternalLink
+  ExternalLink,
+  ImageIcon
 } from 'lucide-react';
+import { toPng } from 'html-to-image';
+import QRCode from 'qrcode';
 import { UserDonor } from '../types';
 import { calculateBiologicalEligibility } from '../utils/donationCalculator';
 
@@ -31,8 +34,8 @@ export const DigitalCardModal: React.FC<DigitalCardModalProps> = ({
   isPublicVerification = false
 }) => {
   const [saveNotification, setSaveNotification] = useState<string | null>(null);
-
-  if (!isOpen) return null;
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('');
 
   const eligibility = calculateBiologicalEligibility(user);
 
@@ -40,76 +43,57 @@ export const DigitalCardModal: React.FC<DigitalCardModalProps> = ({
     ? `${window.location.origin}/?carnet=${encodeURIComponent(user.carnetDigitalCodigo || user.ci)}`
     : `https://hemovida.pages.dev/?carnet=${encodeURIComponent(user.carnetDigitalCodigo || user.ci)}`;
 
-  const qrCodeImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(carnetUrl)}&bgcolor=ffffff&color=0f172a&margin=1`;
+  // Generar código QR como Base64 Data URL puro sin dependencias de red externas
+  useEffect(() => {
+    if (carnetUrl) {
+      QRCode.toDataURL(carnetUrl, {
+        width: 240,
+        margin: 1,
+        color: {
+          dark: '#0f172a',
+          light: '#ffffff'
+        },
+        errorCorrectionLevel: 'M'
+      }).then(url => {
+        setQrCodeDataUrl(url);
+      }).catch(err => {
+        console.warn('Error al generar QR data URL:', err);
+      });
+    }
+  }, [carnetUrl]);
 
-  const handleDownloadDigital = () => {
-    const cardHtml = `<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Carnet Digital - ${user.nombres} ${user.apellidos} - HemoVida</title>
-  <style>
-    body { font-family: system-ui, -apple-system, sans-serif; background: #0f172a; color: #fff; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
-    .card { background: linear-gradient(135deg, #be123c, #9f1239, #881337); border-radius: 24px; padding: 24px; max-width: 420px; width: 100%; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5); border: 2px solid rgba(255,255,255,0.2); }
-    .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 12px; margin-bottom: 16px; }
-    .title { font-weight: 900; font-size: 15px; letter-spacing: 0.5px; }
-    .code { font-family: monospace; font-size: 12px; background: rgba(255,255,255,0.2); padding: 4px 8px; border-radius: 6px; font-weight: bold; }
-    .details { margin: 16px 0; }
-    .name { font-size: 20px; font-weight: 800; margin: 0 0 8px 0; }
-    .meta { font-size: 12px; opacity: 0.9; margin-bottom: 4px; }
-    .blood { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.2); }
-    .blood-type { font-size: 38px; font-weight: 900; }
-    .qr { background: white; padding: 8px; border-radius: 12px; text-align: center; color: #0f172a; }
-    .qr img { width: 110px; height: 110px; display: block; border-radius: 4px; }
-    .status { font-size: 10px; color: #047857; font-weight: bold; margin-top: 4px; }
-    .footer { font-size: 11px; opacity: 0.8; margin-top: 16px; text-align: center; }
-  </style>
-</head>
-<body>
-  <div class="card">
-    <div class="header">
-      <div class="title">BANCO DE SANGRE HEMOVIDA</div>
-      <div class="code">${user.carnetDigitalCodigo}</div>
-    </div>
-    <div class="details">
-      <div class="meta">DONANTE ACREDITADO</div>
-      <div class="name">${user.nombres} ${user.apellidos}</div>
-      <div class="meta">C.I.: <strong>${user.ci}</strong> | Nacionalidad: <strong>${user.nacionalidad || 'Boliviana'}</strong></div>
-      <div class="meta">Modalidad: <strong>${user.tipoDonante}</strong></div>
-      <div class="meta">Donaciones registradas: <strong>${user.totalDonaciones}</strong></div>
-      <div class="meta">Enlace de verificación: <a href="${carnetUrl}" style="color:#fecdd3;">${carnetUrl}</a></div>
-    </div>
-    <div class="blood">
-      <div>
-        <div class="meta">GRUPO & FACTOR</div>
-        <div class="blood-type">${user.grupoSanguineo} ${user.factorRh === 'Positivo' ? 'Rh+' : 'Rh-'}</div>
-      </div>
-      <div class="qr">
-        <img src="${qrCodeImageUrl}" alt="Código QR de Verificación" />
-        <div class="status">✓ HABILITADO</div>
-      </div>
-    </div>
-    <div class="footer">Banco de Sangre Regional HemoVida • Santa Cruz de la Sierra, Bolivia</div>
-  </div>
-</body>
-</html>`;
+  const qrCodeImageUrl = qrCodeDataUrl || `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(carnetUrl)}&bgcolor=ffffff&color=0f172a&margin=1`;
 
-    const blob = new Blob([cardHtml], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `Carnet-Digital-${user.carnetDigitalCodigo || user.ci}.html`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+  // DESCARGAR EL CARNET DIGITAL COMO IMAGEN REAL (.PNG) CON EL QR
+  const handleDownloadImage = async () => {
+    const cardEl = document.getElementById('printable-donor-card');
+    if (!cardEl) return;
 
-    setSaveNotification(`Carnet ${user.carnetDigitalCodigo} descargado exitosamente.`);
-    setTimeout(() => {
-      setSaveNotification(null);
-    }, 3500);
+    try {
+      setIsDownloading(true);
+      const dataUrl = await toPng(cardEl, {
+        cacheBust: true,
+        pixelRatio: 2, // Calidad Retina de alta resolución
+      });
+      const link = document.createElement('a');
+      link.download = `Carnet-HemoVida-${(user.carnetDigitalCodigo || user.ci).replace(/[^a-zA-Z0-9_-]/g, '_')}.png`;
+      link.href = dataUrl;
+      link.click();
+
+      setSaveNotification(`Imagen PNG del carnet con código QR descargada con éxito.`);
+      setTimeout(() => {
+        setSaveNotification(null);
+      }, 3500);
+    } catch (err) {
+      console.error('Error al generar imagen PNG del carnet:', err);
+      setSaveNotification('No se pudo generar la imagen. Intente nuevamente.');
+      setTimeout(() => setSaveNotification(null), 3500);
+    } finally {
+      setIsDownloading(false);
+    }
   };
+
+  if (!isOpen) return null;
 
   const getInitials = (nombres: string, apellidos: string) => {
     const n = nombres?.trim().charAt(0) || 'D';
@@ -370,15 +354,29 @@ export const DigitalCardModal: React.FC<DigitalCardModalProps> = ({
             </div>
           </div>
 
-          {/* Action Buttons: Download + Close */}
+          {/* Action Buttons: Descargar como Imagen PNG (Sin botón imprimir) */}
           <div className="space-y-2 pt-1">
             <button
-              onClick={handleDownloadDigital}
-              className="w-full py-2.5 sm:py-3 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-colors shadow-md shadow-rose-600/20"
+              onClick={handleDownloadImage}
+              disabled={isDownloading}
+              className={`w-full py-2.5 sm:py-3 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-2 transition-all shadow-md ${
+                isDownloading 
+                  ? 'bg-rose-400 cursor-wait' 
+                  : 'bg-rose-600 hover:bg-rose-700 cursor-pointer shadow-rose-600/25 active:scale-[0.99]'
+              }`}
               id="btn-download-carnet-digital"
             >
-              <Download className="w-4 h-4" />
-              <span>Descargar Carnet Digital</span>
+              {isDownloading ? (
+                <>
+                  <Sparkles className="w-4 h-4 animate-spin" />
+                  <span>Generando imagen PNG de alta resolución...</span>
+                </>
+              ) : (
+                <>
+                  <ImageIcon className="w-4 h-4" />
+                  <span>Descargar Credencial como Imagen (.PNG)</span>
+                </>
+              )}
             </button>
 
             {isPublicVerification && (
