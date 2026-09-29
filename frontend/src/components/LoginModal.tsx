@@ -157,7 +157,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   const [showRecoveryConfirmPassword, setShowRecoveryConfirmPassword] = useState(false);
   const [recoveryLoading, setRecoveryLoading] = useState(false);
   const [recoveryMsg, setRecoveryMsg] = useState('');
-  const [recoveryTokenPreview, setRecoveryTokenPreview] = useState<string | null>(null);
   const [recoveryError, setRecoveryError] = useState<string | null>(null);
 
   const recoveryPasswordRules = evaluatePassword(recoveryNewPassword, recoveryConfirmPassword);
@@ -366,12 +365,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({
       const res = await apiService.requestPasswordReset(recoveryEmail);
       setRecoveryStep(2);
       setRecoveryMsg(res.message);
-      if (res.token) {
-        setRecoveryTokenPreview(res.token);
-      }
     } catch (err: any) {
-      setRecoveryStep(2);
-      setRecoveryMsg(`Se ha generado un código de recuperación para ${recoveryEmail}.`);
+      setRecoveryError(err?.message || 'Error al enviar el correo de verificación. Intente nuevamente.');
     } finally {
       setRecoveryLoading(false);
     }
@@ -690,7 +685,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                         setRecoveryToken('');
                         setRecoveryNewPassword('');
                         setRecoveryConfirmPassword('');
-                        setRecoveryTokenPreview(null);
                       }}
                       className="text-xs text-rose-600 hover:text-rose-700 font-bold hover:underline cursor-pointer"
                     >
@@ -807,16 +801,14 @@ export const LoginModal: React.FC<LoginModalProps> = ({
               {/* PASO 2: INGRESAR TOKEN Y CREAR NUEVA CONTRASEÑA */}
               {recoveryStep === 2 && (
                 <form onSubmit={handleConfirmRecoverySubmit} className="space-y-4">
-                  <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-2xl text-[11px] text-emerald-900 space-y-1">
-                    <p className="font-bold flex items-center gap-1.5">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-2xl text-xs text-emerald-950 space-y-1.5">
+                    <p className="font-bold flex items-center gap-1.5 text-xs text-emerald-900">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                       <span>{recoveryMsg || `Código de verificación enviado a ${recoveryEmail}`}</span>
                     </p>
-                    {recoveryTokenPreview && (
-                      <p className="text-[10px] text-slate-600">
-                        Código generado: <code className="bg-white px-2 py-0.5 rounded font-mono font-bold text-emerald-700 border border-emerald-200">{recoveryTokenPreview}</code>
-                      </p>
-                    )}
+                    <p className="text-[11px] text-slate-600 leading-relaxed">
+                      Por favor revise su bandeja de entrada (y la carpeta de spam o correo no deseado) de <strong>{recoveryEmail}</strong>. Ingrese el código recibido a continuación para confirmar su identidad.
+                    </p>
                   </div>
 
                   <div>

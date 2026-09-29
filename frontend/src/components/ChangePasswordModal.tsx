@@ -40,7 +40,6 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
   const [tokenSent, setTokenSent] = useState(false);
   const [tokenLoading, setTokenLoading] = useState(false);
   const [tokenCode, setTokenCode] = useState('');
-  const [tokenGeneratedPreview, setTokenGeneratedPreview] = useState<string | null>(null);
 
   // Common New Password Fields
   const [newPassword, setNewPassword] = useState('');
@@ -66,11 +65,8 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
     setErrorMsg(null);
     setTokenLoading(true);
     try {
-      const res = await apiService.requestPasswordReset(userEmail);
+      await apiService.requestPasswordReset(userEmail);
       setTokenSent(true);
-      if (res.token) {
-        setTokenGeneratedPreview(res.token);
-      }
     } catch (err: any) {
       setErrorMsg(err?.message || 'Error al enviar código al correo.');
     } finally {
@@ -137,7 +133,6 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
     setConfirmNewPassword('');
     setTokenCode('');
     setTokenSent(false);
-    setTokenGeneratedPreview(null);
     setErrorMsg(null);
     setSuccessMsg(null);
   };
@@ -287,16 +282,14 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
                   </div>
 
                   {tokenSent && (
-                    <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl text-[11px] text-emerald-900 space-y-1">
-                      <div className="flex items-center gap-1.5 font-bold">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                        <span>¡Código de 6 dígitos enviado a su correo!</span>
+                    <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-950 space-y-1">
+                      <div className="flex items-center gap-1.5 font-bold text-emerald-900">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <span>¡Código de 6 dígitos enviado!</span>
                       </div>
-                      {tokenGeneratedPreview && (
-                        <p className="text-[10px] text-slate-600">
-                          Código de verificación generado: <code className="bg-white px-2 py-0.5 rounded font-mono font-bold text-emerald-700 border border-emerald-200">{tokenGeneratedPreview}</code>
-                        </p>
-                      )}
+                      <p className="text-[11px] text-slate-600 leading-relaxed">
+                        Hemos enviado un código a <strong>{userEmail}</strong>. Revise su bandeja de entrada (y la carpeta de spam) e ingréselo a continuación.
+                      </p>
                     </div>
                   )}
 

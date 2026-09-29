@@ -3,6 +3,7 @@ Pruebas unitarias para Seguridad, Autenticación y Auditoría (CU01, CU02, CU03)
 """
 from django.test import TestCase
 from django.core.exceptions import ValidationError
+from django.core.cache import cache
 from rest_framework.test import APIClient
 from rest_framework import status
 from datetime import date, datetime
@@ -227,7 +228,9 @@ class SeguridadAPITestCase(TestCase):
         })
         self.assertEqual(res_req.status_code, status.HTTP_200_OK)
         self.assertTrue(res_req.data['success'])
-        token = res_req.data['token']
+        cached = cache.get(f"pwd_reset_{self.user_admin.email.lower()}")
+        self.assertIsNotNone(cached)
+        token = cached['code']
         self.assertEqual(len(token), 6)
 
         # 2. Confirmar con nuevo password

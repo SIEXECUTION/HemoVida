@@ -73,7 +73,7 @@ export const apiService = {
   /**
    * Solicitar token de recuperación de contraseña por correo electrónico
    */
-  async requestPasswordReset(email: string): Promise<{ success: boolean; message: string; token?: string }> {
+  async requestPasswordReset(email: string): Promise<{ success: boolean; message: string; email_enviado?: boolean }> {
     const cleanEmail = email.trim().toLowerCase();
     try {
       const res = await fetch(`${API_BASE_URL}/auth/recuperar-password/solicitar/`, {
@@ -85,30 +85,17 @@ export const apiService = {
         body: JSON.stringify({ email: cleanEmail })
       });
       if (res.ok) {
-        const data = await res.json();
-        // Guardar token en respaldo local también
-        if (data.token) {
-          const stored = JSON.parse(localStorage.getItem('hemovida_reset_tokens') || '{}');
-          stored[cleanEmail] = { token: data.token, expiresAt: Date.now() + 15 * 60 * 1000 };
-          localStorage.setItem('hemovida_reset_tokens', JSON.stringify(stored));
-        }
-        return data;
+        return await res.json();
       }
-    } catch (e) {
-      console.warn('Recuperación con backend offline, utilizando generador local:', e);
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Error al procesar la solicitud de recuperación.');
+    } catch (e: any) {
+      if (e?.message && !e.message.includes('fetch')) {
+        throw e;
+      }
+      // Si el backend estuviera momentáneamente inaccesible, informar al usuario claramente
+      throw new Error('No se pudo conectar con el servidor de correos HemoVida. Por favor intente nuevamente en unos instantes.');
     }
-
-    // Generador de respaldo local de 6 dígitos
-    const localCode = `${Math.floor(100000 + Math.random() * 900000)}`;
-    const stored = JSON.parse(localStorage.getItem('hemovida_reset_tokens') || '{}');
-    stored[cleanEmail] = { token: localCode, expiresAt: Date.now() + 15 * 60 * 1000 };
-    localStorage.setItem('hemovida_reset_tokens', JSON.stringify(stored));
-
-    return {
-      success: true,
-      message: `Se ha enviado un código de verificación de 6 dígitos al correo ${cleanEmail}.`,
-      token: localCode
-    };
   },
 
   /**
@@ -133,31 +120,14 @@ export const apiService = {
       if (res.ok) {
         return await res.json();
       }
-    } catch (e) {
-      console.warn('Confirmación con backend offline, validando localmente:', e);
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'El código de verificación es inválido o ha expirado.');
+    } catch (e: any) {
+      if (e?.message && !e.message.includes('fetch')) {
+        throw e;
+      }
+      throw new Error('No se pudo verificar el código con el servidor. Verifique su conexión e intente nuevamente.');
     }
-
-    // Validación local
-    const stored = JSON.parse(localStorage.getItem('hemovida_reset_tokens') || '{}');
-    const entry = stored[cleanEmail];
-    if (entry && entry.token === cleanToken && entry.expiresAt > Date.now()) {
-      delete stored[cleanEmail];
-      localStorage.setItem('hemovida_reset_tokens', JSON.stringify(stored));
-      return {
-        success: true,
-        message: 'Su contraseña ha sido actualizada con éxito.'
-      };
-    }
-
-    // Aceptar si coincide con el token local o código estándar
-    if (cleanToken.length === 6) {
-      return {
-        success: true,
-        message: 'Su contraseña ha sido actualizada con éxito.'
-      };
-    }
-
-    throw new Error('El código de verificación es inválido o ha expirado.');
   },
 
   /**
