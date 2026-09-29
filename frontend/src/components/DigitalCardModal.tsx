@@ -13,7 +13,8 @@ import {
   Sparkles,
   Copy,
   ExternalLink,
-  ImageIcon
+  ImageIcon,
+  Clock
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import QRCode from 'qrcode';
@@ -101,8 +102,14 @@ export const DigitalCardModal: React.FC<DigitalCardModalProps> = ({
     return `${n}${a}`.toUpperCase();
   };
 
-  const estimatedLivesSaved = Math.max(1, (user.totalDonaciones || 1) * 3);
-  const totalVolumeMl = user.volumenHistoricoMl || (user.totalDonaciones || 1) * 450;
+  const isPostulante = Boolean(
+    user.totalDonaciones === 0 || 
+    (user.carnetDigitalCodigo && user.carnetDigitalCodigo.startsWith('HV-POST')) ||
+    user.ocupacion?.includes('Postulante')
+  );
+
+  const estimatedLivesSaved = Math.max(0, (user.totalDonaciones || 0) * 3);
+  const totalVolumeMl = user.volumenHistoricoMl || (user.totalDonaciones || 0) * 450;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/75 backdrop-blur-xs overflow-y-auto">
@@ -112,7 +119,9 @@ export const DigitalCardModal: React.FC<DigitalCardModalProps> = ({
           <div className="flex items-center gap-2">
             <Award className="w-5 h-5 text-rose-500 shrink-0" />
             <span className="font-bold text-sm font-['Outfit',sans-serif] truncate">
-              {isPublicVerification ? 'Validación Oficial de Carnet Digital' : 'Carnet Digital del Donante'}
+              {isPublicVerification 
+                ? (isPostulante ? 'Validación Oficial: Postulante Registrado' : 'Validación Oficial: Donante Acreditado') 
+                : (isPostulante ? 'Carnet Provisional de Postulante' : 'Carnet Digital del Donante')}
             </span>
           </div>
           <button
@@ -126,22 +135,28 @@ export const DigitalCardModal: React.FC<DigitalCardModalProps> = ({
 
         {/* Public Verification Medical Status Banner */}
         {isPublicVerification && (
-          <div className={`${eligibility.habilitado ? 'bg-emerald-600' : 'bg-amber-600'} text-white px-5 sm:px-6 py-3 flex items-start gap-2.5 text-xs shadow-inner`}>
-            {eligibility.habilitado ? (
+          <div className={`${isPostulante ? 'bg-amber-600' : (eligibility.habilitado ? 'bg-emerald-600' : 'bg-amber-600')} text-white px-5 sm:px-6 py-3 flex items-start gap-2.5 text-xs shadow-inner`}>
+            {isPostulante ? (
+              <Clock className="w-5 h-5 shrink-0 text-white mt-0.5" />
+            ) : eligibility.habilitado ? (
               <CheckCircle2 className="w-5 h-5 shrink-0 text-white mt-0.5" />
             ) : (
               <Calendar className="w-5 h-5 shrink-0 text-white mt-0.5" />
             )}
             <div>
               <p className="font-bold tracking-tight text-xs sm:text-sm">
-                {eligibility.habilitado 
-                  ? '✓ CERTIFICACIÓN OFICIAL: HABILITADO PARA DONAR' 
-                  : '⏳ EN PERÍODO DE RECUPERACIÓN BIOLÓGICA'}
+                {isPostulante
+                  ? '📋 POSTULANTE REGISTRADO EN HEMOVIDA (EN EVALUACIÓN)'
+                  : eligibility.habilitado 
+                    ? '✓ CERTIFICACIÓN OFICIAL: HABILITADO PARA DONAR' 
+                    : '⏳ EN PERÍODO DE RECUPERACIÓN BIOLÓGICA'}
               </p>
               <p className="text-[11px] opacity-90 mt-0.5 leading-snug">
-                {eligibility.habilitado
-                  ? `Donante apto y verificado en la base de datos central de HemoVida Santa Cruz (${user.sexo === 'M' ? '90 días' : '120 días'} de intervalo biológico reglamentario).`
-                  : `Reposo celular en curso. Próxima fecha autorizada: ${eligibility.fechaProximaHabilitada.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })} (${eligibility.diasRestantes} días restantes).`
+                {isPostulante
+                  ? 'Usuario registrado en la base de datos de HemoVida. Habilitado para triaje clínico presencial y primera colecta (tamizaje serológico pendiente tras extracción).'
+                  : eligibility.habilitado
+                    ? `Donante apto y verificado en la base de datos central de HemoVida Santa Cruz (${user.sexo === 'M' ? '90 días' : '120 días'} de intervalo biológico reglamentario).`
+                    : `Reposo celular en curso. Próxima fecha autorizada: ${eligibility.fechaProximaHabilitada.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })} (${eligibility.diasRestantes} días restantes).`
                 }
               </p>
             </div>
@@ -152,7 +167,7 @@ export const DigitalCardModal: React.FC<DigitalCardModalProps> = ({
           {/* THE DIGITAL CREDENTIAL CARD (SIN FOTO DE PERSONA) */}
           <div 
             id="printable-donor-card"
-            className="bg-gradient-to-br from-rose-700 via-rose-600 to-red-800 text-white rounded-3xl p-5 sm:p-6 shadow-xl relative overflow-hidden border border-rose-400/40 select-none"
+            className={`bg-gradient-to-br ${isPostulante ? 'from-amber-700 via-orange-600 to-amber-900 border-amber-400/40' : 'from-rose-700 via-rose-600 to-red-800 border-rose-400/40'} text-white rounded-3xl p-5 sm:p-6 shadow-xl relative overflow-hidden border select-none`}
           >
             {/* Background Pattern */}
             <div className="absolute -right-8 -bottom-8 w-44 h-44 bg-white/10 rounded-full blur-xl pointer-events-none" />
@@ -212,8 +227,8 @@ export const DigitalCardModal: React.FC<DigitalCardModalProps> = ({
 
               <div className="col-span-8 space-y-1">
                 <div>
-                  <p className="text-[9px] sm:text-[10px] text-rose-200 uppercase tracking-wider font-semibold">
-                    Donante Acreditado
+                  <p className="text-[9px] sm:text-[10px] text-white/80 uppercase tracking-wider font-semibold">
+                    {isPostulante ? 'Postulante Registrado (En Evaluación)' : 'Donante Acreditado'}
                   </p>
                   <p className="font-black text-sm sm:text-base leading-tight tracking-tight">
                     {user.nombres} {user.apellidos}
@@ -240,15 +255,25 @@ export const DigitalCardModal: React.FC<DigitalCardModalProps> = ({
             {/* Blood Type Big Badge & Real Scannable QR */}
             <div className="relative z-10 mt-3 pt-3 border-t border-white/20 flex items-center justify-between">
               <div>
-                <span className="text-[9px] text-rose-200 uppercase tracking-wider block">Grupo & Factor</span>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-2xl sm:text-3xl font-black tracking-tight text-white">
-                    {user.grupoSanguineo}
-                  </span>
-                  <span className="text-xs sm:text-sm font-extrabold bg-white text-rose-800 px-1.5 py-0.5 rounded">
-                    {user.factorRh === 'Positivo' ? 'Rh+' : 'Rh-'}
-                  </span>
-                </div>
+                <span className="text-[9px] text-white/80 uppercase tracking-wider block">
+                  {isPostulante ? 'Tipificación Sanguínea' : 'Grupo & Factor'}
+                </span>
+                {isPostulante ? (
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <span className="text-xs sm:text-sm font-extrabold bg-white/25 text-white px-2 py-0.5 rounded border border-white/30">
+                      En Evaluación (Triaje)
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-2xl sm:text-3xl font-black tracking-tight text-white">
+                      {user.grupoSanguineo}
+                    </span>
+                    <span className="text-xs sm:text-sm font-extrabold bg-white text-rose-800 px-1.5 py-0.5 rounded">
+                      {user.factorRh === 'Positivo' ? 'Rh+' : 'Rh-'}
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Código QR Real y Escaneable */}
@@ -287,18 +312,18 @@ export const DigitalCardModal: React.FC<DigitalCardModalProps> = ({
           )}
 
           {/* Solidarity Impact Statistics */}
-          <div className="grid grid-cols-3 gap-2 bg-rose-50/70 p-3 rounded-2xl border border-rose-100 text-center">
+          <div className="grid grid-cols-3 gap-2 bg-slate-50 p-3 rounded-2xl border border-slate-200 text-center">
             <div className="p-1">
               <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold block">Donaciones</span>
-              <strong className="text-base sm:text-lg font-black text-rose-700">{user.totalDonaciones || 1}</strong>
+              <strong className="text-base sm:text-lg font-black text-rose-700">{user.totalDonaciones || 0}</strong>
             </div>
-            <div className="p-1 border-x border-rose-200/60">
+            <div className="p-1 border-x border-slate-200">
               <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold block">Volumen</span>
-              <strong className="text-base sm:text-lg font-black text-rose-700">{totalVolumeMl} <span className="text-[10px] font-medium">ml</span></strong>
+              <strong className="text-base sm:text-lg font-black text-rose-700">{isPostulante ? 0 : totalVolumeMl} <span className="text-[10px] font-medium">ml</span></strong>
             </div>
             <div className="p-1">
               <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold block">Vidas Salvadas</span>
-              <strong className="text-base sm:text-lg font-black text-emerald-600">~{estimatedLivesSaved}</strong>
+              <strong className="text-base sm:text-lg font-black text-emerald-600">~{isPostulante ? 0 : estimatedLivesSaved}</strong>
             </div>
           </div>
 
@@ -306,18 +331,25 @@ export const DigitalCardModal: React.FC<DigitalCardModalProps> = ({
           <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 text-xs text-slate-600 space-y-1.5">
             <div className="flex justify-between items-center">
               <span className="font-semibold text-slate-700">Estado de Habilitación:</span>
-              <strong className={`px-2 py-0.5 rounded font-bold ${eligibility.habilitado ? 'text-emerald-700 bg-emerald-100' : 'text-amber-800 bg-amber-100'}`}>
-                {eligibility.habilitado ? 'Habilitado' : 'Diferido Temporal'}
+              <strong className={`px-2 py-0.5 rounded font-bold ${
+                isPostulante 
+                  ? 'text-amber-800 bg-amber-100' 
+                  : (eligibility.habilitado ? 'text-emerald-700 bg-emerald-100' : 'text-amber-800 bg-amber-100')
+              }`}>
+                {isPostulante ? 'En Evaluación (Pre-filtro)' : (eligibility.habilitado ? 'Habilitado' : 'Diferido Temporal')}
               </strong>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-slate-500">Última donación registrada:</span>
-              <span className="font-semibold text-slate-800">{user.fechaUltimaDonacion || 'Sin donación previa'}</span>
+              <span className="text-slate-500">{isPostulante ? 'Primera colecta:' : 'Última donación registrada:'}</span>
+              <span className="font-semibold text-slate-800">{isPostulante ? 'Pendiente de agendamiento' : (user.fechaUltimaDonacion || 'Sin donación previa')}</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-slate-500">Próxima fecha autorizada:</span>
-              <span className="font-bold text-rose-700">
-                {eligibility.fechaProximaHabilitada.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
+              <span className="text-slate-500">{isPostulante ? 'Tamizaje serológico:' : 'Próxima fecha autorizada:'}</span>
+              <span className={`font-bold ${isPostulante ? 'text-amber-700' : 'text-rose-700'}`}>
+                {isPostulante 
+                  ? '6 marcadores tras primera extracción' 
+                  : eligibility.fechaProximaHabilitada.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })
+                }
               </span>
             </div>
           </div>

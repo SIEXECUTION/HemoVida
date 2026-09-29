@@ -49,6 +49,7 @@ class PosibleDonadorResponseSerializer(serializers.Serializer):
     estadoAptitud = serializers.CharField()
     tieneAnalisis = serializers.BooleanField()
     fechaRegistroPostulante = serializers.DateField()
+    carnetProvisionalCodigo = serializers.CharField(allow_null=True, required=False)
     estaHabilitadoParaDonar = serializers.BooleanField(default=False)
     mensaje = serializers.CharField()
 

@@ -28,6 +28,13 @@ class PosibleDonador(models.Model):
     )
     tieneAnalisis = models.BooleanField(default=False, db_column='tieneanalisis')
     fechaRegistroPostulante = models.DateField(auto_now_add=True, db_column='fecharegistropostulante')
+    carnetProvisionalCodigo = models.CharField(
+        max_length=40, 
+        unique=True, 
+        null=True, 
+        blank=True, 
+        db_column='carnetprovisionalcodigo'
+    )
 
     class Meta:
         managed = False
@@ -36,7 +43,7 @@ class PosibleDonador(models.Model):
         verbose_name_plural = 'Posibles Donadores'
 
     def __str__(self):
-        return f"{self.persona.nombreCompleto} - {self.estadoAptitud} (Análisis: {self.tieneAnalisis})"
+        return f"{self.persona.nombreCompleto} - {self.carnetProvisionalCodigo or 'Sin Código'} ({self.estadoAptitud})"
 
 
 class Donante(models.Model):

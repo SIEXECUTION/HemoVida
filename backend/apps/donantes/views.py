@@ -105,16 +105,19 @@ class DonanteCarnetDigitalView(APIView):
             serializer = CarnetDigitalResponseSerializer(payload)
             return Response(serializer.data, status=status.HTTP_200_OK)
 
-        # 2. Búsqueda en PosibleDonador (Postulante en fase inicial sin serología)
+        # 2. Búsqueda en PosibleDonador (Postulante en fase inicial con código provisional o CI)
         posible_filter = (
             Q(persona__ci__iexact=query) |
             Q(persona__ci__iexact=query_hyphen) |
+            Q(carnetProvisionalCodigo__iexact=query) |
+            Q(carnetProvisionalCodigo__iexact=query_hyphen) |
             Q(persona__usuario__username__iexact=query) |
             Q(persona__usuario__username__iexact=query_hyphen)
         )
         if len(query_digits) >= 4:
             posible_filter |= (
                 Q(persona__ci__icontains=query_digits) |
+                Q(carnetProvisionalCodigo__icontains=query_digits) |
                 Q(persona__usuario__username__icontains=query_digits)
             )
 
@@ -122,8 +125,11 @@ class DonanteCarnetDigitalView(APIView):
 
         if posible:
             persona = posible.persona
+            codigo_provisional = posible.carnetProvisionalCodigo or f"HV-POST-{date.today().year}-{persona.idPersona}"
             payload_posible = {
                 'esPosibleDonador': True,
+                'carnetDigitalCodigo': codigo_provisional,
+                'carnetProvisionalCodigo': codigo_provisional,
                 'ci': persona.ci,
                 'nombres': persona.nombres,
                 'apellidos': persona.apellidos,
@@ -137,7 +143,7 @@ class DonanteCarnetDigitalView(APIView):
                 'tieneAnalisis': posible.tieneAnalisis,
                 'fechaRegistroPostulante': posible.fechaRegistroPostulante,
                 'estaHabilitadoParaDonar': False,
-                'mensaje': 'Postulante en fase de registro y cuestionario de prefiltro. Aún sin análisis serológico validado.'
+                'mensaje': 'Postulante registrado en HemoVida. Habilitado para evaluación inicial y cuestionario de prefiltro.'
             }
             serializer = PosibleDonadorResponseSerializer(payload_posible)
             return Response(serializer.data, status=status.HTTP_200_OK)
