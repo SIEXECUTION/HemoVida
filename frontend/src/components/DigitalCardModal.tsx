@@ -34,6 +34,8 @@ export const DigitalCardModal: React.FC<DigitalCardModalProps> = ({
 
   if (!isOpen) return null;
 
+  const eligibility = calculateBiologicalEligibility(user);
+
   const carnetUrl = typeof window !== 'undefined'
     ? `${window.location.origin}/?carnet=${encodeURIComponent(user.carnetDigitalCodigo || user.ci)}`
     : `https://hemovida.pages.dev/?carnet=${encodeURIComponent(user.carnetDigitalCodigo || user.ci)}`;

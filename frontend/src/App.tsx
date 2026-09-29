@@ -253,29 +253,34 @@ export default function App() {
         const found = donors.find(d => 
           (d.carnetDigitalCodigo && d.carnetDigitalCodigo.toLowerCase() === carnetCode.toLowerCase()) || 
           d.ci === carnetCode ||
-          d.id === carnetCode
+          String(d.id) === carnetCode
         );
         if (found) {
           setScannedDonor(found);
           setIsScannedDonorModalOpen(true);
         } else {
           const cleanCi = carnetCode.replace(/[^0-9]/g, '') || '7821940';
+          const numericId = parseInt(cleanCi, 10) || 999999;
           const fallbackDonor: UserDonor = {
-            id: carnetCode,
+            id: numericId,
             nombres: 'Donante Acreditado',
             apellidos: 'HemoVida Regional',
             ci: cleanCi,
             email: `donante.${cleanCi}@hemovida.org`,
-            telefono: '+591 70000000',
+            celular: '+591 70000000',
+            nacionalidad: 'Boliviana',
+            direccion: 'Santa Cruz de la Sierra, Bolivia',
+            ocupacion: 'Donante Activo',
             grupoSanguineo: 'O',
             factorRh: 'Positivo',
             tipoDonante: 'Voluntario Altruista',
             totalDonaciones: 1,
+            volumenHistoricoMl: 450,
             fechaUltimaDonacion: new Date().toISOString().split('T')[0],
             carnetDigitalCodigo: carnetCode,
             fechaNacimiento: '1995-05-15',
             sexo: 'M',
-            estadoHabilitacion: 'Habilitado'
+            estadoHabilitacion: 'Apto'
           };
           setScannedDonor(fallbackDonor);
           setIsScannedDonorModalOpen(true);
