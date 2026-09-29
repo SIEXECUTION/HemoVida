@@ -274,16 +274,28 @@ export interface DonationCenter {
 // NUEVAS ESTRUCTURAS CASOS DE USO CU01 - CU20
 // ==========================================
 
-// CU03: Bitácora de Auditoría Forense
+// CU03: Bitácora de Auditoría Forense (Mapeo completo con tabla PostgreSQL BitacoraAuditoria)
 export interface BitacoraAuditoria {
+  idAuditoria?: number;
   idEvento: string;
   timestamp: string;
+  fechaHora?: string;
+  idUsuario?: number;
+  username?: string;
+  funcionario?: string;
   actorNombre: string;
-  actorRol: StaffRole | 'donante' | 'sistema';
+  actorRol: StaffRole | 'donante' | 'sistema' | string;
+  nombreRol?: string;
   actorCi: string;
+  ci?: string;
+  nacionalidad?: string;
   ipSimulada: string;
-  tipoEvento: 'LOGIN' | 'LOGOUT' | 'FLEBOTOMIA_REGISTRADA' | 'FRACCIONAMIENTO' | 'DESCARTE_SEROLOGICO' | 'DESPACHO_AUTORIZADO' | 'CODIGO_ROJO_EMERGENCIA' | 'PRUEBA_CRUZADA_INCOMPATIBLE' | 'CAMBIO_UMBRAL_STOCK' | 'ASISTENCIA_CONFIRMADA' | 'CREACION_USUARIO' | 'SOLICITUD_PERSONAL' | 'APROBACION_PERSONAL' | 'RECHAZO_PERSONAL' | 'CAMBIO_PASSWORD';
+  ipOrigen?: string;
+  tipoEvento: 'LOGIN' | 'LOGOUT' | 'FLEBOTOMIA_REGISTRADA' | 'FRACCIONAMIENTO' | 'DESCARTE_SEROLOGICO' | 'DESPACHO_AUTORIZADO' | 'CODIGO_ROJO_EMERGENCIA' | 'PRUEBA_CRUZADA_INCOMPATIBLE' | 'CAMBIO_UMBRAL_STOCK' | 'ASISTENCIA_CONFIRMADA' | 'CREACION_USUARIO' | 'SOLICITUD_PERSONAL' | 'APROBACION_PERSONAL' | 'RECHAZO_PERSONAL' | 'CAMBIO_PASSWORD' | string;
   accion: string;
+  accionRealizada?: string;
+  tablaAfectada?: string;
+  idRegistroAfectado?: number;
   detalles: string;
   entidadId?: string;
 }

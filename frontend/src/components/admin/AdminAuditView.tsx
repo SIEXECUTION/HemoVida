@@ -21,7 +21,11 @@ import {
   X,
   Stethoscope,
   FlaskConical,
-  Truck
+  Truck,
+  Database,
+  RefreshCw,
+  Moon,
+  Globe
 } from 'lucide-react';
 import { 
   StaffAccount, 
@@ -43,6 +47,8 @@ interface AdminAuditViewProps {
   onApproveStaff?: (staffId: string) => void;
   onRejectStaff?: (staffId: string) => void;
   onOpenChangePassword?: () => void;
+  onRefreshAuditLogs?: () => Promise<void>;
+  isLoadingAudit?: boolean;
 }
 
 export const AdminAuditView: React.FC<AdminAuditViewProps> = ({
@@ -55,24 +61,50 @@ export const AdminAuditView: React.FC<AdminAuditViewProps> = ({
   pendingStaffRequests = [],
   onApproveStaff,
   onRejectStaff,
-  onOpenChangePassword
+  onOpenChangePassword,
+  onRefreshAuditLogs,
+  isLoadingAudit = false
 }) => {
   const [activeTab, setActiveTab] = useState<'bitacora' | 'umbrales' | 'solicitudes' | 'rbac'>('bitacora');
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedEventType, setSelectedEventType] = useState<string>('all');
+  const [selectedTable, setSelectedTable] = useState<string>('all');
+  const [nightShiftOnly, setNightShiftOnly] = useState<boolean>(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Filter audit logs
+  // Filter audit logs according to real database schema
   const filteredLogs = auditLogs.filter(log => {
-    const matchesSearch = 
-      log.actorNombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      log.actorCi.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      log.accion.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      log.detalles.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      log.ipSimulada.includes(searchTerm);
-    
-    const matchesType = selectedEventType === 'all' || log.tipoEvento === selectedEventType;
+    const actor = (log.funcionario || log.actorNombre || '').toLowerCase();
+    const username = (log.username || '').toLowerCase();
+    const ci = (log.ci || log.actorCi || '').toLowerCase();
+    const nacionalidad = (log.nacionalidad || '').toLowerCase();
+    const tabla = (log.tablaAfectada || '').toLowerCase();
+    const accion = (log.accionRealizada || log.accion || '').toLowerCase();
+    const detalles = (log.detalles || '').toLowerCase();
+    const ip = (log.ipOrigen || log.ipSimulada || '');
+    const term = searchTerm.toLowerCase();
 
-    return matchesSearch && matchesType;
+    const matchesSearch = !term ||
+      actor.includes(term) ||
+      username.includes(term) ||
+      ci.includes(term) ||
+      nacionalidad.includes(term) ||
+      tabla.includes(term) ||
+      accion.includes(term) ||
+      detalles.includes(term) ||
+      ip.includes(term);
+
+    const matchesTable = selectedTable === 'all' || 
+      (log.tablaAfectada && log.tablaAfectada.toLowerCase() === selectedTable.toLowerCase());
+
+    const matchesNightShift = !nightShiftOnly || (() => {
+      const dateStr = log.fechaHora || log.timestamp;
+      if (!dateStr) return false;
+      const d = new Date(dateStr);
+      const hour = d.getHours();
+      return hour >= 19 || hour < 7;
+    })();
+
+    return matchesSearch && matchesTable && matchesNightShift;
   });
 
   // Calculate live inventory count per group to compare against thresholds
@@ -212,56 +244,115 @@ export const AdminAuditView: React.FC<AdminAuditViewProps> = ({
         </div>
       )}
 
-      {/* TAB 1: BITÁCORA FORENSE */}
+      {/* TAB 1: BITÁCORA FORENSE - MAPEO EXACTO CON TABLA BitacoraAuditoria EN POSTGRESQL / SUPABASE */}
       {activeTab === 'bitacora' && (
         <div className="bg-white rounded-3xl border border-slate-200 shadow-xs p-6 space-y-5">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h2 className="text-xl font-black text-slate-900 font-['Outfit',sans-serif] flex items-center gap-2">
+              <div className="flex items-center gap-2">
+                <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 border border-emerald-200">
+                  <Database className="w-3 h-3 text-emerald-600" />
+                  <span>PostgreSQL / Supabase Cloud</span>
+                </span>
+                <span className="bg-slate-100 text-slate-700 text-[10px] font-mono px-2 py-0.5 rounded-full border border-slate-200">
+                  Tabla: BitacoraAuditoria
+                </span>
+              </div>
+              <h2 className="text-xl font-black text-slate-900 font-['Outfit',sans-serif] flex items-center gap-2 mt-1">
                 <ShieldCheck className="w-5 h-5 text-rose-600" />
-                Bitácora de Auditoría Forense (Solo Lectura)
+                Bitácora de Auditoría Forense
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">
-                Registro criptográfico inmutable de logins, flebotomías, fraccionamientos, descartes serológicos y despachos hospitalarios.
+                Registro inmutable de transacciones sobre tablas relacionales, usuarios, IPs y registros afectados.
               </p>
             </div>
 
-            <div className="flex items-center gap-2">
-              <span className="text-xs bg-slate-100 text-slate-700 font-mono px-3 py-1 rounded-lg border border-slate-200">
-                {filteredLogs.length} eventos auditados
+            <div className="flex flex-wrap items-center gap-2">
+              {onRefreshAuditLogs && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setIsRefreshing(true);
+                    try {
+                      await onRefreshAuditLogs();
+                    } finally {
+                      setIsRefreshing(false);
+                    }
+                  }}
+                  disabled={isRefreshing || isLoadingAudit}
+                  className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl flex items-center gap-1.5 transition-all cursor-pointer border border-slate-300 disabled:opacity-50"
+                  title="Sincronizar y recargar registros desde la base de datos Supabase"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing || isLoadingAudit ? 'animate-spin text-rose-600' : ''}`} />
+                  <span>{isRefreshing || isLoadingAudit ? 'Sincronizando...' : 'Recargar BD'}</span>
+                </button>
+              )}
+
+              <span className="text-xs bg-slate-100 text-slate-700 font-mono px-3 py-2 rounded-xl border border-slate-200">
+                {filteredLogs.length} / {auditLogs.length} registros
               </span>
             </div>
           </div>
 
           {/* Search & Filter Bar */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3">
             <div className="relative flex-1">
               <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
               <input
                 type="text"
-                placeholder="Buscar por actor, C.I., IP simulada o detalle forense..."
+                placeholder="Buscar por usuario, funcionario, C.I., nacionalidad, tabla afectada, acción o IP..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-9 pr-3 py-2 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-rose-500"
               />
             </div>
 
-            <div className="w-full sm:w-60">
+            {/* Filter by Tabla Afectada */}
+            <div className="w-full sm:w-64">
               <select
-                value={selectedEventType}
-                onChange={(e) => setSelectedEventType(e.target.value)}
-                className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl bg-white"
+                value={selectedTable}
+                onChange={(e) => setSelectedTable(e.target.value)}
+                className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl bg-white focus:ring-2 focus:ring-rose-500 font-medium"
               >
-                <option value="all">Todos los Tipos de Eventos</option>
-                <option value="LOGIN">Logins y Accesos</option>
-                <option value="FLEBOTOMIA_REGISTRADA">Flebotomías Registradas</option>
-                <option value="FRACCIONAMIENTO">Fraccionamientos Mecánicos</option>
-                <option value="DESCARTE_SEROLOGICO">Bajas y Descartes Serológicos</option>
-                <option value="CODIGO_ROJO_EMERGENCIA">Despachos Código Rojo</option>
-                <option value="PRUEBA_CRUZADA_INCOMPATIBLE">Pruebas Cruzadas Incompatibles</option>
-                <option value="CAMBIO_UMBRAL_STOCK">Cambios de Umbrales</option>
+                <option value="all">Todas las Tablas de la BD</option>
+                <option value="Usuario">Tabla: Usuario</option>
+                <option value="Persona">Tabla: Persona</option>
+                <option value="Donante">Tabla: Donante</option>
+                <option value="PosibleDonador">Tabla: PosibleDonador</option>
+                <option value="TriajeClinico">Tabla: TriajeClinico</option>
+                <option value="Diferimiento">Tabla: Diferimiento</option>
+                <option value="ExtraccionDonacion">Tabla: ExtraccionDonacion</option>
+                <option value="IncentivoEntrega">Tabla: IncentivoEntrega</option>
+                <option value="UnidadSangreTotal">Tabla: UnidadSangreTotal</option>
+                <option value="AnalisisInmunoSerologico">Tabla: AnalisisInmunoSerologico</option>
+                <option value="PruebaInmunohematologica">Tabla: PruebaInmunohematologica</option>
+                <option value="EjemplarBolsa">Tabla: EjemplarBolsa</option>
+                <option value="BajaInventario">Tabla: BajaInventario</option>
+                <option value="SolicitudHospitalaria">Tabla: SolicitudHospitalaria</option>
+                <option value="PruebaCompatibilidad">Tabla: PruebaCompatibilidad</option>
+                <option value="ComprobanteDespacho">Tabla: ComprobanteDespacho</option>
+                <option value="ComprobantePago">Tabla: ComprobantePago</option>
+                <option value="ReposicionPendiente">Tabla: ReposicionPendiente</option>
+                <option value="CompromisoDonacion">Tabla: CompromisoDonacion</option>
+                <option value="ParametroStockMinimo">Tabla: ParametroStockMinimo</option>
               </select>
             </div>
+
+            {/* Filter Fuera de Turno Nocturno (19:00 - 07:00 / Subconsulta B2) */}
+            <button
+              type="button"
+              onClick={() => setNightShiftOnly(!nightShiftOnly)}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 border shrink-0 ${
+                nightShiftOnly 
+                  ? 'bg-indigo-900 text-indigo-100 border-indigo-700 shadow-sm' 
+                  : 'bg-white text-slate-700 hover:bg-slate-50 border-slate-300'
+              }`}
+              title="Filtro B2: Operaciones fuera del turno central (19:00 a 07:00)"
+            >
+              <Moon className="w-3.5 h-3.5 text-indigo-400" />
+              <span>Turno Nocturno (19:00 - 07:00)</span>
+              {nightShiftOnly && <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse ml-0.5" />}
+            </button>
           </div>
 
           {/* Audit Logs Table */}
@@ -269,71 +360,136 @@ export const AdminAuditView: React.FC<AdminAuditViewProps> = ({
             <table className="w-full text-left text-xs">
               <thead className="bg-slate-900 text-white uppercase text-[10px] tracking-wider">
                 <tr>
-                  <th className="py-3 px-3.5 font-bold">ID / Timestamp</th>
-                  <th className="py-3 px-3.5 font-bold">Actor & Rol</th>
-                  <th className="py-3 px-3.5 font-bold">IP Simulada</th>
-                  <th className="py-3 px-3.5 font-bold">Tipo de Evento</th>
+                  <th className="py-3 px-3.5 font-bold">ID / Fecha y Hora</th>
+                  <th className="py-3 px-3.5 font-bold">Usuario & Rol</th>
+                  <th className="py-3 px-3.5 font-bold">Funcionario & Nacionalidad</th>
+                  <th className="py-3 px-3.5 font-bold">Tabla Afectada</th>
+                  <th className="py-3 px-3.5 font-bold text-center">ID Reg. Afectado</th>
                   <th className="py-3 px-3.5 font-bold">Acción Realizada</th>
-                  <th className="py-3 px-3.5 font-bold">Detalle Forense</th>
+                  <th className="py-3 px-3.5 font-bold">IP Origen</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filteredLogs.map((log) => {
-                  let badgeColor = 'bg-slate-100 text-slate-800';
-                  if (log.tipoEvento === 'DESCARTE_SEROLOGICO') badgeColor = 'bg-red-100 text-red-800 border-red-200';
-                  else if (log.tipoEvento === 'CODIGO_ROJO_EMERGENCIA') badgeColor = 'bg-rose-100 text-rose-800 border-rose-300 animate-pulse font-black';
-                  else if (log.tipoEvento === 'FLEBOTOMIA_REGISTRADA') badgeColor = 'bg-emerald-100 text-emerald-800 border-emerald-200';
-                  else if (log.tipoEvento === 'PRUEBA_CRUZADA_INCOMPATIBLE') badgeColor = 'bg-amber-100 text-amber-800 border-amber-300';
-                  else if (log.tipoEvento === 'LOGIN') badgeColor = 'bg-blue-100 text-blue-800';
+                {filteredLogs.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="py-12 text-center text-slate-400">
+                      <div className="flex flex-col items-center justify-center space-y-2">
+                        <Database className="w-8 h-8 text-slate-300" />
+                        <span className="font-semibold text-sm text-slate-600">No se encontraron registros de auditoría</span>
+                        <span className="text-xs text-slate-400">Pruebe ajustando los filtros de búsqueda o tabla afectada.</span>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  filteredLogs.map((log, idx) => {
+                    const idDisplay = log.idAuditoria ? `#${log.idAuditoria}` : (log.idEvento || `#${idx + 1}`);
+                    const dateRaw = log.fechaHora || log.timestamp;
+                    const dateDisplay = dateRaw 
+                      ? new Date(dateRaw).toLocaleString('es-BO', { 
+                          dateStyle: 'short', 
+                          timeStyle: 'medium' 
+                        }) 
+                      : '-';
 
-                  return (
-                    <tr key={log.idEvento} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="py-3 px-3.5 whitespace-nowrap">
-                        <span className="font-mono font-bold text-slate-800 block text-[11px]">
-                          {log.idEvento}
-                        </span>
-                        <span className="text-[10px] text-slate-400">
-                          {new Date(log.timestamp).toLocaleString('es-ES', { 
-                            dateStyle: 'short', 
-                            timeStyle: 'medium' 
-                          })}
-                        </span>
-                      </td>
+                    const usernameDisplay = log.username || 'Sistema';
+                    const rolDisplay = log.nombreRol || log.actorRol || 'N/A';
+                    const funcionarioDisplay = log.funcionario || log.actorNombre || 'Usuario del Sistema';
+                    const ciDisplay = log.ci || log.actorCi || 'N/A';
+                    const nacionalidadDisplay = log.nacionalidad || 'Boliviana';
+                    const tablaDisplay = log.tablaAfectada || 'Usuario';
+                    const idRegDisplay = log.idRegistroAfectado !== undefined && log.idRegistroAfectado !== null 
+                      ? log.idRegistroAfectado 
+                      : (log.entidadId || '-');
+                    const accionDisplay = log.accionRealizada || log.accion;
+                    const ipDisplay = log.ipOrigen || log.ipSimulada || '127.0.0.1';
 
-                      <td className="py-3 px-3.5">
-                        <span className="font-bold text-slate-900 block">{log.actorNombre}</span>
-                        <span className="text-[10px] text-slate-500 uppercase font-semibold">
-                          {log.actorRol} • C.I. {log.actorCi}
-                        </span>
-                      </td>
+                    // Table badge coloring
+                    let tableBadgeClass = 'bg-slate-100 text-slate-800 border-slate-200';
+                    if (tablaDisplay === 'Usuario') tableBadgeClass = 'bg-blue-50 text-blue-700 border-blue-200';
+                    else if (tablaDisplay === 'Persona') tableBadgeClass = 'bg-indigo-50 text-indigo-700 border-indigo-200';
+                    else if (tablaDisplay === 'Donante') tableBadgeClass = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+                    else if (tablaDisplay === 'ExtraccionDonacion') tableBadgeClass = 'bg-rose-50 text-rose-700 border-rose-200';
+                    else if (tablaDisplay === 'AnalisisInmunoSerologico') tableBadgeClass = 'bg-purple-50 text-purple-700 border-purple-200';
+                    else if (tablaDisplay === 'PruebaInmunohematologica') tableBadgeClass = 'bg-violet-50 text-violet-700 border-violet-200';
+                    else if (tablaDisplay === 'EjemplarBolsa') tableBadgeClass = 'bg-teal-50 text-teal-700 border-teal-200';
+                    else if (tablaDisplay === 'BajaInventario') tableBadgeClass = 'bg-red-50 text-red-700 border-red-200 font-bold';
+                    else if (tablaDisplay === 'SolicitudHospitalaria') tableBadgeClass = 'bg-amber-50 text-amber-700 border-amber-200';
+                    else if (tablaDisplay === 'ComprobanteDespacho') tableBadgeClass = 'bg-orange-50 text-orange-700 border-orange-200';
 
-                      <td className="py-3 px-3.5 whitespace-nowrap">
-                        <span className="font-mono text-[11px] bg-slate-100 px-2 py-0.5 rounded border border-slate-200 text-slate-700">
-                          {log.ipSimulada}
-                        </span>
-                      </td>
-
-                      <td className="py-3 px-3.5 whitespace-nowrap">
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${badgeColor}`}>
-                          {log.tipoEvento}
-                        </span>
-                      </td>
-
-                      <td className="py-3 px-3.5 font-medium text-slate-800 max-w-xs truncate">
-                        {log.accion}
-                      </td>
-
-                      <td className="py-3 px-3.5 text-slate-600 max-w-md text-[11px] leading-relaxed">
-                        {log.detalles}
-                        {log.entidadId && (
-                          <span className="ml-1 font-mono text-[10px] bg-slate-100 px-1 rounded text-rose-700">
-                            [{log.entidadId}]
+                    return (
+                      <tr key={log.idAuditoria || log.idEvento || idx} className="hover:bg-slate-50/80 transition-colors">
+                        {/* 1. ID Auditoría / Timestamp */}
+                        <td className="py-3 px-3.5 whitespace-nowrap">
+                          <span className="font-mono font-black text-rose-700 block text-xs">
+                            {idDisplay}
                           </span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
+                          <span className="text-[10px] text-slate-400 font-medium">
+                            {dateDisplay}
+                          </span>
+                        </td>
+
+                        {/* 2. Usuario & Rol */}
+                        <td className="py-3 px-3.5 whitespace-nowrap">
+                          <span className="font-mono font-bold text-slate-900 block text-[11px]">
+                            {usernameDisplay}
+                          </span>
+                          <span className="inline-block text-[10px] font-semibold text-slate-500 uppercase bg-slate-100 px-1.5 py-0.5 rounded mt-0.5">
+                            {rolDisplay}
+                          </span>
+                        </td>
+
+                        {/* 3. Funcionario & Nacionalidad */}
+                        <td className="py-3 px-3.5">
+                          <span className="font-bold text-slate-900 block text-xs">
+                            {funcionarioDisplay}
+                          </span>
+                          <div className="flex flex-wrap items-center gap-1.5 mt-0.5 text-[10px] text-slate-500">
+                            <span>C.I. {ciDisplay}</span>
+                            <span>•</span>
+                            <span className="inline-flex items-center gap-0.5 font-medium text-slate-600 bg-slate-50 px-1.5 py-0.2 rounded border border-slate-200">
+                              <Globe className="w-2.5 h-2.5 text-slate-400" />
+                              {nacionalidadDisplay}
+                            </span>
+                          </div>
+                        </td>
+
+                        {/* 4. Tabla Afectada */}
+                        <td className="py-3 px-3.5 whitespace-nowrap">
+                          <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-lg border font-mono ${tableBadgeClass}`}>
+                            <Database className="w-3 h-3 shrink-0" />
+                            {tablaDisplay}
+                          </span>
+                        </td>
+
+                        {/* 5. ID Registro Afectado */}
+                        <td className="py-3 px-3.5 whitespace-nowrap text-center">
+                          <span className="font-mono font-black text-xs text-slate-800 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-md">
+                            {typeof idRegDisplay === 'number' ? `#${idRegDisplay}` : idRegDisplay}
+                          </span>
+                        </td>
+
+                        {/* 6. Acción Realizada */}
+                        <td className="py-3 px-3.5 font-medium text-slate-800 max-w-sm">
+                          <span className="block text-xs text-slate-900 font-semibold leading-snug">
+                            {accionDisplay}
+                          </span>
+                          {log.detalles && log.detalles !== accionDisplay && (
+                            <span className="block text-[11px] text-slate-500 mt-0.5 line-clamp-2">
+                              {log.detalles}
+                            </span>
+                          )}
+                        </td>
+
+                        {/* 7. IP Origen */}
+                        <td className="py-3 px-3.5 whitespace-nowrap">
+                          <span className="font-mono text-[11px] bg-slate-100 px-2 py-0.5 rounded border border-slate-200 text-slate-700 font-medium">
+                            {ipDisplay}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>

@@ -19,14 +19,19 @@ def registrar_auditoria(usuario, accion: str, tabla: str, id_registro: int = 0, 
     """
     Registra un evento transaccional en la tabla BitacoraAuditoria.
     """
-    reg_id = kwargs.get('idRegistroAfectado', id_registro) or 0
+    raw_id = kwargs.get('idRegistroAfectado', id_registro)
+    try:
+        reg_id = int(raw_id) if raw_id is not None and str(raw_id).isdigit() else 0
+    except (ValueError, TypeError):
+        reg_id = 0
+
     usuario_obj = usuario if isinstance(usuario, Usuario) else None
     return BitacoraAuditoria.objects.create(
         usuario=usuario_obj,
-        accionRealizada=accion,
-        tablaAfectada=tabla,
+        accionRealizada=accion[:255] if accion else 'Operación en Plataforma',
+        tablaAfectada=tabla[:60] if tabla else 'Usuario',
         idRegistroAfectado=reg_id,
-        ipOrigen=ip_origen or '127.0.0.1'
+        ipOrigen=(ip_origen or '127.0.0.1')[:45]
     )
 
 def generate_tokens_for_usuario(usuario: Usuario) -> dict:

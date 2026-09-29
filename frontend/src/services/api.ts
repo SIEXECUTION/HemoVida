@@ -191,6 +191,78 @@ export const apiService = {
       console.warn('Error al consultar stock de backend:', e);
     }
     return null;
+  },
+
+  /**
+   * Obtener bitácora forense de auditoría desde PostgreSQL / Supabase
+   */
+  async getAuditoria(token?: string, filters?: {
+    q?: string;
+    fecha_inicio?: string;
+    fecha_fin?: string;
+    tabla_afectada?: string;
+    fuera_turno?: boolean;
+    id_usuario?: number;
+  }): Promise<{ totalRegistros: number; esFiltroFueraTurno: boolean; eventos: any[] }> {
+    const params = new URLSearchParams();
+    if (filters?.q) params.append('q', filters.q.trim());
+    if (filters?.fecha_inicio) params.append('fecha_inicio', filters.fecha_inicio);
+    if (filters?.fecha_fin) params.append('fecha_fin', filters.fecha_fin);
+    if (filters?.tabla_afectada && filters.tabla_afectada !== 'all') params.append('tabla_afectada', filters.tabla_afectada);
+    if (filters?.fuera_turno) params.append('fuera_turno', 'true');
+    if (filters?.id_usuario) params.append('id_usuario', String(filters.id_usuario));
+
+    const queryString = params.toString() ? `?${params.toString()}` : '';
+    const headers: Record<string, string> = { 'Accept': 'application/json' };
+    const savedToken = token || localStorage.getItem('hemovida_jwt_token');
+    if (savedToken) {
+      headers['Authorization'] = `Bearer ${savedToken}`;
+    }
+
+    const res = await fetch(`${API_BASE_URL}/auditoria/${queryString}`, {
+      method: 'GET',
+      headers
+    });
+
+    if (!res.ok) {
+      throw new Error(`Error ${res.status}: no se pudo cargar la auditoría desde el servidor.`);
+    }
+
+    return await res.json();
+  },
+
+  /**
+   * Registrar nueva traza de auditoría en la base de datos PostgreSQL / Supabase
+   */
+  async registrarAuditoria(data: {
+    accion: string;
+    tablaAfectada: string;
+    idRegistroAfectado?: number;
+    idUsuario?: number;
+  }): Promise<any> {
+    try {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      };
+      const savedToken = localStorage.getItem('hemovida_jwt_token');
+      if (savedToken) {
+        headers['Authorization'] = `Bearer ${savedToken}`;
+      }
+
+      const res = await fetch(`${API_BASE_URL}/auditoria/`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(data)
+      });
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch (e) {
+      console.warn('Error al registrar auditoría en backend:', e);
+    }
+    return null;
   }
 };
+
 

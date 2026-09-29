@@ -49,6 +49,7 @@ import {
   CompatibilityTestRecord
 } from './types';
 import { generateForensicIp } from './utils/security';
+import { apiService } from './services/api';
 import { 
   Droplet, 
   Heart, 
@@ -172,14 +173,82 @@ export default function App() {
     return MOCK_APPOINTMENTS;
   });
 
-  // CU03: Forensic Audit Logs
+  // CU03: Forensic Audit Logs (Normalización con tabla BitacoraAuditoria de PostgreSQL / Supabase)
+  const normalizeAuditEntry = (evt: any): BitacoraAuditoria => {
+    const idAuditoria = typeof evt.idAuditoria === 'number' ? evt.idAuditoria : (typeof evt.id_registro === 'number' ? evt.id_registro : undefined);
+    const idEvento = evt.idAuditoria ? `AUD-${evt.idAuditoria}` : (evt.idEvento || `EVT-${Date.now()}`);
+    const timestamp = evt.fechaHora || evt.timestamp || new Date().toISOString();
+    const actorNombre = evt.funcionario || evt.actorNombre || 'Personal HemoVida';
+    const actorRol = evt.nombreRol || evt.actorRol || 'Personal Institucional';
+    const actorCi = evt.ci || evt.actorCi || 'N/A';
+    const ipSimulada = evt.ipOrigen || evt.ipSimulada || '127.0.0.1';
+    const accion = evt.accionRealizada || evt.accion || 'Operación en Plataforma';
+    const tablaAfectada = evt.tablaAfectada || 'Usuario';
+    const idRegistroAfectado = typeof evt.idRegistroAfectado === 'number' ? evt.idRegistroAfectado : undefined;
+    const nacionalidad = evt.nacionalidad || 'Boliviana';
+
+    return {
+      idAuditoria,
+      idEvento,
+      timestamp,
+      fechaHora: timestamp,
+      idUsuario: evt.idUsuario,
+      username: evt.username || 'admin',
+      funcionario: actorNombre,
+      actorNombre,
+      actorRol,
+      nombreRol: actorRol,
+      ci: actorCi,
+      actorCi,
+      nacionalidad,
+      ipOrigen: ipSimulada,
+      ipSimulada,
+      tipoEvento: evt.tipoEvento || 'SISTEMA',
+      accion,
+      accionRealizada: accion,
+      tablaAfectada,
+      idRegistroAfectado,
+      detalles: evt.detalles || accion,
+      entidadId: evt.entidadId || (idRegistroAfectado ? `#${idRegistroAfectado}` : undefined)
+    };
+  };
+
   const [auditLogs, setAuditLogs] = useState<BitacoraAuditoria[]>(() => {
     const saved = localStorage.getItem('hemovida_audit_logs');
     if (saved) {
-      try { return JSON.parse(saved); } catch (e) { return MOCK_BITACORA; }
+      try { 
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.map(normalizeAuditEntry);
+        }
+      } catch (e) { 
+        return MOCK_BITACORA.map(normalizeAuditEntry); 
+      }
     }
-    return MOCK_BITACORA;
+    return MOCK_BITACORA.map(normalizeAuditEntry);
   });
+
+  const [isLoadingAudit, setIsLoadingAudit] = useState(false);
+
+  const fetchAuditLogs = async () => {
+    setIsLoadingAudit(true);
+    try {
+      const data = await apiService.getAuditoria();
+      if (data && Array.isArray(data.eventos) && data.eventos.length > 0) {
+        const normalized = data.eventos.map(normalizeAuditEntry);
+        setAuditLogs(normalized);
+        localStorage.setItem('hemovida_audit_logs', JSON.stringify(normalized));
+      }
+    } catch (err) {
+      console.warn('Carga inicial de auditoría remota:', err);
+    } finally {
+      setIsLoadingAudit(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAuditLogs();
+  }, []);
 
   // CU04: Stock Threshold Config
   const [stockThresholds, setStockThresholds] = useState<StockThresholdConfig[]>(() => {
@@ -971,6 +1040,8 @@ export default function App() {
             onApproveStaff={handleApproveStaff}
             onRejectStaff={handleRejectStaff}
             onOpenChangePassword={() => setIsChangePasswordOpen(true)}
+            onRefreshAuditLogs={fetchAuditLogs}
+            isLoadingAudit={isLoadingAudit}
           />
         )}
 

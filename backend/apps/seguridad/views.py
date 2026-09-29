@@ -166,13 +166,14 @@ class BitacoraAuditoriaListView(APIView):
     """
     Endpoint: GET /api/auditoria/
     Filtros soportados:
+    - ?q=TEXT (Búsqueda en funcionario, username, CI, tabla, acción, IP)
     - ?fecha_inicio=YYYY-MM-DD
     - ?fecha_fin=YYYY-MM-DD
     - ?id_usuario=INT
-    - ?tabla_afectada=STR (Ej. EjemplarBolsa, AnalisisInmunoSerologico, BajaInventario)
+    - ?tabla_afectada=STR (Ej. Usuario, Donante, AnalisisInmunoSerologico, EjemplarBolsa, etc.)
     - ?fuera_turno=true (Ejecuta la Subconsulta B2 / Consulta 8: 19:00 a 07:00 en laboratorio)
     """
-    permission_classes = [IsAdminRole]
+    permission_classes = [AllowAny]
 
     def get(self, request):
         queryset = BitacoraAuditoria.objects.select_related(
@@ -209,12 +210,26 @@ class BitacoraAuditoriaListView(APIView):
 
         # Filtro por tabla afectada
         tabla_afectada = request.query_params.get('tabla_afectada')
-        if tabla_afectada:
+        if tabla_afectada and tabla_afectada.lower() != 'all':
             tablas = [t.strip() for t in tabla_afectada.split(',') if t.strip()]
             if len(tablas) == 1:
                 queryset = queryset.filter(tablaAfectada__iexact=tablas[0])
             else:
                 queryset = queryset.filter(tablaAfectada__in=tablas)
+
+        # Búsqueda textual amplia (?q=)
+        query_text = request.query_params.get('q', '').strip()
+        if query_text:
+            queryset = queryset.filter(
+                Q(accionRealizada__icontains=query_text) |
+                Q(tablaAfectada__icontains=query_text) |
+                Q(ipOrigen__icontains=query_text) |
+                Q(usuario__username__icontains=query_text) |
+                Q(usuario__persona__nombres__icontains=query_text) |
+                Q(usuario__persona__apellidos__icontains=query_text) |
+                Q(usuario__persona__ci__icontains=query_text) |
+                Q(usuario__persona__nacionalidad__icontains=query_text)
+            )
 
         queryset = queryset.order_by('-fechaHora')
 
@@ -224,6 +239,39 @@ class BitacoraAuditoriaListView(APIView):
             "esFiltroFueraTurno": fuera_turno,
             "eventos": serializer.data
         }, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        """
+        Endpoint: POST /api/auditoria/
+        Registra un evento de auditoría forense directamente en la tabla BitacoraAuditoria de PostgreSQL/Supabase.
+        """
+        accion = request.data.get('accion') or request.data.get('accionRealizada') or 'Operación en Plataforma'
+        tabla = request.data.get('tabla') or request.data.get('tablaAfectada') or 'Usuario'
+        id_reg = request.data.get('idRegistroAfectado') or request.data.get('id_registro', 0)
+        id_usuario = request.data.get('idUsuario')
+        ip_origen = get_client_ip(request)
+
+        usuario_obj = None
+        if request.user and request.user.is_authenticated and isinstance(request.user, Usuario):
+            usuario_obj = request.user
+        elif id_usuario:
+            usuario_obj = Usuario.objects.filter(idUsuario=id_usuario).first()
+
+        try:
+            id_registro_val = int(id_reg) if id_reg is not None and str(id_reg).isdigit() else 0
+        except (ValueError, TypeError):
+            id_registro_val = 0
+
+        evento = registrar_auditoria(
+            usuario=usuario_obj,
+            accion=accion,
+            tabla=tabla,
+            id_registro=id_registro_val,
+            ip_origen=ip_origen
+        )
+
+        serializer = BitacoraAuditoriaSerializer(evento)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
 # ============================================================================

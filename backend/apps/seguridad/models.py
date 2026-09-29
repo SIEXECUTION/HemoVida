@@ -176,15 +176,15 @@ class BitacoraAuditoria(models.Model):
         Usuario, 
         null=True, 
         blank=True, 
-        on_delete=models.RESTRICT, 
+        on_delete=models.SET_NULL, 
         db_column='idusuario',
         related_name='eventos_auditoria'
     )
-    accionRealizada = models.CharField(max_length=100, db_column='accionrealizada')
-    tablaAfectada = models.CharField(max_length=100, db_column='tablaafectada')
-    idRegistroAfectado = models.IntegerField(db_column='idregistroafectado')
+    accionRealizada = models.CharField(max_length=255, db_column='accionrealizada')
+    tablaAfectada = models.CharField(max_length=60, db_column='tablaafectada')
+    idRegistroAfectado = models.IntegerField(null=True, blank=True, db_column='idregistroafectado')
     fechaHora = models.DateTimeField(auto_now_add=True, db_column='fechahora')
-    ipOrigen = models.CharField(max_length=45, db_column='iporigen')
+    ipOrigen = models.CharField(max_length=45, null=True, blank=True, db_column='iporigen')
 
     class Meta:
         managed = False

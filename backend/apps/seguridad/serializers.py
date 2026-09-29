@@ -157,18 +157,25 @@ class UsuarioEstadoUpdateSerializer(serializers.Serializer):
 class BitacoraAuditoriaSerializer(serializers.ModelSerializer):
     """
     Serializador para el Caso de Uso [CU03]: Consulta y Auditoría Forense.
+    Incluye datos extendidos del Usuario y Persona (C.I., Nacionalidad).
     """
+    idUsuario = serializers.IntegerField(source='usuario.idUsuario', default=None, allow_null=True)
     username = serializers.CharField(source='usuario.username', default='Sistema / Anónimo')
     nombreRol = serializers.CharField(source='usuario.rol.nombreRol', default='N/A')
     funcionario = serializers.SerializerMethodField()
+    ci = serializers.SerializerMethodField()
+    nacionalidad = serializers.SerializerMethodField()
 
     class Meta:
         model = BitacoraAuditoria
         fields = [
             'idAuditoria',
+            'idUsuario',
             'fechaHora',
             'username',
             'funcionario',
+            'ci',
+            'nacionalidad',
             'nombreRol',
             'accionRealizada',
             'tablaAfectada',
@@ -180,3 +187,14 @@ class BitacoraAuditoriaSerializer(serializers.ModelSerializer):
         if obj.usuario and obj.usuario.persona:
             return obj.usuario.persona.nombreCompleto
         return 'N/A'
+
+    def get_ci(self, obj):
+        if obj.usuario and obj.usuario.persona:
+            return obj.usuario.persona.ci
+        return 'N/A'
+
+    def get_nacionalidad(self, obj):
+        if obj.usuario and obj.usuario.persona:
+            return getattr(obj.usuario.persona, 'nacionalidad', 'Boliviana') or 'Boliviana'
+        return 'Boliviana'
+
