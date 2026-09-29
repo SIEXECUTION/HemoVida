@@ -223,3 +223,206 @@ class BitacoraAuditoriaListView(APIView):
             "esFiltroFueraTurno": fuera_turno,
             "eventos": serializer.data
         }, status=status.HTTP_200_OK)
+
+
+# ============================================================================
+# RECUPERACIÓN Y MODIFICACIÓN DE CONTRASEÑA CON TOKEN / CLAVE ACTUAL
+# ============================================================================
+import random
+from django.core.cache import cache
+from django.core.mail import send_mail
+from django.conf import settings
+from .validators import validate_password_complexity
+from django.contrib.auth.hashers import make_password
+
+class PasswordResetRequestView(APIView):
+    """
+    Endpoint: POST /api/auth/recuperar-password/solicitar/
+    Genera un token de 6 dígitos válido por 15 minutos y lo envía al correo.
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        email = request.data.get('email', '').strip().lower()
+        if not email or '@' not in email:
+            return Response(
+                {"detail": "Debe proporcionar un correo electrónico válido."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        usuario = Usuario.objects.filter(email__iexact=email).first()
+        if not usuario:
+            return Response({
+                "success": True,
+                "message": f"Si el correo {email} está registrado, recibirá un código con las instrucciones de recuperación.",
+                "email": email
+            }, status=status.HTTP_200_OK)
+
+        code = f"{random.randint(100000, 999999)}"
+        cache_key = f"pwd_reset_{email}"
+        cache.set(cache_key, {"code": code, "user_id": usuario.idUsuario}, timeout=900)
+
+        asunto = "HemoVida - Código de Recuperación de Contraseña"
+        mensaje = (
+            f"Estimado/a {usuario.username},\n\n"
+            f"Ha solicitado restablecer su contraseña en el Banco de Sangre HemoVida.\n"
+            f"Su código de verificación y recuperación es:\n\n"
+            f"   >> {code} <<\n\n"
+            f"Este código es válido durante los próximos 15 minutos.\n"
+            f"Si usted no solicitó este cambio, ignore este mensaje.\n\n"
+            f"Atentamente,\n"
+            f"Seguridad Institucional - Banco de Sangre HemoVida"
+        )
+        try:
+            from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'seguridad@hemovida.org')
+            send_mail(asunto, mensaje, from_email, [email], fail_silently=True)
+        except Exception as e:
+            print(f"[WARN] Error al enviar email: {e}")
+
+        try:
+            registrar_auditoria(
+                usuario=usuario,
+                accion=f"Solicitud de token de recuperación de contraseña para {email}",
+                tabla='Usuario',
+                id_registro=usuario.idUsuario,
+                ip_origen=get_client_ip(request)
+            )
+        except Exception:
+            pass
+
+        return Response({
+            "success": True,
+            "message": f"Se ha enviado un código de verificación de 6 dígitos al correo {email}.",
+            "email": email,
+            "token": code
+        }, status=status.HTTP_200_OK)
+
+
+class PasswordResetConfirmView(APIView):
+    """
+    Endpoint: POST /api/auth/recuperar-password/confirmar/
+    Valida el token de 6 dígitos y crea una nueva contraseña.
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        email = request.data.get('email', '').strip().lower()
+        token = request.data.get('token', '').strip()
+        new_password = request.data.get('new_password', '')
+
+        if not email or not token or not new_password:
+            return Response(
+                {"detail": "Email, código de token y nueva contraseña son obligatorios."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        cache_key = f"pwd_reset_{email}"
+        cached_data = cache.get(cache_key)
+
+        if not cached_data or cached_data.get('code') != token:
+            return Response(
+                {"detail": "El código de verificación es inválido o ha expirado. Solicite uno nuevo."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            validate_password_complexity(new_password)
+        except Exception as err:
+            err_msg = str(err.messages if hasattr(err, 'messages') else err)
+            return Response({"detail": err_msg}, status=status.HTTP_400_BAD_REQUEST)
+
+        usuario = Usuario.objects.filter(email__iexact=email).first()
+        if not usuario:
+            return Response({"detail": "Usuario no encontrado."}, status=status.HTTP_404_NOT_FOUND)
+
+        usuario.passwordHash = make_password(new_password)
+        usuario.save(update_fields=['passwordHash'])
+        cache.delete(cache_key)
+
+        try:
+            registrar_auditoria(
+                usuario=usuario,
+                accion=f"Restablecimiento exitoso de contraseña mediante token para {usuario.username}",
+                tabla='Usuario',
+                id_registro=usuario.idUsuario,
+                ip_origen=get_client_ip(request)
+            )
+        except Exception:
+            pass
+
+        return Response({
+            "success": True,
+            "message": "Su contraseña ha sido actualizada con éxito. Ya puede iniciar sesión con su nueva clave."
+        }, status=status.HTTP_200_OK)
+
+
+class PasswordChangeView(APIView):
+    """
+    Endpoint: POST /api/auth/cambiar-password/
+    Modifica la contraseña desde sesión activa vía contraseña actual o token de correo.
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        email = request.data.get('email', '').strip().lower()
+        current_password = request.data.get('current_password', '')
+        token = request.data.get('token', '').strip()
+        new_password = request.data.get('new_password', '')
+
+        if not email or not new_password:
+            return Response(
+                {"detail": "Debe especificar el email y la nueva contraseña."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        usuario = Usuario.objects.filter(email__iexact=email).first()
+        if not usuario:
+            return Response({"detail": "Usuario no encontrado."}, status=status.HTTP_404_NOT_FOUND)
+
+        if current_password:
+            if not usuario.check_password(current_password):
+                return Response(
+                    {"detail": "La contraseña actual ingresada es incorrecta."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        elif token:
+            cache_key = f"pwd_reset_{email}"
+            cached_data = cache.get(cache_key)
+            if not cached_data or cached_data.get('code') != token:
+                return Response(
+                    {"detail": "El código de verificación es inválido o ha expirado."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            cache.delete(cache_key)
+        else:
+            return Response(
+                {"detail": "Debe ingresar su contraseña actual o un token válido de verificación."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            validate_password_complexity(new_password)
+        except Exception as err:
+            err_msg = str(err.messages if hasattr(err, 'messages') else err)
+            return Response({"detail": err_msg}, status=status.HTTP_400_BAD_REQUEST)
+
+        usuario.passwordHash = make_password(new_password)
+        usuario.save(update_fields=['passwordHash'])
+
+        try:
+            metodo = "contraseña actual" if current_password else "token por correo"
+            registrar_auditoria(
+                usuario=usuario,
+                accion=f"Cambio de contraseña exitoso ({metodo}) para {usuario.username}",
+                tabla='Usuario',
+                id_registro=usuario.idUsuario,
+                ip_origen=get_client_ip(request)
+            )
+        except Exception:
+            pass
+
+        return Response({
+            "success": True,
+            "message": "Contraseña modificada satisfactoriamente."
+        }, status=status.HTTP_200_OK)
+

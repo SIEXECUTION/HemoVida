@@ -216,3 +216,41 @@ class SeguridadAPITestCase(TestCase):
         response = self.client.get('/api/auditoria/?fuera_turno=true')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(response.data['esFiltroFueraTurno'])
+
+    # -------------------------------------------------------------------------
+    # Recuperación y Modificación de Contraseña
+    # -------------------------------------------------------------------------
+    def test_recuperar_password_solicitar_y_confirmar(self):
+        # 1. Solicitar token
+        res_req = self.client.post('/api/auth/recuperar-password/solicitar/', {
+            'email': self.user_admin.email
+        })
+        self.assertEqual(res_req.status_code, status.HTTP_200_OK)
+        self.assertTrue(res_req.data['success'])
+        token = res_req.data['token']
+        self.assertEqual(len(token), 6)
+
+        # 2. Confirmar con nuevo password
+        nueva_clave = 'HemoVida#Nueva2026'
+        res_conf = self.client.post('/api/auth/recuperar-password/confirmar/', {
+            'email': self.user_admin.email,
+            'token': token,
+            'new_password': nueva_clave
+        })
+        self.assertEqual(res_conf.status_code, status.HTTP_200_OK)
+        self.assertTrue(res_conf.data['success'])
+
+        # Verificar que la nueva clave funciona
+        self.user_admin.refresh_from_db()
+        self.assertTrue(self.user_admin.check_password(nueva_clave))
+
+    def test_cambiar_password_con_clave_actual(self):
+        res = self.client.post('/api/auth/cambiar-password/', {
+            'email': self.user_admin.email,
+            'current_password': 'HemoVida#2026!',
+            'new_password': 'SuperClave#2026!'
+        })
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.user_admin.refresh_from_db()
+        self.assertTrue(self.user_admin.check_password('SuperClave#2026!'))
+

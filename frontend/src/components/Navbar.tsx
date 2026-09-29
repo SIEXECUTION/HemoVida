@@ -17,7 +17,8 @@ import {
   UserCheck,
   Stethoscope,
   FlaskConical,
-  User
+  User,
+  KeyRound
 } from 'lucide-react';
 import { UserSession } from '../types';
 
@@ -29,6 +30,7 @@ interface NavbarProps {
   onOpenRegister?: () => void;
   onLogout: () => void;
   onOpenPrecheck: () => void;
+  onOpenChangePassword?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -38,7 +40,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenLogin,
   onOpenRegister,
   onLogout,
-  onOpenPrecheck
+  onOpenPrecheck,
+  onOpenChangePassword
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -331,6 +334,19 @@ export const Navbar: React.FC<NavbarProps> = ({
                   </div>
                 )}
 
+                {/* Modificar Contraseña Button */}
+                {onOpenChangePassword && (
+                  <button
+                    id="btn-change-password-nav"
+                    onClick={onOpenChangePassword}
+                    className="px-3 py-1.5 text-xs font-bold text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs"
+                    title="Modificar Contraseña de Acceso"
+                  >
+                    <KeyRound className="w-3.5 h-3.5 text-amber-500" />
+                    <span className="hidden sm:inline">Cambiar Clave</span>
+                  </button>
+                )}
+
                 {/* Cerrar Sesión Button (Single session termination) */}
                 <button
                   id="btn-logout"
@@ -410,6 +426,20 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <span>Salir</span>
                 </button>
               </div>
+
+              {/* Modificar Contraseña Mobile */}
+              {onOpenChangePassword && (
+                <button
+                  onClick={() => {
+                    onOpenChangePassword();
+                    setMobileMenuOpen(false);
+                  }}
+                  className="w-full text-left px-3 py-2 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-100 flex items-center gap-2"
+                >
+                  <KeyRound className="w-4 h-4 text-amber-500" />
+                  <span>Modificar Contraseña</span>
+                </button>
+              )}
 
               {/* Navigation links if donor */}
               {session.role === 'donante' && (
