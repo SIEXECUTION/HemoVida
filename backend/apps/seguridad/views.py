@@ -250,11 +250,15 @@ class PasswordResetRequestView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        usuario = Usuario.objects.filter(email__iexact=email).first()
-        if not usuario:
-            usuario = Usuario.objects.filter(username__iexact=email).first()
-            if usuario:
-                email = usuario.email.lower()
+        usuario = None
+        try:
+            usuario = Usuario.objects.filter(email__iexact=email).first()
+            if not usuario:
+                usuario = Usuario.objects.filter(username__iexact=email).first()
+                if usuario:
+                    email = usuario.email.lower()
+        except Exception as e:
+            print(f"[WARN DB] Error al consultar usuario en base de datos: {e}")
 
         nombre_saludo = usuario.username if usuario else email.split('@')[0]
         code = f"{random.randint(100000, 999999)}"
@@ -375,26 +379,29 @@ class PasswordResetConfirmView(APIView):
             err_msg = str(err.messages if hasattr(err, 'messages') else err)
             return Response({"detail": err_msg}, status=status.HTTP_400_BAD_REQUEST)
 
-        usuario = Usuario.objects.filter(email__iexact=email).first()
-        if not usuario:
-            # Si el usuario no existe aún en la base de datos (p.ej. donante nuevo), lo creamos
-            rol_donante = Rol.objects.filter(nombreRol__icontains='donante').first() or Rol.objects.first()
-            base_user = email.split('@')[0]
-            username = base_user
-            idx = 1
-            while Usuario.objects.filter(username=username).exists():
-                username = f"{base_user}{idx}"
-                idx += 1
-            usuario = Usuario.objects.create(
-                username=username,
-                email=email,
-                passwordHash=make_password(new_password),
-                rol=rol_donante,
-                estado='Activo'
-            )
-        else:
-            usuario.passwordHash = make_password(new_password)
-            usuario.save(update_fields=['passwordHash'])
+        try:
+            usuario = Usuario.objects.filter(email__iexact=email).first()
+            if not usuario:
+                # Si el usuario no existe aún en la base de datos (p.ej. donante nuevo), lo creamos
+                rol_donante = Rol.objects.filter(nombreRol__icontains='donante').first() or Rol.objects.first()
+                base_user = email.split('@')[0]
+                username = base_user
+                idx = 1
+                while Usuario.objects.filter(username=username).exists():
+                    username = f"{base_user}{idx}"
+                    idx += 1
+                usuario = Usuario.objects.create(
+                    username=username,
+                    email=email,
+                    passwordHash=make_password(new_password),
+                    rol=rol_donante,
+                    estado='Activo'
+                )
+            else:
+                usuario.passwordHash = make_password(new_password)
+                usuario.save(update_fields=['passwordHash'])
+        except Exception as e:
+            print(f"[WARN DB] Error al actualizar contraseña en base de datos: {e}")
 
         cache.delete(cache_key)
 
