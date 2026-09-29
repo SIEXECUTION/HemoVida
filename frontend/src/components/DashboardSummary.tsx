@@ -11,7 +11,8 @@ import {
   ShieldCheck, 
   ArrowRight,
   Sparkles,
-  Award
+  Award,
+  KeyRound
 } from 'lucide-react';
 import { UserDonor, Appointment } from '../types';
 import { calculateBiologicalEligibility, formatDateTime } from '../utils/donationCalculator';
@@ -23,6 +24,7 @@ interface DashboardSummaryProps {
   onOpenNewAppointment: () => void;
   onOpenDigitalCard: () => void;
   onOpenPrecheck: () => void;
+  onOpenChangePassword?: () => void;
 }
 
 export const DashboardSummary: React.FC<DashboardSummaryProps> = ({
@@ -31,7 +33,8 @@ export const DashboardSummary: React.FC<DashboardSummaryProps> = ({
   onNavigate,
   onOpenNewAppointment,
   onOpenDigitalCard,
-  onOpenPrecheck
+  onOpenPrecheck,
+  onOpenChangePassword
 }) => {
   const eligibility = calculateBiologicalEligibility(user);
   const nextAppointment = upcomingAppointments.find(a => a.estadoCita === 'Programada');
@@ -109,6 +112,18 @@ export const DashboardSummary: React.FC<DashboardSummaryProps> = ({
                 <Award className="w-4 h-4 text-amber-400" />
                 Ver Carnet Digital
               </button>
+
+              {onOpenChangePassword && (
+                <button
+                  id="btn-hero-cambiar-password"
+                  onClick={onOpenChangePassword}
+                  className="bg-white/15 hover:bg-white/25 text-white font-semibold text-sm px-4 py-2.5 rounded-xl backdrop-blur-xs transition-colors cursor-pointer flex items-center gap-2"
+                  title="Modificar Contraseña de Acceso"
+                >
+                  <KeyRound className="w-4 h-4 text-amber-400" />
+                  Cambiar Contraseña
+                </button>
+              )}
             </div>
           </div>
 

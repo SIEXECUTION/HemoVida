@@ -1020,6 +1020,7 @@ export default function App() {
                 onOpenNewAppointment={() => setActiveTab('citas')}
                 onOpenDigitalCard={() => setIsDigitalCardOpen(true)}
                 onOpenPrecheck={() => setIsPrecheckOpen(true)}
+                onOpenChangePassword={() => setIsChangePasswordOpen(true)}
               />
             )}
 
