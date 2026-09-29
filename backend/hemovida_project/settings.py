@@ -6,9 +6,21 @@ Integración con PostgreSQL (Local y Supabase Cloud), JWT, CORS, Koyeb y Vercel.
 
 from pathlib import Path
 import os
+import socket
 from datetime import timedelta
 from dotenv import load_dotenv
 import dj_database_url
+
+# Forzar resolución IPv4 en entornos Linux / Docker / Render sin enrutamiento IPv6.
+# Evita el error "[Errno 101] Network is unreachable" de Python al conectar a smtp.gmail.com
+_original_getaddrinfo = socket.getaddrinfo
+def _ipv4_first_getaddrinfo(host, port, family=0, type=0, proto=0, flags=0):
+    try:
+        return _original_getaddrinfo(host, port, socket.AF_INET, type, proto, flags)
+    except Exception:
+        return _original_getaddrinfo(host, port, family, type, proto, flags)
+
+socket.getaddrinfo = _ipv4_first_getaddrinfo
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -256,8 +268,12 @@ TEST_RUNNER = 'apps.test_runner.UnmanagedModelTestRunner'
 EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
 EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
 EMAIL_PORT = int(os.getenv('EMAIL_PORT', '587'))
-EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True').lower() in ('true', '1', 'yes')
-EMAIL_USE_SSL = os.getenv('EMAIL_USE_SSL', 'False').lower() in ('true', '1', 'yes')
+if EMAIL_PORT == 465:
+    EMAIL_USE_SSL = os.getenv('EMAIL_USE_SSL', 'True').lower() in ('true', '1', 'yes')
+    EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'False').lower() in ('true', '1', 'yes')
+else:
+    EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True').lower() in ('true', '1', 'yes')
+    EMAIL_USE_SSL = os.getenv('EMAIL_USE_SSL', 'False').lower() in ('true', '1', 'yes')
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', f"Banco de Sangre HemoVida <{EMAIL_HOST_USER}>" if EMAIL_HOST_USER else "Banco de Sangre HemoVida <seguridad@hemovida.org>")

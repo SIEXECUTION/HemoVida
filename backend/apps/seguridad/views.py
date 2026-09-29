@@ -1,6 +1,7 @@
 """
 Vistas de API REST para Seguridad, Autenticación y Auditoría (CU01, CU02, CU03).
 """
+import os
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -307,18 +308,76 @@ class PasswordResetRequestView(APIView):
         </div>
         """
 
-        email_enviado = False
-        email_error_detalle = None
+        from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', None) or 'Banco de Sangre HemoVida <seguridad@hemovida.org>'
+
+        # 1. Intentar con Django Mail (con resolución IPv4 forzada)
         try:
             from django.core.mail import EmailMultiAlternatives
-            from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', None) or 'Banco de Sangre HemoVida <seguridad@hemovida.org>'
             msg = EmailMultiAlternatives(asunto, mensaje_texto, from_email, [email])
             msg.attach_alternative(mensaje_html, "text/html")
             msg.send(fail_silently=False)
             email_enviado = True
         except Exception as e:
             email_error_detalle = str(e)
-            print(f"[ERROR EMAIL] No se pudo enviar el correo a {email}: {e}")
+            print(f"[ERROR EMAIL] Fallo intento primario SMTP: {e}")
+
+        # 2. Fallback automático directo a SSL puerto 465 si falló por red/puerto
+        if not email_enviado:
+            smtp_user = getattr(settings, 'EMAIL_HOST_USER', '')
+            smtp_pass = getattr(settings, 'EMAIL_HOST_PASSWORD', '')
+            smtp_host = getattr(settings, 'EMAIL_HOST', 'smtp.gmail.com')
+            if smtp_user and smtp_pass:
+                try:
+                    import smtplib
+                    from email.mime.multipart import MIMEMultipart
+                    from email.mime.text import MIMEText
+                    server = smtplib.SMTP_SSL(smtp_host, 465, timeout=10)
+                    server.login(smtp_user, smtp_pass)
+                    
+                    email_msg = MIMEMultipart('alternative')
+                    email_msg['Subject'] = asunto
+                    email_msg['From'] = from_email
+                    email_msg['To'] = email
+                    email_msg.attach(MIMEText(mensaje_texto, 'plain'))
+                    email_msg.attach(MIMEText(mensaje_html, 'html'))
+                    
+                    server.sendmail(from_email, [email], email_msg.as_string())
+                    server.quit()
+                    email_enviado = True
+                    email_error_detalle = None
+                    print(f"[INFO EMAIL] Enviado exitosamente vía SSL puerto 465 a {email}")
+                except Exception as e_ssl:
+                    print(f"[ERROR EMAIL SSL 465]: {e_ssl}")
+                    email_error_detalle = f"{email_error_detalle} | SSL 465: {e_ssl}"
+
+        # 3. Fallback a Resend API vía HTTPS (Puerto 443 - Jamás bloqueado en Render)
+        resend_key = os.getenv('RESEND_API_KEY')
+        if not email_enviado and resend_key:
+            try:
+                import urllib.request
+                import json
+                req_data = json.dumps({
+                    "from": os.getenv('RESEND_FROM', 'onboarding@resend.dev'),
+                    "to": [email],
+                    "subject": asunto,
+                    "html": mensaje_html,
+                    "text": mensaje_texto
+                }).encode('utf-8')
+                resend_req = urllib.request.Request(
+                    "https://api.resend.com/emails",
+                    data=req_data,
+                    headers={
+                        "Authorization": f"Bearer {resend_key}",
+                        "Content-Type": "application/json"
+                    }
+                )
+                with urllib.request.urlopen(resend_req, timeout=10) as res_api:
+                    if res_api.status in (200, 201):
+                        email_enviado = True
+                        email_error_detalle = None
+                        print(f"[INFO EMAIL] Enviado exitosamente vía Resend API a {email}")
+            except Exception as e_resend:
+                print(f"[ERROR RESEND API]: {e_resend}")
 
         if usuario:
             try:
