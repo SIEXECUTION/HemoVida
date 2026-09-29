@@ -315,41 +315,14 @@ export const LoginModal: React.FC<LoginModalProps> = ({
         }
       }
     } catch (apiErr: any) {
-      console.warn('Fallo en autenticación remota o usuario local:', apiErr?.message);
+      setLoginLoading(false);
+      setLoginError(apiErr?.message || 'Error de autenticación: No se pudo verificar la cuenta en el servidor central de HemoVida en Render/Supabase.');
+      return;
     } finally {
       setLoginLoading(false);
     }
 
-    // 2. Fallback a cuentas locales
-    const matchedStaff = availableStaff.find(
-      s => s.email && s.email.toLowerCase() === cleanEmail
-    );
-
-    if (matchedStaff) {
-      if (matchedStaff.password && matchedStaff.password !== cleanPwd) {
-        setLoginError(`Contraseña incorrecta para la cuenta de ${matchedStaff.nombre} (${matchedStaff.rol}).`);
-        return;
-      }
-      onSelectAccount({ type: matchedStaff.rol, staff: matchedStaff } as any);
-      onClose();
-      return;
-    }
-
-    const matchedDonor = availableUsers.find(
-      u => u.email && u.email.toLowerCase() === cleanEmail
-    );
-
-    if (matchedDonor) {
-      if (matchedDonor.password && matchedDonor.password !== cleanPwd) {
-        setLoginError(`Contraseña incorrecta para la cuenta de donante (${matchedDonor.nombres} ${matchedDonor.apellidos}).`);
-        return;
-      }
-      onSelectAccount({ type: 'donante', user: matchedDonor });
-      onClose();
-      return;
-    }
-
-    setLoginError(`No se encontró ninguna cuenta registrada con el correo "${cleanEmail}". Si es su primera vez, por favor cree su cuenta en la pestaña "Crear Nueva Cuenta".`);
+    setLoginError(`No se encontró ninguna cuenta activa con el correo "${cleanEmail}". Verifique sus datos o regístrese en la pestaña "Crear Nueva Cuenta".`);
   };
 
   // 2. RECUPERACIÓN DE CONTRASEÑA POR CORREO ELECTRÓNICO (PASO 1: ENVIAR TOKEN)

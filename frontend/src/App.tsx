@@ -218,29 +218,35 @@ export default function App() {
     if (saved) {
       try { 
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
+        if (Array.isArray(parsed)) {
           return parsed.map(normalizeAuditEntry);
         }
       } catch (e) { 
-        return MOCK_BITACORA.map(normalizeAuditEntry); 
+        return []; 
       }
     }
-    return MOCK_BITACORA.map(normalizeAuditEntry);
+    return [];
   });
 
   const [isLoadingAudit, setIsLoadingAudit] = useState(false);
+  const [auditError, setAuditError] = useState<string | null>(null);
 
   const fetchAuditLogs = async () => {
     setIsLoadingAudit(true);
+    setAuditError(null);
     try {
       const data = await apiService.getAuditoria();
-      if (data && Array.isArray(data.eventos) && data.eventos.length > 0) {
+      if (data && Array.isArray(data.eventos)) {
         const normalized = data.eventos.map(normalizeAuditEntry);
         setAuditLogs(normalized);
         localStorage.setItem('hemovida_audit_logs', JSON.stringify(normalized));
+      } else {
+        setAuditLogs([]);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.warn('Carga inicial de auditoría remota:', err);
+      setAuditError(err?.message || 'No se pudo conectar con el servidor para obtener los registros de auditoría de Supabase.');
+      setAuditLogs([]);
     } finally {
       setIsLoadingAudit(false);
     }
@@ -311,6 +317,7 @@ export default function App() {
 
   // Carnet Digital QR Public Verification State
   const [scannedDonor, setScannedDonor] = useState<UserDonor | null>(null);
+  const [scannedDonorError, setScannedDonorError] = useState<string | null>(null);
   const [isScannedDonorModalOpen, setIsScannedDonorModalOpen] = useState(false);
 
   // Detect ?carnet=... when user scans QR code with mobile camera
@@ -326,9 +333,10 @@ export default function App() {
         );
         if (found) {
           setScannedDonor(found);
+          setScannedDonorError(null);
           setIsScannedDonorModalOpen(true);
         } else {
-          // Consultar endpoint público de verificación médica del backend
+          // Consultar endpoint público de verificación médica del backend en Supabase
           apiService.getCarnetDigital(carnetCode).then(res => {
             if (res) {
               const donorFromApi: UserDonor = {
@@ -353,37 +361,18 @@ export default function App() {
                 estadoHabilitacion: (res.estadoHabilitacion as any) || (res.estaHabilitadoParaDonar ? 'Apto' : 'Diferido Temporal')
               };
               setScannedDonor(donorFromApi);
+              setScannedDonorError(null);
               setIsScannedDonorModalOpen(true);
             } else {
-              // Respaldo de contingencia si no responde el backend
-              const cleanCi = carnetCode.replace(/[^0-9]/g, '') || '7821940';
-              const numericId = parseInt(cleanCi, 10) || 999999;
-              const fallbackDonor: UserDonor = {
-                id: numericId,
-                nombres: 'Donante Acreditado',
-                apellidos: 'HemoVida Regional',
-                ci: cleanCi,
-                email: `donante.${cleanCi}@hemovida.org`,
-                celular: '+591 70000000',
-                nacionalidad: 'Boliviana',
-                direccion: 'Santa Cruz de la Sierra, Bolivia',
-                ocupacion: 'Donante Activo',
-                grupoSanguineo: 'O',
-                factorRh: 'Positivo',
-                tipoDonante: 'Voluntario Altruista',
-                totalDonaciones: 1,
-                volumenHistoricoMl: 450,
-                fechaUltimaDonacion: new Date().toISOString().split('T')[0],
-                carnetDigitalCodigo: carnetCode,
-                fechaNacimiento: '1995-05-15',
-                sexo: 'M',
-                estadoHabilitacion: 'Apto'
-              };
-              setScannedDonor(fallbackDonor);
+              setScannedDonor(null);
+              setScannedDonorError(`No se encontró ningún donante registrado con código o C.I. "${carnetCode}" en la base de datos de HemoVida.`);
               setIsScannedDonorModalOpen(true);
             }
           }).catch(err => {
             console.warn('Error al verificar carnet con API:', err);
+            setScannedDonor(null);
+            setScannedDonorError(err?.message || `Fallo de conexión: No se pudo verificar el carnet digital "${carnetCode}". Verifique que el servicio backend esté en línea.`);
+            setIsScannedDonorModalOpen(true);
           });
         }
       }
@@ -1074,6 +1063,7 @@ export default function App() {
             onOpenChangePassword={() => setIsChangePasswordOpen(true)}
             onRefreshAuditLogs={fetchAuditLogs}
             isLoadingAudit={isLoadingAudit}
+            auditError={auditError}
           />
         )}
 
@@ -1265,19 +1255,52 @@ export default function App() {
         />
       )}
 
-      {scannedDonor && (
-        <DigitalCardModal
-          isOpen={isScannedDonorModalOpen}
-          onClose={() => {
-            setIsScannedDonorModalOpen(false);
-            if (window.history.pushState) {
-              const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
-              window.history.pushState({ path: cleanUrl }, '', cleanUrl);
-            }
-          }}
-          user={scannedDonor}
-          isPublicVerification={true}
-        />
+      {isScannedDonorModalOpen && (
+        scannedDonor ? (
+          <DigitalCardModal
+            isOpen={isScannedDonorModalOpen}
+            onClose={() => {
+              setIsScannedDonorModalOpen(false);
+              setScannedDonor(null);
+              setScannedDonorError(null);
+              if (window.history.pushState) {
+                const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+                window.history.pushState({ path: cleanUrl }, '', cleanUrl);
+              }
+            }}
+            user={scannedDonor}
+            isPublicVerification={true}
+          />
+        ) : (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/75 backdrop-blur-xs">
+            <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-200 p-6 text-center space-y-4 animate-fadeIn">
+              <div className="w-14 h-14 bg-red-100 text-red-600 rounded-2xl flex items-center justify-center mx-auto shadow-xs">
+                <AlertTriangle className="w-7 h-7" />
+              </div>
+              <h3 className="text-lg font-black text-slate-900 font-['Outfit',sans-serif]">
+                Fallo en la Verificación del Carnet
+              </h3>
+              <p className="text-xs text-slate-600 leading-relaxed bg-red-50 p-3.5 rounded-2xl border border-red-200 text-left">
+                {scannedDonorError || 'No se pudo validar el documento en la base de datos oficial.'}
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsScannedDonorModalOpen(false);
+                  setScannedDonor(null);
+                  setScannedDonorError(null);
+                  if (window.history.pushState) {
+                    const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+                    window.history.pushState({ path: cleanUrl }, '', cleanUrl);
+                  }
+                }}
+                className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl cursor-pointer transition-colors shadow-md shadow-slate-900/10"
+              >
+                Cerrar Notificación
+              </button>
+            </div>
+          </div>
+        )
       )}
 
       <PrecheckModal

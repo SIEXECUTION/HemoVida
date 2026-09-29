@@ -157,21 +157,14 @@ export const apiService = {
       if (res.ok) {
         return await res.json();
       }
-      const errData = await res.json();
-      if (errData && errData.detail) {
-        throw new Error(errData.detail);
-      }
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData?.detail || 'No se pudo actualizar la contraseña en el servidor.');
     } catch (e: any) {
       if (e?.message && !e.message.includes('fetch')) {
         throw e;
       }
-      console.warn('Cambio de contraseña procesado en modo local:', e);
+      throw new Error('Fallo de conexión con el servidor: No se pudo contactar al backend de HemoVida en Render.');
     }
-
-    return {
-      success: true,
-      message: 'Contraseña modificada satisfactoriamente.'
-    };
   },
 
   /**
@@ -276,10 +269,17 @@ export const apiService = {
       if (res.ok) {
         return await res.json();
       }
-    } catch (e) {
-      console.warn('Consulta pública de carnet en backend:', e);
+      if (res.status === 404) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || `No se encontró ningún donante registrado con C.I. o código "${ciOrCode}" en Supabase.`);
+      }
+      throw new Error(`Error ${res.status}: No se pudo verificar el carnet digital.`);
+    } catch (e: any) {
+      if (e?.message && !e.message.includes('fetch')) {
+        throw e;
+      }
+      throw new Error('Fallo de conexión: No se pudo contactar al servidor de HemoVida en Render/Supabase.');
     }
-    return null;
   }
 };
 

@@ -49,6 +49,7 @@ interface AdminAuditViewProps {
   onOpenChangePassword?: () => void;
   onRefreshAuditLogs?: () => Promise<void>;
   isLoadingAudit?: boolean;
+  auditError?: string | null;
 }
 
 export const AdminAuditView: React.FC<AdminAuditViewProps> = ({
@@ -63,7 +64,8 @@ export const AdminAuditView: React.FC<AdminAuditViewProps> = ({
   onRejectStaff,
   onOpenChangePassword,
   onRefreshAuditLogs,
-  isLoadingAudit = false
+  isLoadingAudit = false,
+  auditError = null
 }) => {
   const [activeTab, setActiveTab] = useState<'bitacora' | 'umbrales' | 'solicitudes' | 'rbac'>('bitacora');
   const [searchTerm, setSearchTerm] = useState('');
@@ -293,6 +295,28 @@ export const AdminAuditView: React.FC<AdminAuditViewProps> = ({
               </span>
             </div>
           </div>
+
+          {/* Error Banner when Supabase Audit fetch fails */}
+          {auditError && (
+            <div className="bg-red-50 border border-red-200 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-red-900 animate-fadeIn">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+                <div>
+                  <h5 className="font-bold text-xs sm:text-sm text-red-950">Fallo al consultar la base de datos Supabase</h5>
+                  <p className="text-xs text-red-700 mt-0.5">{auditError}</p>
+                </div>
+              </div>
+              {onRefreshAuditLogs && (
+                <button
+                  type="button"
+                  onClick={() => onRefreshAuditLogs()}
+                  className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl cursor-pointer transition-colors shrink-0 shadow-xs"
+                >
+                  Reintentar Conexión
+                </button>
+              )}
+            </div>
+          )}
 
           {/* Search & Filter Bar */}
           <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3">
