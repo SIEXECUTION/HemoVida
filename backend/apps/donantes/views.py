@@ -25,11 +25,22 @@ class DonanteCarnetDigitalView(APIView):
 
     def get(self, request, ci):
         query = ci.strip()
+        query_hyphen = query.replace(' ', '-').replace('_', '-')
+        query_spaced = query.replace('-', ' ')
+        query_digits = ''.join(c for c in query if c.isdigit())
         
         # 1. Búsqueda en Donante Calificado (superó Inmunoserología)
-        donante = Donante.objects.select_related('persona').filter(
-            Q(persona__ci__iexact=query) | Q(carnetDigitalCodigo__iexact=query)
-        ).first()
+        donante_filter = (
+            Q(persona__ci__iexact=query) |
+            Q(persona__ci__iexact=query_hyphen) |
+            Q(carnetDigitalCodigo__iexact=query) |
+            Q(carnetDigitalCodigo__iexact=query_hyphen) |
+            Q(carnetDigitalCodigo__iexact=query_spaced)
+        )
+        if len(query_digits) >= 4:
+            donante_filter |= Q(persona__ci__icontains=query_digits) | Q(carnetDigitalCodigo__icontains=query_digits)
+
+        donante = Donante.objects.select_related('persona').filter(donante_filter).first()
 
         if donante:
             persona = donante.persona
@@ -95,9 +106,19 @@ class DonanteCarnetDigitalView(APIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         # 2. Búsqueda en PosibleDonador (Postulante en fase inicial sin serología)
-        posible = PosibleDonador.objects.select_related('persona').filter(
-            Q(persona__ci__iexact=query) | Q(persona__usuario__username__iexact=query)
-        ).first()
+        posible_filter = (
+            Q(persona__ci__iexact=query) |
+            Q(persona__ci__iexact=query_hyphen) |
+            Q(persona__usuario__username__iexact=query) |
+            Q(persona__usuario__username__iexact=query_hyphen)
+        )
+        if len(query_digits) >= 4:
+            posible_filter |= (
+                Q(persona__ci__icontains=query_digits) |
+                Q(persona__usuario__username__icontains=query_digits)
+            )
+
+        posible = PosibleDonador.objects.select_related('persona').filter(posible_filter).first()
 
         if posible:
             persona = posible.persona

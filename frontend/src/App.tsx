@@ -328,20 +328,37 @@ export default function App() {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
-      const carnetCode = params.get('carnet');
-      if (carnetCode) {
-        const found = donors.find(d => 
-          (d.carnetDigitalCodigo && d.carnetDigitalCodigo.toLowerCase() === carnetCode.toLowerCase()) || 
-          d.ci === carnetCode ||
-          String(d.id) === carnetCode
-        );
+      const rawCarnet = params.get('carnet');
+      if (rawCarnet) {
+        const carnetCode = rawCarnet.trim();
+        const codeClean = carnetCode.toLowerCase();
+        const codeHyphen = codeClean.replace(/\s+/g, '-');
+        const codeSpaced = codeClean.replace(/-/g, ' ');
+        const digits = codeClean.replace(/\D/g, '');
+
+        const found = donors.find(d => {
+          const card = (d.carnetDigitalCodigo || '').toLowerCase();
+          const ci = (d.ci || '').toLowerCase();
+          const idStr = String(d.id);
+          return (
+            card === codeClean ||
+            card === codeHyphen ||
+            card === codeSpaced ||
+            ci === codeClean ||
+            ci === codeHyphen ||
+            idStr === codeClean ||
+            (digits.length >= 4 && (card.includes(digits) || ci.includes(digits)))
+          );
+        });
+
         if (found) {
           setScannedDonor(found);
           setScannedDonorError(null);
           setIsScannedDonorModalOpen(true);
         } else {
           // Consultar endpoint público de verificación médica del backend en Supabase
-          apiService.getCarnetDigital(carnetCode).then(res => {
+          const queryForApi = codeHyphen || carnetCode;
+          apiService.getCarnetDigital(queryForApi).then(res => {
             if (res) {
               const donorFromApi: UserDonor = {
                 id: res.id || parseInt((res.ci || '0').replace(/[^0-9]/g, '')) || 999999,
@@ -352,17 +369,17 @@ export default function App() {
                 celular: res.celular || '+591 70000000',
                 nacionalidad: res.nacionalidad || 'Boliviana',
                 direccion: res.direccion || 'Santa Cruz de la Sierra, Bolivia',
-                ocupacion: res.ocupacion || 'Donante Registrado',
+                ocupacion: res.ocupacion || (res.esPosibleDonador ? 'Postulante a Donante' : 'Donante Registrado'),
                 grupoSanguineo: (res.grupoSanguineo as any) || 'O',
                 factorRh: (res.factorRh as any) || 'Positivo',
                 tipoDonante: (res.tipoDonante as any) || 'Voluntario Altruista',
-                totalDonaciones: res.totalDonacionesHistoricas || 1,
-                volumenHistoricoMl: res.volumenHistoricoAportadoMl || 450,
+                totalDonaciones: res.totalDonacionesHistoricas || (res.esPosibleDonador ? 0 : 1),
+                volumenHistoricoMl: res.volumenHistoricoAportadoMl || (res.esPosibleDonador ? 0 : 450),
                 fechaUltimaDonacion: res.fechaUltimaDonacion || undefined,
-                carnetDigitalCodigo: res.carnetDigitalCodigo || carnetCode,
+                carnetDigitalCodigo: res.carnetDigitalCodigo || (res.esPosibleDonador ? `HV-POST-${res.ci}` : carnetCode),
                 fechaNacimiento: res.fechaNacimiento || '1995-05-15',
                 sexo: (res.sexo === 'F' ? 'F' : 'M'),
-                estadoHabilitacion: (res.estadoHabilitacion as any) || (res.estaHabilitadoParaDonar ? 'Apto' : 'Diferido Temporal')
+                estadoHabilitacion: (res.estadoHabilitacion as any) || (res.estaHabilitadoParaDonar ? 'Apto' : (res.esPosibleDonador ? 'Diferido Temporal' : 'Diferido Temporal'))
               };
               setScannedDonor(donorFromApi);
               setScannedDonorError(null);
