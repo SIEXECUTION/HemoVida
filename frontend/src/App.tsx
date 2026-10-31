@@ -1,3 +1,4 @@
+import { ClinicalCircuit } from './components/clinical/ClinicalCircuit';
 import React, { useState, useEffect } from 'react';
 import { Navbar } from './components/Navbar';
 import { DashboardSummary } from './components/DashboardSummary';
@@ -496,9 +497,11 @@ export default function App() {
     : null;
 
   // Conmutador de perfil en caliente para usuarios multi-rol (Págs 20-21 del PDF)
-  const handleSwitchRole = (newRole: RoleCode) => {
+  const handleSwitchRole = async (newRole: RoleCode) => {
     if (!session) return;
     let targetRolInfo = session.rolesDisponibles?.find(r => r.codigo === newRole);
+    let selectedToken: string;
+    try { selectedToken=(await apiService.selectRole(session.token || '',newRole)).access; } catch(e) { alert((e as Error).message);return; }
     
     // Si el rol aún no estaba en la lista de roles autorizados de la sesión, incorporarlo dinámicamente
     const roleNames: Record<RoleCode, string> = {
@@ -558,11 +561,13 @@ export default function App() {
       ...session,
       role: newAppRole,
       activeRole: newRole,
+      token: selectedToken,
       rolesDisponibles: updatedRolesList,
       staff: updatedStaff
     };
 
     setSession(newSession);
+    localStorage.setItem('hemovida_jwt_token', selectedToken);
     localStorage.setItem('hemovida_session', JSON.stringify(newSession));
     setActiveTab('inicio');
 
@@ -1295,8 +1300,10 @@ export default function App() {
         {/* ======================================================== */}
         {/* ESTADO 2: CUENTA DE RECEPCIÓN / COLECTA EXCLUSIVA        */}
         {/* ======================================================== */}
+        {session && ['ADMIN','PERS_COLECTA','BIOQ_INTEGRAL','TEC_LOGISTICA'].includes(activeRole || '') && <ClinicalCircuit token={session.token} role={activeRole || ''} />}
         {(activeRole === 'PERS_COLECTA' || session?.role === 'recepcion') && (
           <ReceptionDeskView
+            onOpenColecta={() => document.getElementById('circuito-clinico')?.scrollIntoView({behavior: 'smooth'})}
             inventory={inventory}
             setInventory={setInventory}
             dispatches={dispatches}
@@ -1391,14 +1398,7 @@ export default function App() {
         {/* ESTADO 5: CUENTA MÉDICA DE TRIAJE CLÍNICO (CU10/11)      */}
         {/* ======================================================== */}
         {(activeRole === 'DOC_TRIAJE' || session?.role === 'medico') && (
-          <DoctorTriageView
-            staffAccount={session.staff || medicoStaff}
-            appointments={appointments}
-            donors={donors}
-            triajes={triajes}
-            onConfirmTriage={handleConfirmDoctorTriage}
-            onOpenChangePassword={() => setIsChangePasswordOpen(true)}
-          />
+          <ClinicalCircuit token={session?.token} role={activeRole || 'DOC_TRIAJE'} />
         )}
 
         {/* ======================================================== */}
@@ -1406,6 +1406,7 @@ export default function App() {
         {/* ======================================================== */}
         {(activeRole === 'BIOQ_INTEGRAL' || session?.role === 'bioquimico') && (
           <LabProcessingView
+            token={session?.token}
             staffAccount={session.staff || bioquimicoStaff}
             allDonations={allDonations}
             setAllDonations={setAllDonations}

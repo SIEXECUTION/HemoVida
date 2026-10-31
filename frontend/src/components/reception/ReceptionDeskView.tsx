@@ -42,6 +42,7 @@ import { ReceptionDonationModal } from './ReceptionDonationModal';
 import { AutologousDonationSection } from './AutologousDonationSection';
 
 interface ReceptionDeskViewProps {
+  onOpenColecta?: () => void;
   inventory: BloodInventoryItem[];
   setInventory: React.Dispatch<React.SetStateAction<BloodInventoryItem[]>>;
   dispatches: BloodDispatchRecord[];
@@ -65,6 +66,7 @@ interface ReceptionDeskViewProps {
 export type ReceptionTab = 'viabilidad' | 'asistencia' | 'incentivos' | 'reposiciones' | 'autologas' | 'estadisticas' | 'inventario';
 
 export const ReceptionDeskView: React.FC<ReceptionDeskViewProps> = ({
+  onOpenColecta,
   inventory,
   setInventory,
   dispatches,
@@ -123,12 +125,12 @@ export const ReceptionDeskView: React.FC<ReceptionDeskViewProps> = ({
 
   const handleProceedToDonateFromViability = (donor: UserDonor) => {
     setDonorForDonation(donor);
-    setIsDonationModalOpen(true);
+    if (onOpenColecta) onOpenColecta(); else setIsDonationModalOpen(true);
   };
 
   const handleDonateForPatient = (patient: PatientReplacementRecord) => {
     setDonorForDonation(donors[0] || null);
-    setIsDonationModalOpen(true);
+    if (onOpenColecta) onOpenColecta(); else setIsDonationModalOpen(true);
   };
 
   const handleConfirmDonation = (
@@ -236,7 +238,7 @@ export const ReceptionDeskView: React.FC<ReceptionDeskViewProps> = ({
             <button
               onClick={() => {
                 setDonorForDonation(donors[0] || null);
-                setIsDonationModalOpen(true);
+                if (onOpenColecta) onOpenColecta(); else setIsDonationModalOpen(true);
               }}
               className="px-5 py-3 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-all shadow-md shadow-rose-950/40"
             >
@@ -543,7 +545,7 @@ export const ReceptionDeskView: React.FC<ReceptionDeskViewProps> = ({
           donations={allDonations}
           onOpenDonationModal={() => {
             setDonorForDonation(donors[0] || null);
-            setIsDonationModalOpen(true);
+            if (onOpenColecta) onOpenColecta(); else setIsDonationModalOpen(true);
           }}
         />
       )}

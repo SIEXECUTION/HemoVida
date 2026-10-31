@@ -47,7 +47,6 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
   const [tokenCode, setTokenCode] = useState('');
   const [tokenSent, setTokenSent] = useState(false);
   const [tokenLoading, setTokenLoading] = useState(false);
-  const [receivedCode, setReceivedCode] = useState<string | null>(null);
 
   // Status & Notifications
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -75,10 +74,6 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
       const emailOrUser = userEmail || session.username || '';
       const res: any = await apiService.requestPasswordReset(emailOrUser);
       setTokenSent(true);
-      if (res && res.code) {
-        setReceivedCode(res.code);
-        setTokenCode(res.code);
-      }
     } catch (err: any) {
       setErrorMsg(err?.message || 'Error al enviar código de 6 dígitos al correo.');
     } finally {
@@ -334,21 +329,8 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
                       <p className="text-[11px] text-slate-600 leading-relaxed">
                         Revise su bandeja de entrada (y la carpeta de spam). Copie el código de 6 dígitos e ingréselo aquí:
                       </p>
-                      {receivedCode && (
-                        <div className="p-2.5 bg-white rounded-lg border border-emerald-300 flex items-center justify-between shadow-2xs">
-                          <div>
-                            <span className="text-[11px] text-emerald-800 font-bold block">Código de seguridad generado:</span>
-                            <span className="font-mono font-black text-rose-700 text-sm tracking-widest">{receivedCode}</span>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => setTokenCode(receivedCode)}
-                            className="text-[11px] bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1 rounded-md font-bold cursor-pointer transition-colors shadow-2xs"
-                          >
-                            Autocompletar
-                          </button>
-                        </div>
-                      )}
+
+
                     </div>
                   )}
 

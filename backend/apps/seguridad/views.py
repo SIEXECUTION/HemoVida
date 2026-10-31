@@ -4,6 +4,7 @@ con soporte para RBAC múltiple, Auto-registro de Posible Donador y Alta de Pers
 """
 import os
 import random
+import secrets
 from datetime import date
 from rest_framework import status
 from rest_framework.views import APIView
@@ -386,7 +387,13 @@ class PasswordResetRequestView(APIView):
             usuario.persona.nombreCompleto if usuario and usuario.persona 
             else (usuario.username if usuario else email.split('@')[0])
         )
-        code = f"{random.randint(100000, 999999)}"
+        if not settings.BREVO_API_KEY and settings.EMAIL_BACKEND in (
+            'django.core.mail.backends.console.EmailBackend',
+            'django.core.mail.backends.locmem.EmailBackend',
+            'django.core.mail.backends.dummy.EmailBackend',
+        ):
+            return Response({'detail': 'El envío de correo no está configurado. Configura Brevo o SMTP para recuperar tu contraseña.'}, status=503)
+        code = f"{secrets.randbelow(900000) + 100000}"
         user_id = usuario.idUsuario if usuario else None
 
         # Almacenar en caché bajo el email y bajo el username para resolución infalible
@@ -433,6 +440,12 @@ class PasswordResetRequestView(APIView):
         """
 
         email_enviado = enviar_correo_institucional(asunto, mensaje_texto, mensaje_html, email)
+        if not email_enviado:
+            cache.delete(f"pwd_reset_{email}")
+            if usuario and usuario.username:
+                cache.delete(f"pwd_reset_{usuario.username.lower()}")
+            return Response({'detail': 'No se pudo enviar el correo. Revisa la configuración del proveedor de correo o contacta al administrador.'}, status=503)
+
 
         if usuario:
             try:
@@ -451,7 +464,6 @@ class PasswordResetRequestView(APIView):
             "success": True,
             "message": f"Se ha enviado un código de verificación de 6 dígitos al correo {email}.",
             "email": email,
-            "code": code,
             "email_enviado": email_enviado
         }, status=status.HTTP_200_OK)
 

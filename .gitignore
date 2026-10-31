@@ -22,3 +22,7 @@ dist-ssr/
 .idea/
 .DS_Store
 Thumbs.db
+
+.venv/
+.pg-clinica/
+*.sqlite3

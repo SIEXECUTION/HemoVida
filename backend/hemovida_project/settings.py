@@ -114,75 +114,12 @@ elif USE_SQLITE:
             'NAME': BASE_DIR / 'db.sqlite3',
         }
     }
-elif DATABASE_URL:
-    import re
-    import urllib.parse
-    
-    # Sanitización exhaustiva de DATABASE_URL (remueve comillas, corchetes y urlencodea contraseñas con caracteres especiales)
-    raw_url = DATABASE_URL.strip().strip('"\'')
-    raw_url = raw_url.replace('[', '').replace(']', '')
-    
-    # Expresión regular para separar y codificar credenciales
-    m = re.match(r'^(postgres(?:ql)?:\/\/)([^:]+):(.*)@([^@\/:]+)(?::(\d+))?(\/.*)?$', raw_url)
-    if m:
-        scheme, user, password, host, port, rest = m.groups()
-        encoded_pass = urllib.parse.quote(urllib.parse.unquote(password))
-        port_str = f":{port}" if port else ""
-        rest_str = rest if rest else ""
-        clean_db_url = f"{scheme}{user}:{encoded_pass}@{host}{port_str}{rest_str}"
-    else:
-        clean_db_url = raw_url
-
-    os.environ['DATABASE_URL'] = clean_db_url
-    try:
-        DATABASES = {
-            'default': dj_database_url.parse(
-                clean_db_url,
-                conn_max_age=600,
-                conn_health_checks=True,
-                ssl_require=True
-            )
-        }
-
-    except Exception as e:
-        print(f"[WARN] Error al configurar DATABASE_URL: {e}. Activando fallback a SQLite.")
-        DATABASES = {
-            'default': {
-                'ENGINE': 'django.db.backends.sqlite3',
-                'NAME': BASE_DIR / 'db.sqlite3',
-            }
-        }
-
-
-
 else:
-    # Si estamos en Render o no hay DB_HOST externo configurado, usar SQLite para evitar error 500 por localhost
-    if os.getenv('RENDER') or os.getenv('DB_HOST', 'localhost') == 'localhost':
-        DATABASES = {
-            'default': {
-                'ENGINE': 'django.db.backends.sqlite3',
-                'NAME': BASE_DIR / 'db.sqlite3',
-            }
-        }
-    else:
-        # Conexión estándar por parámetros individuales (PostgreSQL Remoto)
-        DB_ENGINE = os.getenv('DB_ENGINE', 'django.db.backends.postgresql')
-        DB_NAME = os.getenv('DB_NAME', 'Hemovida')
-        DB_USER = os.getenv('DB_USER', 'postgres')
-        DB_PASSWORD = os.getenv('DB_PASSWORD', 'postgres')
-        DB_HOST = os.getenv('DB_HOST')
-        DB_PORT = os.getenv('DB_PORT', '5432')
-
-        DATABASES = {
-            'default': {
-                'ENGINE': DB_ENGINE,
-                'NAME': DB_NAME,
-                'USER': DB_USER,
-                'PASSWORD': DB_PASSWORD,
-                'HOST': DB_HOST,
-                'PORT': DB_PORT,
-            }
-        }
+    from .database_config import database_from_url
+    DATABASES = {'default': database_from_url(
+        DATABASE_URL or '',
+        transaction_pooler=os.getenv('SUPABASE_TRANSACTION_POOLER', 'False').lower() in ('true', '1'),
+    )}
 
 # Validación de Contraseñas (incluye el validador estricto con la política del trigger SQL)
 AUTH_PASSWORD_VALIDATORS = [
@@ -268,6 +205,8 @@ TEST_RUNNER = 'apps.test_runner.UnmanagedModelTestRunner'
 # ============================================================================
 # CONFIGURACIÓN DE ENVÍO DE CORREOS ELECTRÓNICOS (SMTP)
 # ============================================================================
+BREVO_API_KEY = os.getenv('BREVO_API_KEY', '').strip()
+BREVO_SENDER_EMAIL = os.getenv('BREVO_SENDER_EMAIL', '').strip()
 EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
 EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
 EMAIL_PORT = int(os.getenv('EMAIL_PORT', '587'))

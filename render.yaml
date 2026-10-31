@@ -18,3 +18,11 @@ services:
         generateValue: true
       - key: DATABASE_URL
         sync: false
+      - key: BREVO_API_KEY
+        sync: false
+      - key: BREVO_SENDER_EMAIL
+        sync: false
+      - key: SUPABASE_TRANSACTION_POOLER
+        value: "True"
+      - key: USE_SQLITE
+        value: "False"

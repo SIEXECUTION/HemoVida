@@ -2,7 +2,8 @@
 Pruebas unitarias para Seguridad, Autenticación y Auditoría (CU01, CU02, CU03)
 con roles RBAC en UsuarioRol y procedimientos almacenados.
 """
-from django.test import TestCase
+from django.test import TestCase, override_settings
+from unittest.mock import patch
 from django.core.exceptions import ValidationError
 from django.core.cache import cache
 from rest_framework.test import APIClient
@@ -265,13 +266,15 @@ class SeguridadAPITestCase(TestCase):
     # -------------------------------------------------------------------------
     # Recuperación y Modificación de Contraseña
     # -------------------------------------------------------------------------
-    def test_recuperar_password_solicitar_y_confirmar(self):
+    @override_settings(EMAIL_BACKEND='django.core.mail.backends.smtp.EmailBackend')
+    @patch('apps.seguridad.views.enviar_correo_institucional', return_value=True)
+    def test_recuperar_password_solicitar_y_confirmar(self, mocked_mail):
         res_req = self.client.post('/api/auth/recuperar-password/solicitar/', {
             'email': self.user_admin.email
         })
         self.assertEqual(res_req.status_code, status.HTTP_200_OK)
         self.assertTrue(res_req.data['success'])
-        self.assertIn('code', res_req.data)
+        self.assertNotIn('code', res_req.data)
         cached = cache.get(f"pwd_reset_{self.user_admin.email.lower()}")
         self.assertIsNotNone(cached)
         token = cached['code']
@@ -288,15 +291,25 @@ class SeguridadAPITestCase(TestCase):
         self.user_admin.refresh_from_db()
         self.assertTrue(self.user_admin.check_password(nueva_clave))
 
-    def test_recuperar_password_solicitar_con_username(self):
+    @override_settings(EMAIL_BACKEND='django.core.mail.backends.smtp.EmailBackend')
+    @patch('apps.seguridad.views.enviar_correo_institucional', return_value=True)
+    def test_recuperar_password_solicitar_con_username(self, mocked_mail):
         res_req = self.client.post('/api/auth/recuperar-password/solicitar/', {
             'email': self.user_admin.username
         })
         self.assertEqual(res_req.status_code, status.HTTP_200_OK)
         self.assertTrue(res_req.data['success'])
-        self.assertIn('code', res_req.data)
+        self.assertNotIn('code', res_req.data)
         cached = cache.get(f"pwd_reset_{self.user_admin.username.lower()}")
         self.assertIsNotNone(cached)
+
+    @override_settings(EMAIL_BACKEND='django.core.mail.backends.smtp.EmailBackend')
+    @patch('apps.seguridad.views.enviar_correo_institucional', return_value=False)
+    def test_recuperacion_fallida_no_expone_codigo(self, mocked_mail):
+        response = self.client.post('/api/auth/recuperar-password/solicitar/', {'email': self.user_admin.email})
+        self.assertEqual(response.status_code, 503)
+        self.assertNotIn('code', response.data)
+        self.assertIsNone(cache.get(f"pwd_reset_{self.user_admin.email.lower()}"))
 
     def test_cambiar_password_con_clave_actual(self):
         res = self.client.post('/api/auth/cambiar-password/', {

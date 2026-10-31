@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { JointReleasePanel } from './JointReleasePanel';
 import { 
   FlaskConical, 
   Droplet, 
@@ -29,6 +30,7 @@ import {
 } from '../../types';
 
 interface LabProcessingViewProps {
+  token?: string;
   staffAccount?: StaffAccount;
   allDonations: DonationRecord[];
   setAllDonations: React.Dispatch<React.SetStateAction<DonationRecord[]>>;
@@ -42,6 +44,7 @@ interface LabProcessingViewProps {
 }
 
 export const LabProcessingView: React.FC<LabProcessingViewProps> = ({
+  token,
   staffAccount,
   allDonations,
   setAllDonations,
@@ -52,6 +55,14 @@ export const LabProcessingView: React.FC<LabProcessingViewProps> = ({
   bajasInventario,
   setBajasInventario,
   onOpenChangePassword
+}) => {
+  return <><div className="max-w-6xl mx-auto px-6 pt-4"><button onClick={onOpenChangePassword} className="border rounded p-2">Cambiar contraseña</button></div><JointReleasePanel token={token} /></>;
+};
+
+// Vista local conservada para referencia, sin ruta operativa de liberacion.
+const LegacyLabProcessingView: React.FC<LabProcessingViewProps> = ({
+  staffAccount, allDonations, setAllDonations, inventory, setInventory,
+  labAnalyses, setLabAnalyses, bajasInventario, setBajasInventario, onOpenChangePassword,
 }) => {
   const [activeTab, setActiveTab] = useState<'fraccionamiento' | 'serologia' | 'bajas'>('fraccionamiento');
 

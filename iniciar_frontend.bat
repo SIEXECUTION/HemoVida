@@ -1,12 +1,9 @@
 @echo off
-title Frontend HemoVida - React Vite
-echo ========================================================
-echo   INICIANDO FRONTEND HEMOVIDA (REACT + VITE)
-echo ========================================================
-cd frontend
-if not exist node_modules (
-    echo Instalando paquetes de React con legacy peer deps...
-    call npm install --legacy-peer-deps
+setlocal
+cd /d "%~dp0frontend"
+if not exist "node_modules" (
+  echo Ejecuta primero preparar_local.ps1
+  exit /b 1
 )
-call npm run dev
+call npm run dev -- --host 127.0.0.1
 pause

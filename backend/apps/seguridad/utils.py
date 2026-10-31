@@ -125,10 +125,12 @@ def enviar_correo_institucional(asunto: str, mensaje_texto: str, mensaje_html: s
     email_enviado = False
 
     # 1. Intentar envío vía Brevo API si BREVO_API_KEY existe
-    brevo_key = os.getenv('BREVO_API_KEY')
+    brevo_key = settings.BREVO_API_KEY
     if brevo_key:
         try:
-            sender_email = os.getenv('BREVO_SENDER_EMAIL', os.getenv('DEFAULT_FROM_EMAIL', 'hemovida.bancodesangre@gmail.com'))
+            sender_email = settings.BREVO_SENDER_EMAIL
+            if not sender_email:
+                return False
             if '<' in sender_email and '>' in sender_email:
                 sender_email = sender_email.split('<')[1].split('>')[0].strip()
             brevo_payload = json.dumps({
@@ -150,7 +152,8 @@ def enviar_correo_institucional(asunto: str, mensaje_texto: str, mensaje_html: s
                 if res_brevo.status in (200, 201):
                     return True
         except Exception as e_brevo:
-            print(f"[WARN] Error al enviar correo vía Brevo API: {e_brevo}")
+            print("[WARN] Brevo no confirmó el envío. Revise la clave API y el remitente verificado.")
+        return False
 
     # 2. Fallback: Envío vía SMTP Django standard send_mail
     try:

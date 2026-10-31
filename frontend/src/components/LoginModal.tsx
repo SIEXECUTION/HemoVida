@@ -153,7 +153,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   const [recoveryEmail, setRecoveryEmail] = useState('');
   const [recoveryStep, setRecoveryStep] = useState<1 | 2 | 3>(1); // 1: Solicitud, 2: Token y nueva clave, 3: Éxito
   const [recoveryToken, setRecoveryToken] = useState('');
-  const [recoveryCodeReceived, setRecoveryCodeReceived] = useState<string | null>(null);
   const [recoveryEmailSent, setRecoveryEmailSent] = useState<boolean>(true);
   const [recoveryNewPassword, setRecoveryNewPassword] = useState('');
   const [recoveryConfirmPassword, setRecoveryConfirmPassword] = useState('');
@@ -238,10 +237,12 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   };
 
   // Helper para construir la sesión autorizada con el rol activo seleccionado (Criterio Multi-Rol y Selector de Perfil Págs 20-21)
-  const executeSessionLogin = (roleCode: RoleCode, res: any, email: string, pwd: string) => {
+  const executeSessionLogin = async (roleCode: RoleCode, res: any, email: string, pwd: string) => {
     const persona = res.usuario?.persona;
     const rolesDisp: RolDisponible[] = res.rolesDisponibles || [];
-    const token = res.token || res.tokens?.access || '';
+    let token = res.token || res.tokens?.access || '';
+    try { const selected = await apiService.selectRole(token,roleCode);token=selected.access;localStorage.setItem('hemovida_jwt_token',token); }
+    catch(e) { setLoginError((e as Error).message);return; }
     const usuarioId = res.usuarioId || res.usuario?.idUsuario || Date.now();
     const nombreCompleto = res.nombreCompleto || persona?.nombreCompleto || `${persona?.nombres || ''} ${persona?.apellidos || ''}`.trim() || res.usuario?.username || 'Usuario HemoVida';
 
@@ -461,9 +462,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({
       const res = await apiService.requestPasswordReset(recoveryEmail);
       setRecoveryStep(2);
       setRecoveryMsg(res.message);
-      if (res.code) {
-        setRecoveryCodeReceived(res.code);
-      }
       setRecoveryEmailSent(res.email_enviado !== false);
     } catch (err: any) {
       setRecoveryError(err?.message || 'Error al enviar el correo de verificación. Intente nuevamente.');
@@ -989,26 +987,13 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                   <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-2xl text-xs text-emerald-950 space-y-1.5">
                     <p className="font-bold flex items-center gap-1.5 text-xs text-emerald-900">
                       <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                      <span>{recoveryMsg || `Código de verificación generado para ${recoveryEmail}`}</span>
+                      <span>{recoveryMsg || `Código de verificación enviado al correo ${recoveryEmail}`}</span>
                     </p>
                     <p className="text-[11px] text-slate-600 leading-relaxed">
                       Por favor revise su bandeja de entrada (y la carpeta de spam o correo no deseado) de <strong>{recoveryEmail}</strong>.
                     </p>
-                    {recoveryCodeReceived && (
-                      <div className="mt-2.5 p-2.5 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 flex items-center justify-between gap-2">
-                        <div>
-                          <span className="text-[10px] uppercase font-bold text-amber-700 block">Código Generado por el Sistema:</span>
-                          <span className="font-mono text-base font-black tracking-widest text-amber-950">{recoveryCodeReceived}</span>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setRecoveryToken(recoveryCodeReceived)}
-                          className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white text-[10px] font-bold rounded-lg shadow-xs cursor-pointer transition-colors"
-                        >
-                          Usar Código
-                        </button>
-                      </div>
-                    )}
+
+
                   </div>
 
                   <div>

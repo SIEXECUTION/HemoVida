@@ -1,6 +1,6 @@
 import { RolDisponible, RoleCode } from '../types';
 
-const API_BASE_URL = 'https://hemovida-backend.onrender.com/api';
+export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? '/api' : 'https://hemovida-backend.onrender.com/api')).replace(/\/$/, '');
 
 export interface LoginResponse {
   usuarioId: number;
@@ -35,6 +35,10 @@ export interface LoginResponse {
 }
 
 export const apiService = {
+  async selectRole(token: string, rolActivo: string): Promise<{access:string;refresh:string}> {
+    const r=await fetch(`${API_BASE_URL}/clinica/perfil/`,{method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify({rolActivo})});
+    const d=await r.json();if(!r.ok)throw new Error(d.detail||'No se pudo seleccionar el perfil autorizado.');return d;
+  },
   /**
    * Health Check de conexión
    */
