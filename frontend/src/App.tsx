@@ -1,3 +1,20 @@
+import "./cloud.css";
+import "./legacy.css";
+import "./reference-theme.css";
+import {
+  LegacyRoleBanner,
+  ReferenceOverview,
+} from "./components/ReferenceOverview";
+import {
+  Heart,
+  Activity,
+  Package,
+  FlaskConical,
+  Users,
+  ClipboardList,
+  CreditCard,
+  CalendarDays,
+} from "lucide-react";
 import React, { useState } from "react";
 import { Navbar } from "./components/Navbar";
 import { LoginModal } from "./components/LoginModal";
@@ -70,8 +87,9 @@ export default function App() {
     }
   }
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col">
+    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col font-['Plus_Jakarta_Sans',sans-serif]">
       <Navbar
+        showDesktopNavigation={false}
         session={session}
         activeTab={
           [
@@ -103,19 +121,15 @@ export default function App() {
           <PublicLanding onLogin={openLogin} onRegister={openRegister} />
         ) : (
           <>
-            <header className="rounded-3xl bg-gradient-to-r from-slate-900 to-rose-950 text-white p-8">
-              <h1 className="text-3xl font-bold">
-                Hola, {session.nombreCompleto}
-              </h1>
-              <p>
-                {session.rolesDisponibles.find(
-                  (r) => r.codigo === session.activeRole,
-                )?.nombre || session.activeRole}
-              </p>
-            </header>
+            {clinical && (
+              <LegacyRoleBanner
+                session={session}
+                onAccount={() => setPassword(true)}
+              />
+            )}
             <nav
               aria-label="Módulos"
-              className="flex flex-wrap gap-3 bg-white rounded-2xl p-3 border"
+              className="legacy-tabs flex flex-wrap gap-2 bg-white rounded-2xl p-2 border border-slate-200 shadow-sm"
             >
               {[
                 ["inicio", "Mi espacio"],
@@ -141,48 +155,71 @@ export default function App() {
                 <button
                   key={id}
                   onClick={() => setTab(id)}
-                  className={`p-3 rounded-xl ${tab === id ? "bg-rose-700 text-white" : "text-slate-700"}`}
+                  className={`px-4 py-2.5 rounded-xl text-xs font-bold inline-flex items-center gap-2 ${tab === id ? "bg-slate-900 text-white shadow-md" : "text-slate-600 hover:bg-rose-50 hover:text-rose-700"}`}
                 >
+                  {React.createElement(
+                    (
+                      {
+                        inicio: Heart,
+                        clinica: Activity,
+                        stock: Package,
+                        laboratorio: FlaskConical,
+                        personal: Users,
+                        auditoria: ClipboardList,
+                        carnet: CreditCard,
+                        citas: CalendarDays,
+                      } as Record<string, React.ElementType>
+                    )[id] || Heart,
+                    { size: 15 },
+                  )}
                   {label}
                 </button>
               ))}
             </nav>
-            {(tab === "clinica" || (tab === "inicio" && clinical)) && (
-              <ClinicalCircuit
-                key={session.activeRole}
-                token={session.token}
-                role={session.activeRole}
+            {tab === "inicio" && (
+              <ReferenceOverview
+                session={session}
+                clinical={clinical}
+                onSelect={setTab}
               />
             )}
-            {tab === "laboratorio" &&
-              ["ADMIN", "BIOQ_INTEGRAL"].includes(session.activeRole) && (
-                <JointReleasePanel
+            <div
+              className={`reference-screen legacy-role-${session.activeRole}`}
+            >
+              {tab === "clinica" && clinical && (
+                <ClinicalCircuit
                   key={session.activeRole}
                   token={session.token}
+                  role={session.activeRole}
                 />
               )}
-            {tab === "stock" && clinical && (
-              <ApiRecords
-                key="stock"
-                path="stock/alertas/?todos=true"
-                title="Inventario y alertas"
-                token={session.token!}
-              />
-            )}
-            {tab === "personal" && session.activeRole === "ADMIN" && (
-              <AdminActions token={session.token!} />
-            )}
-            {tab === "auditoria" && session.activeRole === "ADMIN" && (
-              <ApiRecords
-                key="auditoria"
-                path="auditoria/"
-                title="Bitácora de eventos"
-                token={session.token!}
-              />
-            )}
-            {(["carnet", "historial"].includes(tab) ||
-              (tab === "inicio" && !clinical)) &&
-              session.persona?.ci && (
+              {tab === "laboratorio" &&
+                ["ADMIN", "BIOQ_INTEGRAL"].includes(session.activeRole) && (
+                  <JointReleasePanel
+                    key={session.activeRole}
+                    token={session.token}
+                  />
+                )}
+              {tab === "stock" && clinical && (
+                <ApiRecords
+                  key="stock"
+                  path="stock/alertas/?todos=true"
+                  title="Inventario y alertas"
+                  token={session.token!}
+                />
+              )}
+              {tab === "personal" && session.activeRole === "ADMIN" && (
+                <AdminActions token={session.token!} />
+              )}
+              {tab === "auditoria" && session.activeRole === "ADMIN" && (
+                <ApiRecords
+                  key="auditoria"
+                  path="auditoria/"
+                  title="Bitácora de eventos"
+                  token={session.token!}
+                />
+              )}
+              {["carnet", "historial"].includes(tab) && session.persona?.ci && (
                 <ApiRecords
                   key="carnet"
                   path={`donantes/${encodeURIComponent(session.persona.ci)}/carnet/`}
@@ -190,17 +227,20 @@ export default function App() {
                   token={session.token!}
                 />
               )}
-            {["citas", "autoevaluacion", "mapa"].includes(tab) && (
-              <section className="bg-white border rounded-3xl p-8">
-                <h2 className="text-xl font-bold">
-                  {tab === "mapa" ? "Centros de atención" : "Citas y prefiltro"}
-                </h2>
-                <p className="mt-3">
-                  Este módulo está pendiente de integración. Consulta al
-                  personal de recepción para gestionar tu atención.
-                </p>
-              </section>
-            )}
+              {["citas", "autoevaluacion", "mapa"].includes(tab) && (
+                <section className="bg-white border rounded-3xl p-8">
+                  <h2 className="text-xl font-bold">
+                    {tab === "mapa"
+                      ? "Centros de atención"
+                      : "Citas y prefiltro"}
+                  </h2>
+                  <p className="mt-3">
+                    Este módulo está pendiente de integración. Consulta al
+                    personal de recepción para gestionar tu atención.
+                  </p>
+                </section>
+              )}
+            </div>
           </>
         )}
       </main>

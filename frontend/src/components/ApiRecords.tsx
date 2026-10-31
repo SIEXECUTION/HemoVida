@@ -16,18 +16,54 @@ const names: Record<string, string> = {
 function Content({ value }: { value: unknown }): React.ReactElement {
   if (value === null || value === undefined || value === "")
     return <span className="text-slate-500">Sin registro</span>;
-  if (Array.isArray(value))
-    return value.length ? (
-      <div className="space-y-4">
-        {value.map((row, i) => (
-          <div key={i} className="rounded-2xl border p-4">
-            <Content value={row} />
-          </div>
+  if (Array.isArray(value)) {
+    if (!value.length)
+      return <p className="text-slate-500 py-5">No hay registros.</p>;
+    if (
+      value.every(
+        (row) => row && typeof row === "object" && !Array.isArray(row),
+      )
+    ) {
+      const columns = [
+        ...new Set(value.flatMap((row) => Object.keys(row))),
+      ].filter((k) => !/password|token|secret|firma/i.test(k));
+      return (
+        <div className="reference-table">
+          <table>
+            <thead>
+              <tr>
+                {columns.map((k) => (
+                  <th key={k}>
+                    {names[k] || k.replace(/([a-z])([A-Z])/g, "$1 $2")}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {value.map((row, i) => (
+                <tr key={i}>
+                  {columns.map((k) => (
+                    <td key={k}>
+                      <Content value={row[k]} />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+    }
+    return (
+      <ul className="space-y-2">
+        {value.map((v, i) => (
+          <li key={i}>
+            <Content value={v} />
+          </li>
         ))}
-      </div>
-    ) : (
-      <p>No hay registros.</p>
+      </ul>
     );
+  }
   if (typeof value === "object")
     return (
       <dl className="grid gap-3">
@@ -67,13 +103,73 @@ function CardQR({ code }: { code: string }) {
     };
   }, [code]);
   return qr ? (
-    <div className="rounded-2xl border p-4 inline-block">
-      <img src={qr} alt="QR del carnet registrado" />
+    <div className="rounded-2xl bg-white text-slate-900 p-3 inline-flex flex-col items-center gap-2 text-xs font-bold">
+      <img src={qr} width={150} height={150} alt="QR del carnet registrado" />
       <a href={qr} download="carnet-qr.png">
         Descargar QR
       </a>
     </div>
   ) : null;
+}
+function DonorCard({ data: c }: { data: Record<string, unknown> }) {
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-rose-950 rounded-3xl text-white p-6 flex flex-wrap justify-between gap-6">
+          <div className="space-y-3">
+            <span className="text-xs font-bold tracking-widest text-rose-300">
+              {c.esPosibleDonador ? "CARNET PROVISIONAL" : "CARNET DE DONANTE"}
+            </span>
+            <h3 className="text-2xl font-black text-white">
+              {String(
+                c.donante || [c.nombres, c.apellidos].filter(Boolean).join(" "),
+              )}
+            </h3>
+            <p className="text-slate-300">
+              C.I. {String(c.ci || "Sin registro")}
+            </p>
+            <strong className="block text-2xl text-rose-300">
+              {c.grupoSanguineo
+                ? `${c.grupoSanguineo} ${c.factorRh || ""}`
+                : "Pendiente de tipificación"}
+            </strong>
+            <p className="font-mono text-rose-200">
+              {String(c.carnetDigitalCodigo)}
+            </p>
+          </div>
+          <CardQR code={String(c.carnetDigitalCodigo)} />
+        </div>
+        <div className="border border-slate-200 rounded-3xl p-6 space-y-4">
+          <h3 className="text-xl font-black">Tu próxima evaluación</h3>
+          <span className="inline-flex rounded-full bg-amber-50 text-amber-800 px-3 py-2 text-xs font-bold">
+            {String(
+              c.estadoHabilitacion ||
+                c.estadoAptitud ||
+                "Pendiente de evaluación",
+            )}
+          </span>
+          <p className="text-sm text-slate-500">
+            La evaluación clínica confirma la aptitud. El descanso biológico no
+            sustituye el dictamen del personal de salud.
+          </p>
+          <dl className="space-y-2 text-sm">
+            <div>
+              Próxima fecha por descanso:{" "}
+              {String(c.fechaHabilitacionProxima || "Sin registro")}
+            </div>
+            <div>
+              Días de descanso restantes:{" "}
+              {String(c.diasRestantesEspera ?? "Sin registro")}
+            </div>
+          </dl>
+        </div>
+      </div>
+      <section className="border rounded-3xl p-6 space-y-4">
+        <h3 className="text-xl font-black">Historial de donaciones</h3>
+        <Content value={c.extraccionesRecientes || []} />
+      </section>
+    </div>
+  );
 }
 export function ApiRecords({
   path,
@@ -180,14 +276,14 @@ export function ApiRecords({
         </p>
       ) : (
         <>
-          <Content value={data} />
           {path.startsWith("donantes/") &&
-            data &&
-            typeof data === "object" &&
-            "carnetDigitalCodigo" in data &&
-            typeof data.carnetDigitalCodigo === "string" && (
-              <CardQR code={data.carnetDigitalCodigo} />
-            )}
+          data &&
+          typeof data === "object" &&
+          "carnetDigitalCodigo" in data ? (
+            <DonorCard data={data as Record<string, unknown>} />
+          ) : (
+            <Content value={data} />
+          )}
         </>
       )}
     </section>

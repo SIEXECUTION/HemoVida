@@ -1,0 +1,113 @@
+.reference-screen {
+  font-family: "Plus Jakarta Sans", sans-serif;
+  color: #334155;
+  font-size: 13px;
+}
+.reference-screen h1,
+.reference-screen h2,
+.reference-screen h3 {
+  font-family: Outfit, sans-serif;
+  letter-spacing: -0.025em;
+  font-weight: 800;
+}
+.reference-screen form,
+.reference-screen > section {
+  border-color: #e2e8f0;
+  box-shadow: 0 1px 3px #0f172a08;
+}
+.reference-screen form h2 {
+  font-size: 20px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid #f1f5f9;
+  margin-bottom: 20px;
+}
+.reference-screen label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #475569;
+}
+.reference-screen input,
+.reference-screen select,
+.reference-screen textarea {
+  font-family: inherit;
+  font-size: 12px;
+  padding: 11px 12px;
+  border-radius: 12px;
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  max-width: 100%;
+}
+.reference-screen input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  margin: 0 8px;
+  accent-color: #e11d48;
+}
+.reference-screen form button {
+  font-size: 12px;
+  border-radius: 12px;
+}
+.reference-screen.legacy-role-DOC_TRIAJE form button[type="submit"],
+.reference-screen.legacy-role-DOC_TRIAJE fieldset > button:last-child {
+  background: #2563eb;
+}
+.reference-screen.legacy-role-ADMIN fieldset > button:last-child {
+  background: #0f172a;
+}
+.reference-screen.legacy-role-BIOQ_INTEGRAL fieldset > button:last-child {
+  background: #0d9488;
+}
+.reference-screen table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 12px;
+}
+.reference-screen th {
+  text-align: left;
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  padding: 14px 16px;
+}
+.reference-screen td {
+  padding: 14px 16px;
+  border-top: 1px solid #f1f5f9;
+}
+.reference-screen tr:hover td {
+  background: #fff1f240;
+}
+.reference-table {
+  overflow: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  max-width: 100%;
+}
+.reference-screen form fieldset {
+  gap: 18px;
+}
+.reference-screen #circuito-clinico > header {
+  display: none;
+}
+.reference-screen #circuito-clinico {
+  padding: 0;
+}
+.reference-screen #circuito-clinico > form:first-of-type {
+  padding: 20px;
+}
+.reference-screen > section h1 {
+  font-family: Outfit, sans-serif;
+}
+@media (max-width: 700px) {
+  .reference-screen form {
+    padding: 18px;
+  }
+  .reference-screen h2 {
+    font-size: 18px;
+  }
+  .legacy-tabs button {
+    padding: 10px;
+    font-size: 10px;
+  }
+}

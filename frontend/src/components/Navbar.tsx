@@ -35,6 +35,7 @@ interface NavbarProps {
   onOpenChangePassword?: () => void;
   onSwitchRole?: (roleCode: RoleCode) => void;
   onOpenOtherRoles?: () => void;
+  showDesktopNavigation?: boolean;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -47,7 +48,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenPrecheck,
   onOpenChangePassword,
   onSwitchRole,
-  onOpenOtherRoles
+  onOpenOtherRoles,
+  showDesktopNavigation = true
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -70,13 +72,13 @@ export const Navbar: React.FC<NavbarProps> = ({
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 overflow-x-auto">
           <div className="flex items-center gap-2 shrink-0">
             <span className="inline-flex items-center gap-1 bg-rose-600 text-white font-bold px-2 py-0.5 rounded-full text-[11px] animate-pulse">
-              <AlertTriangle className="w-3 h-3" /> HEMOVIDA
+              <Heart className="w-3 h-3" /> HEMOVIDA
             </span>
             <span>
-              Donar es compartir vida. Consulta tu estado y atención con el banco de sangre.
+              Donar es compartir vida. <strong>Consulta tu próxima cita y tu estado de evaluación.</strong>
             </span>
           </div>
-          {activeRole === 'DONANTE' && (
+          {session?.role === 'donante' && (
             <button 
               onClick={() => onSelectTab('citas')}
               className="text-rose-200 hover:text-white underline text-[11px] font-semibold whitespace-nowrap cursor-pointer ml-4"
@@ -93,13 +95,11 @@ export const Navbar: React.FC<NavbarProps> = ({
           
           {/* Brand Logo */}
           <div className="flex items-center gap-3 sm:gap-4">
-            <div 
-              onClick={() => {
-                if (activeRole === 'DONANTE') {
-                  onSelectTab('inicio');
-                }
-              }}
-              className="flex items-center gap-2.5 cursor-pointer group select-none"
+            <button
+              type="button"
+              aria-label="HemoVida: inicio"
+              onClick={() => onSelectTab('inicio')}
+              className="flex items-center gap-2.5 cursor-pointer group select-none text-left"
               id="brand-logo-btn"
             >
               <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-rose-700 via-rose-600 to-red-500 flex items-center justify-center text-white shadow-md shadow-rose-600/20 group-hover:scale-105 transition-transform">
@@ -118,13 +118,13 @@ export const Navbar: React.FC<NavbarProps> = ({
                   Banco de Sangre & Transfusión
                 </p>
               </div>
-            </div>
+            </button>
 
             {/* Institutional Badge based on activeRole */}
             {activeRole === 'POSIBLE_DONADOR' && (
               <div className="hidden md:flex items-center gap-2 bg-amber-50 border border-amber-200 px-3 py-1 rounded-xl text-xs font-bold text-amber-800">
                 <Clock className="w-4 h-4 text-amber-600" />
-                <span>Postulante en Evaluación (Sin Análisis)</span>
+                <span>Postulante en Evaluación</span>
               </div>
             )}
 
@@ -145,7 +145,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             {activeRole === 'ADMIN' && (
               <div className="hidden md:flex items-center gap-2 bg-slate-900 border border-slate-700 px-3 py-1 rounded-xl text-xs font-bold text-rose-300">
                 <ShieldCheck className="w-4 h-4 text-rose-400" />
-                <span>Auditoría Forense & RBAC</span>
+                <span>Administración y Auditoría</span>
               </div>
             )}
 
@@ -165,7 +165,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
 
           {/* Desktop Navigation for Donor Mode ONLY */}
-          {activeRole === 'DONANTE' && (
+          {showDesktopNavigation && activeRole === 'DONANTE' && (
             <nav className="hidden lg:flex items-center gap-1">
               <button
                 id="nav-tab-inicio"
@@ -243,7 +243,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           )}
 
           {/* Desktop Navigation for Posible Donador ONLY */}
-          {activeRole === 'POSIBLE_DONADOR' && (
+          {showDesktopNavigation && activeRole === 'POSIBLE_DONADOR' && (
             <nav className="hidden lg:flex items-center gap-1">
               <button
                 id="nav-tab-postulante"
@@ -312,7 +312,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     id="btn-otros-roles-nav"
                     onClick={onOpenOtherRoles}
                     className="px-2.5 sm:px-3 py-1.5 text-xs font-bold text-slate-800 hover:text-rose-700 bg-white hover:bg-rose-50 border border-slate-300 hover:border-rose-300 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs"
-                    title="Explorar o probar otros roles del área de salud (Exclusivo Administración)"
+                    title="Consultar tu cuenta y solicitar un perfil sanitario"
                   >
                     <Briefcase className="w-3.5 h-3.5 text-rose-600" />
                     <span className="font-extrabold text-[11px] sm:text-xs">Otros Roles</span>
@@ -342,7 +342,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 )}
 
                 {/* Account 1: Donante Info */}
-                {activeRole === 'DONANTE' && session.user && (
+                {activeRole === 'DONANTE' && (
                   <div 
                     onClick={() => onSelectTab('carnet')}
                     className="hidden sm:flex items-center gap-2 bg-slate-100 hover:bg-slate-200/80 px-3 py-1.5 rounded-full cursor-pointer transition-colors border border-slate-200"
@@ -351,16 +351,16 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <div className="relative">
                       <div className="w-8 h-8 rounded-full bg-gradient-to-br from-rose-600 to-red-800 text-white flex items-center justify-center font-bold text-xs shadow-xs border border-rose-400">
                         <span className="font-mono text-[11px] font-black tracking-tighter">
-                          {session.user.nombres[0]}{session.user.apellidos[0]}
+                          {session.nombreCompleto.split(' ').map(n=>n[0]).slice(0,2).join('')}
                         </span>
                       </div>
                       <span className="absolute -bottom-1 -right-1 bg-rose-600 text-[9px] text-white font-bold px-1 rounded-full leading-tight border border-white">
-                        {session.user.grupoSanguineo}{session.user.factorRh === 'Positivo' ? '+' : '-'}
+                        {session.user ? `${session.user.grupoSanguineo}${session.user.factorRh === 'Positivo' ? '+' : '-'}` : 'HV'}
                       </span>
                     </div>
                     <div className="text-left">
                       <p className="text-xs font-bold text-slate-800 leading-tight truncate max-w-[120px]">
-                        {session.user.nombres.split(' ')[0]} {session.user.apellidos.split(' ')[0]}
+                        {session.nombreCompleto}
                       </p>
                       <p className="text-[10px] text-rose-700 font-semibold leading-tight">
                         Cuenta Donador
@@ -414,7 +414,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                         {session.staff.nombre}
                       </p>
                       <p className="text-[10px] text-rose-300 font-semibold leading-tight">
-                        Auditoría Forense & RBAC
+                        Administración y Auditoría
                       </p>
                     </div>
                   </div>
@@ -504,6 +504,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Mobile Menu Toggle */}
             <button
               id="mobile-menu-toggle"
+              aria-label={mobileMenuOpen ? 'Cerrar menú' : 'Abrir menú'}
+              aria-expanded={mobileMenuOpen}
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="lg:hidden p-2 text-slate-600 hover:text-slate-900 rounded-lg hover:bg-slate-100"
             >

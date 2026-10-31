@@ -11,6 +11,7 @@ import {
   Truck,
   UserPlus,
 } from "lucide-react";
+
 export function PublicLanding({
   onLogin,
   onRegister,
@@ -25,19 +26,16 @@ export function PublicLanding({
           <div className="inline-flex items-center gap-2 bg-rose-600/30 border border-rose-500/40 px-3.5 py-1 rounded-full text-xs font-bold text-rose-200">
             <Lock className="w-3.5 h-3.5 text-rose-400" />
             <span>
-              Acceso Restringido • Solo con Correo Electrónico y Contraseña
+              Acceso Seguro • Usuario o Correo Electrónico y Contraseña
             </span>
           </div>
           <h1 className="text-3xl sm:text-4xl font-black font-['Outfit',sans-serif] tracking-tight">
             Banco de Sangre & Transfusión HemoVida
           </h1>
           <p className="text-sm sm:text-base text-slate-300 max-w-3xl leading-relaxed">
-            Por estrictas normas de seguridad, confidencialidad y control RBAC,{" "}
-            <strong>
-              el acceso a todos los módulos está restringido únicamente a
-              usuarios autenticados mediante correo electrónico y contraseña
-            </strong>
-            . No se permite el acceso sin credenciales válidas.
+            Inicia sesión para consultar tu carnet, completar el prefiltro y
+            programar tu próxima cita. El personal de salud accede a las
+            herramientas de atención según su perfil autorizado.
           </p>
           <div className="pt-2 flex flex-wrap items-center gap-3">
             <button
@@ -46,7 +44,7 @@ export function PublicLanding({
               id="btn-hero-primary-login"
             >
               <LogIn className="w-4 h-4" />
-              <span>Iniciar Sesión con Correo & Contraseña</span>
+              <span>Iniciar Sesión</span>
               <ArrowRight className="w-4 h-4" />
             </button>
             <button
@@ -138,14 +136,14 @@ export function PublicLanding({
             </div>
             <div>
               <span className="text-[10px] uppercase font-bold tracking-wider text-teal-800 bg-teal-50 px-2.5 py-1 rounded-md border border-teal-100">
-                Bioseguridad Certificada
+                Seguridad Transfusional
               </span>
               <h2 className="text-xl font-black text-slate-900 mt-2 font-['Outfit',sans-serif]">
                 Hemovigilancia y Calidad
               </h2>
               <p className="text-xs text-slate-600 mt-1.5 leading-relaxed">
                 Protocolos internacionales de bioseguridad y análisis serológico
-                estricto para garantizar transfusiones 100% seguras:
+                estricto para garantizar la seguridad del proceso transfusional:
               </p>
             </div>
 
@@ -174,7 +172,7 @@ export function PublicLanding({
               <li className="flex items-start gap-2">
                 <CheckCircle2 className="w-4 h-4 text-teal-600 shrink-0 mt-0.5" />
                 <span>
-                  Trazabilidad hematológica unívoca con códigos ISBT-128.
+                  Trazabilidad de extracciones, bolsas madre y hemocomponentes.
                 </span>
               </li>
             </ul>
@@ -183,10 +181,10 @@ export function PublicLanding({
           <div className="pt-2">
             <div className="p-3 bg-teal-50/70 border border-teal-200/80 rounded-xl text-center">
               <p className="text-[11px] font-bold text-teal-900">
-                Certificación de Calidad y Bioseguridad
+                Control de Calidad y Bioseguridad
               </p>
               <p className="text-[10px] text-teal-700 mt-0.5">
-                Banco de Sangre de Referencia Departamental de Santa Cruz
+                Banco de Sangre HemoVida
               </p>
             </div>
           </div>
@@ -266,8 +264,9 @@ export function PublicLanding({
           <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
             Acceso restringido para médicos de triaje, bioquímicos de
             laboratorio, recepción hospitalaria, despacho y administración. Las
-            solicitudes de registro de nuevo personal son verificadas y
-            aprobadas por el administrador del sistema.
+            solicitudes de personal son verificadas y aprobadas por el
+            administrador. Para solicitar un perfil sanitario, inicia sesión y
+            entra en Mi cuenta.
           </p>
         </div>
 
@@ -286,7 +285,7 @@ export function PublicLanding({
             id="btn-staff-portal-register"
           >
             <UserPlus className="w-4 h-4 text-rose-400" />
-            <span>Acceder con mi cuenta institucional</span>
+            <span>+ Solicitar Perfil Sanitario</span>
           </button>
         </div>
       </div>

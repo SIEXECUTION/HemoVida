@@ -1,0 +1,288 @@
+/* Presentación institucional original sobre los flujos persistentes de la API. */
+.hv.legacy-forms {
+  font-family: "Plus Jakarta Sans", sans-serif;
+  background: transparent;
+  min-height: 0;
+  color: #334155;
+  font-size: 13px;
+}
+.legacy-forms h1,
+.legacy-forms h2,
+.legacy-forms h3 {
+  font-family: "Outfit", sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+}
+.legacy-forms .hv-panel {
+  border-radius: 24px;
+  padding: 24px;
+  border-color: #e2e8f0;
+  box-shadow: 0 1px 3px #0f172a08;
+  margin-bottom: 24px;
+}
+.legacy-forms .hv-panel > header {
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 18px;
+  margin-bottom: 20px;
+}
+.legacy-forms .hv-panel > header h2 {
+  font-size: 20px;
+  color: #0f172a;
+}
+.legacy-forms .hv-panel > header p {
+  font-size: 12px;
+  line-height: 1.7;
+  color: #64748b;
+}
+.legacy-forms .hv-fields {
+  gap: 18px;
+}
+.legacy-forms .hv-fields label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #475569;
+}
+.legacy-forms .hv-fields input,
+.legacy-forms .hv-fields select {
+  border-radius: 12px;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  padding: 11px 12px;
+  font-size: 12px;
+}
+.legacy-forms .hv-fields input:focus,
+.legacy-forms .hv-fields select:focus {
+  outline: 2px solid #fecdd3;
+  border-color: #f43f5e;
+  background: white;
+}
+.legacy-forms .hv-primary {
+  background: #e11d48;
+  border-color: #e11d48;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 12px 20px;
+  box-shadow: 0 3px 8px #e11d4820;
+}
+.legacy-forms .hv-primary:hover {
+  background: #be123c;
+  border-color: #be123c;
+}
+.legacy-forms .hv-secondary {
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.legacy-forms .hv-error,
+.legacy-forms .hv-success {
+  border-radius: 16px;
+  font-size: 12px;
+  padding: 14px 18px;
+}
+.legacy-forms .hv-grid {
+  gap: 24px;
+}
+.legacy-forms .hv-stats > div {
+  border-radius: 24px;
+  padding: 24px;
+  border-color: #e2e8f0;
+  box-shadow: 0 1px 3px #0f172a08;
+}
+.legacy-forms .hv-stats strong {
+  font-family: "Outfit", sans-serif;
+  font-weight: 900;
+  color: #0f172a;
+  font-size: 32px;
+}
+.legacy-forms .hv-stats span {
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+}
+.legacy-forms .hv-stats svg {
+  color: #e11d48;
+  background: #fff1f2;
+  border-radius: 8px;
+  width: 32px;
+  height: 32px;
+  padding: 6px;
+}
+.legacy-forms .hv-table-wrap {
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+}
+.legacy-forms th {
+  font-size: 10px;
+  font-weight: 800;
+  background: #f8fafc;
+  color: #64748b;
+  padding: 14px 16px;
+}
+.legacy-forms td {
+  padding: 16px;
+  font-size: 12px;
+}
+.legacy-forms tbody tr:hover {
+  background: #fff1f240;
+}
+.legacy-forms .hv-actions button {
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  border-color: #fecdd3;
+  background: #fff1f2;
+  color: #be123c;
+}
+.legacy-forms .hv-actions button:hover {
+  background: #ffe4e6;
+}
+.legacy-forms .hv-actions select {
+  border-radius: 10px;
+}
+.legacy-forms .hv-empty {
+  border: 1px dashed #e2e8f0;
+  background: #f8fafc;
+  border-radius: 16px;
+  color: #94a3b8;
+  padding: 32px;
+}
+.legacy-forms .hv-badge {
+  font-size: 10px;
+  font-weight: 800;
+  padding: 6px 12px;
+}
+.legacy-forms .hv-stock-grid article {
+  border-radius: 20px;
+  border-color: #e2e8f0;
+  padding: 22px;
+}
+.legacy-forms .hv-stock-grid article > strong {
+  font-family: "Outfit", sans-serif;
+  font-weight: 900;
+  font-size: 32px;
+  color: #0f172a;
+}
+.legacy-forms .hv-card {
+  background: linear-gradient(135deg, #0f172a, #1e293b 55%, #4c0519);
+  padding: 24px;
+  border-radius: 20px;
+  color: white;
+  border: 1px solid #334155;
+  box-shadow: 0 8px 24px #0f172a12;
+}
+.legacy-forms .hv-card h2 {
+  color: white;
+  font-family: "Outfit", sans-serif;
+}
+.legacy-forms .hv-card .hv-eyebrow {
+  color: #fda4af;
+  letter-spacing: 1.5px;
+}
+.legacy-forms .hv-card p {
+  color: #cbd5e1;
+}
+.legacy-forms .hv-card strong {
+  color: #fda4af;
+  font-size: 22px;
+}
+.legacy-forms .hv-card img {
+  background: white;
+  padding: 8px;
+  border-radius: 12px;
+  flex-shrink: 0;
+}
+.legacy-forms .hv-card a {
+  color: #fecdd3;
+  text-decoration: underline;
+  font-size: 11px;
+}
+.legacy-forms .hv-search-result {
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+}
+.legacy-forms.legacy-dialog-body {
+  background: white;
+  padding: 24px;
+}
+.legacy-dialog-body .hv-auth {
+  padding: 0;
+  max-width: none;
+}
+.legacy-dialog-body .hv-auth > h2 {
+  font-family: "Outfit", sans-serif;
+  font-size: 24px;
+  margin: 12px 0;
+}
+.legacy-dialog-body .hv-auth .hv-fields-multiple {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.legacy-dialog-body .hv-auth-links {
+  flex-direction: row;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  font-weight: 700;
+}
+.legacy-dialog-body .hv-role-list button {
+  border-radius: 16px;
+  border-color: #e2e8f0;
+  font-size: 12px;
+  font-weight: 700;
+}
+.legacy-dialog-body .hv-role-list button:hover {
+  background: #fff1f2;
+  border-color: #fda4af;
+}
+.legacy-role-BIOQ_INTEGRAL .hv-primary {
+  background: #0d9488;
+  border-color: #0d9488;
+  box-shadow: 0 3px 8px #0d948820;
+}
+.legacy-role-BIOQ_INTEGRAL .hv-actions button {
+  color: #0f766e;
+  border-color: #99f6e4;
+  background: #f0fdfa;
+}
+.legacy-role-DOC_TRIAJE .hv-primary,
+.legacy-role-MED_SOLICITANTE .hv-primary {
+  background: #2563eb;
+  border-color: #2563eb;
+  box-shadow: 0 3px 8px #2563eb20;
+}
+.legacy-role-ADMIN .hv-primary {
+  background: #0f172a;
+  border-color: #0f172a;
+  box-shadow: 0 3px 8px #0f172a20;
+}
+@media (max-width: 700px) {
+  .legacy-forms .hv-grid {
+    grid-template-columns: 1fr;
+  }
+  .legacy-forms .hv-panel {
+    padding: 18px;
+    border-radius: 20px;
+  }
+  .legacy-forms .hv-card {
+    padding: 18px;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .legacy-forms .hv-card img {
+    width: 120px;
+    height: 120px;
+  }
+  .legacy-dialog-body .hv-auth .hv-fields-multiple {
+    grid-template-columns: 1fr;
+  }
+  .legacy-forms.legacy-dialog-body {
+    padding: 20px;
+  }
+  .legacy-tabs {
+    gap: 4px;
+  }
+  .legacy-tabs button {
+    padding: 10px;
+    font-size: 10px;
+  }
+}
