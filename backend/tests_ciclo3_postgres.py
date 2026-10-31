@@ -241,6 +241,11 @@ class Cycle3Tests(ClinicalTests):
         pid = r.data["idpago"]
         self.assertEqual(self.call(CheckoutView, d, deuda=debt).status_code, 201)
         self.assertEqual(create.call_count, 1)
+        # Contrato vigente de Stripe, verificado también contra su API test.
+        self.assertEqual(
+            create.call_args.kwargs["allowed_payment_method_types"], ["card"]
+        )
+        self.assertNotIn("payment_method_types", create.call_args.kwargs)
         event = {
             "id": "evt_test_synthetic",
             "type": "checkout.session.completed",

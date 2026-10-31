@@ -38,7 +38,11 @@ Stripe Checkout se crea en el backend con importe en centavos BOB, pago con tarj
 
 Una repetición del evento no duplica el ingreso. Un evento antiguo no revierte un pago confirmado. La conciliación consulta el estado real del proveedor y permite expirar sesiones todavía abiertas. Un error de red conserva el intento para reintentar con la misma clave; un rechazo definitivo de parámetros lo marca rechazado. Si un intento incierto sin sesión supera 23 horas se bloquea su recreación: requiere revisión en el panel Stripe antes de cobrar de nuevo, por la posible caducidad de la idempotencia del proveedor. Mientras existe un intento pendiente se bloquea otro abono sobre la misma deuda. Si los fondos recibidos exceden el saldo, se señala conciliación administrativa sin duplicar ni forzar el abono.
 
-La implementación de Stripe se probó con su SDK instalado y respuestas externas controladas; **no se validó un pago contra la cuenta real ni sandbox externo**: se verificó la clave de prueba con una consulta de solo lectura a la API de Stripe (país US), pero falta STRIPE_WEBHOOK_SECRET. No se ha declarado ese cobro como completado. La cuenta devolvió charges_enabled=False; su habilitación para cobros reales requiere revisión en Stripe.
+Stripe quedó validado también contra su sandbox externo, con las claves test guardadas por el usuario. Se completaron dos pagos simulados de 100 BOB desde el Checkout alojado, usando la tarjeta oficial de pruebas; no se movió dinero real. El primero se confirmó mediante conciliación y el segundo automáticamente mediante una notificación auténtica recibida por Stripe CLI. Ambos se registraron exclusivamente en PostgreSQL local, con un único comprobante por obligación. Repetir la conciliación y reenviar de forma firmada el mismo evento no duplicó abonos; CU24 mostró 200 BOB sin sumar los comprobantes.
+
+La prueba externa detectó que Stripe API `2026-10-28.endive` rechaza `payment_method_types` al crear sesiones. Se corrigió a `allowed_payment_method_types=['card']`, que filtra los métodos elegibles del Dashboard sin permitir métodos incompatibles con el registro financiero. Se añadió la comprobación de ese contrato a la prueba de regresión.
+
+El secreto guardado por el usuario coincide con el de Stripe CLI para el dispositivo local `hemovida-local`; no se reemplazaron las claves. La cuenta no tiene endpoints públicos de webhook test registrados. Para Render se debe registrar su URL después de desplegar el backend y usar el secreto de ese endpoint en Render. El secreto local de CLI no reemplaza al del endpoint público. La cuenta devolvió charges_enabled=False; esta validación en sandbox no certifica habilitación para cobrar dinero real.
 
 En `backend/.env` para desarrollo, y en variables del servicio backend de Render para despliegue:
 
@@ -58,9 +62,11 @@ Endpoint externo a registrar en Stripe: `https://<backend-render>/api/finanzas/s
 stripe listen --forward-to http://127.0.0.1:8000/api/finanzas/stripe/webhook/
 ```
 
-Guardar el `whsec_...` correspondiente y reiniciar Django. Crear una deuda de prueba mediante la aplicación, abrir su Checkout y pagar en modo test; verificar abono único y saldo tanto por webhook como conciliación, incluyendo reenvío del evento. Un evento genérico del CLI sin sesión creada por HemoVida será rechazado. Para producción se requieren claves de la misma cuenta en modo live y validación operativa previa; esta entrega conserva test como valor por defecto.
+En esta máquina se instaló Stripe CLI 1.55.6 dentro de `.venv/stripe-cli`, fuera de Git. `iniciar_stripe_local.bat` inicia el receptor para el backend en puerto 8000, carga las claves desde backend/.env sin pasarlas por argumentos y oculta el secreto en la salida. Mantener esta tercera terminal abierta junto al backend y frontend. El lanzador comprueba que el secreto configurado coincida con el de CLI y admite únicamente test; no registra endpoints públicos ni activa cobros reales. En otra máquina se instala desde la raíz con `npm install --prefix .venv/stripe-cli @stripe/cli@1.55.6`.
 
-Referencias del proveedor: [monedas](https://docs.stripe.com/currencies), [confirmación de Checkout](https://docs.stripe.com/checkout/fulfillment), [firmas](https://docs.stripe.com/webhooks/signature), [idempotencia](https://docs.stripe.com/api/idempotent_requests).
+Guardar el `whsec_...` correspondiente y reiniciar Django cuando se cambien variables. Crear una deuda de prueba mediante la aplicación, abrir su Checkout y pagar en modo test; verificar abono único y saldo tanto por webhook como conciliación, incluyendo reenvío del evento. Un evento genérico del CLI sin sesión creada por HemoVida será rechazado. Para producción se requieren claves de la misma cuenta en modo live y validación operativa previa; esta entrega conserva test como valor por defecto.
+
+Referencias del proveedor: [monedas](https://docs.stripe.com/currencies), [confirmación de Checkout](https://docs.stripe.com/checkout/fulfillment), [firmas](https://docs.stripe.com/webhooks/signature), [idempotencia](https://docs.stripe.com/api/idempotent_requests), [creación de sesiones y métodos elegibles](https://docs.stripe.com/api/checkout/sessions/create) y [reenvío local con CLI](https://docs.stripe.com/cli/listen).
 
 ## API agregada
 
@@ -97,6 +103,7 @@ El catálogo financiero lista hasta 200 obligaciones/solicitudes, 300 pagos y 10
 - 29 pruebas existentes de seguridad, donantes e inventario; 3 pruebas puras de configuración; 2 de preflight CORS.
 - 4 pruebas de navegador con API controlada: fallo/reintento de Checkout, abono rechazado y corregido, filtros/exportación/error de CU24 y protocolo sin agitación. Escritorio y móvil sin desbordamiento horizontal.
 - Prueba adicional del frontend, HTTP Django y PostgreSQL local reales: creación con pago posterior, abono de 25 BOB, saldo de 75 BOB, recaudación CU24 de 25 BOB y exportación PDF.
+- Dos pagos de Stripe sandbox, con Checkout externo, conciliación, recepción auténtica del webhook por CLI (HTTP 200), repetición firmada del evento y consulta CU24. Las 38 pruebas PostgreSQL se repitieron después de corregir el contrato de creación de sesiones.
 - Compilación TypeScript + Vite, 2 comprobaciones de arquitectura del frontend y Django check aprobados. Actualizaciones compatibles del lockfile eliminaron las 4 alertas detectadas por npm audit; auditoría final sin alertas.
 
 Las pruebas PostgreSQL vacían **solo** la base desechable `hemo_liberacion_test` en `127.0.0.1:55439`, usuario `hemovida_test`, restaurada sin datos desde el esquema de referencia y con 06 y 07. No utilizan DATABASE_URL de Supabase. Requieren esa copia local previamente preparada.
@@ -124,4 +131,4 @@ Las pruebas de navegador usan Edge instalado en Windows; en Linux requieren Chro
 
 ## Estado de entrega
 
-Código disponible localmente en la rama secundaria. Base remota verificada sin modificar sus datos. Falta aportar STRIPE_WEBHOOK_SECRET y validar un Checkout externo, configurar su webhook y publicar backend/frontend para probar el flujo en Render/Cloudflare. No se hizo push ni despliegue. Los protocolos de conservación de producción deben ser aprobados por el responsable institucional; no se crearon por las pruebas locales.
+Código disponible localmente en la rama secundaria. Base remota verificada sin modificar sus datos. Checkout y webhook externo quedaron validados en modo test contra PostgreSQL local. Falta publicar backend/frontend y registrar el endpoint webhook público para probar el flujo desplegado en Render/Cloudflare. La activación y las claves live son un paso diferente; no se realizaron cobros reales. No se hizo push ni despliegue. Los protocolos de conservación de producción deben ser aprobados por el responsable institucional; no se crearon por las pruebas locales.

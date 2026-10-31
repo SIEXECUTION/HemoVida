@@ -54,3 +54,8 @@ Sin API key se conserva EMAIL_BACKEND, que localmente muestra correos en termina
 
 
 Recuperación: el código ya no se devuelve en la API ni se muestra/autocompleta en LoginModal o ChangePasswordModal. El fallo de envío devuelve 503 y elimina el código pendiente. Los backends de consola/dummy/locmem no habilitan recuperación sin Brevo. Pruebas de recuperación usan envío simulado, sin correos reales.
+
+
+## Stripe en desarrollo
+
+Las dos claves test están configuradas y se verificó el flujo externo en sandbox. Ejecutar `iniciar_stripe_local.bat` en una tercera terminal para recibir notificaciones en el backend local (puerto 8000), además de los lanzadores de backend y frontend. El secreto de CLI permanece privado y debe coincidir con backend/.env. El lanzador no aplica SQL ni permite modo live. La validación de pagos se hizo sobre PostgreSQL local aislado, sin operaciones financieras de prueba en Supabase. Ver CICLO3_IMPLEMENTACION.md para el despliegue y el secreto diferente del endpoint de Render.

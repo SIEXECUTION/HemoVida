@@ -193,7 +193,8 @@ def checkout(request, deuda, d):
             api_key=settings.STRIPE_SECRET_KEY,
             idempotency_key=str(d["idempotencia"]),
             mode="payment",
-            payment_method_types=["card"],
+            # API 2026-10-28: filtro de los métodos elegibles del Dashboard.
+            allowed_payment_method_types=["card"],
             line_items=[
                 {
                     "price_data": {
