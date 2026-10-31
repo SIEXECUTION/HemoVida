@@ -84,5 +84,7 @@ def liberar_lote(request, madre):
         cursor.execute("UPDATE public.unidadsangretotal SET estadoliberacion='Liberada Apta' WHERE idunidadmadre=%s AND estadoliberacion<>'Liberada Apta'", [madre])
         if ids:
             # Una reserva autóloga permanece exclusiva y debe reactivarse por su flujo.
-            cursor.execute("UPDATE public.ejemplarbolsa SET estadobolsak='Disponible' WHERE idejemplarbolsa=ANY(%s)", [ids])
+            cursor.execute("SELECT 1 FROM ejemplarbolsa b WHERE b.idejemplarbolsa=ANY(%s) AND b.esexclusivoautologo AND NOT EXISTS(SELECT 1 FROM reservasangre r WHERE r.idejemplarbolsa=b.idejemplarbolsa AND r.esautologa AND r.estadoreserva='Activa' AND r.fechavencimientoreserva>=CURRENT_DATE)",[ids])
+            if cursor.fetchone():raise ValidationError('Falta reserva exclusiva autóloga vigente; no se libera el lote.')
+            cursor.execute("UPDATE public.ejemplarbolsa SET estadobolsak=CASE WHEN esexclusivoautologo THEN 'Reservada' ELSE 'Disponible' END WHERE idejemplarbolsa=ANY(%s)", [ids])
         return ids

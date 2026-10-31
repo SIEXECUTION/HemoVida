@@ -28,8 +28,30 @@ class Operations(APIView):
         if connection.vendor != "postgresql":
             raise ValidationError("Se requiere PostgreSQL.")
         with connection.cursor() as c:
+            from hemovida_project.schema_checks import missing_cycle3
+
+            extended = not missing_cycle3(c)
+            extra = (
+                {
+                    "protocolos": ops.rows(
+                        c, "SELECT * FROM protocoloconservacion ORDER BY tipocomponente"
+                    ),
+                    "incidencias": ops.rows(
+                        c,
+                        "SELECT * FROM incidenciacolecta ORDER BY idincidencia DESC LIMIT 100",
+                    ),
+                    "autologas": ops.rows(
+                        c,
+                        "SELECT * FROM colectaautologa ORDER BY idunidadmadre DESC LIMIT 100",
+                    ),
+                }
+                if extended
+                else {"protocolos": [], "incidencias": [], "autologas": []}
+            )
             return Response(
                 {
+                    **extra,
+                    "revision07": extended,
                     "personas": ops.rows(
                         c,
                         "SELECT p.idpersona,p.ci,p.nombres,p.apellidos FROM persona p JOIN posibledonador d USING(idpersona) WHERE p.ci ILIKE %s OR p.nombres ILIKE %s OR p.apellidos ILIKE %s ORDER BY p.idpersona DESC LIMIT 100",
@@ -137,3 +159,47 @@ class PerfilView(APIView):
 
             raise PermissionDenied("Perfil no asignado a la cuenta.")
         return Response(generate_tokens_for_usuario(request.user, role))
+
+
+class ProtocoloView(Mutation):
+    roles = ["ADMIN"]
+    form = forms.Protocolo
+    operation = staticmethod(ops.protocol)
+
+
+class IncidenciaView(Mutation):
+    roles = ["ADMIN", "PERS_COLECTA"]
+    form = forms.Incidencia
+    operation = staticmethod(ops.incident)
+
+
+class ComunicacionView(Mutation):
+    roles = ["ADMIN", "DOC_TRIAJE", "BIOQ_INTEGRAL"]
+    form = forms.Comunicacion
+    operation = staticmethod(ops.communicate)
+
+
+class BajaMadreView(Mutation):
+    roles = ["ADMIN", "BIOQ_INTEGRAL", "TEC_LOGISTICA"]
+    form = forms.Baja
+    operation = staticmethod(ops.discard_mother)
+
+
+class CondicionesView(Mutation):
+    roles = ["ADMIN", "BIOQ_INTEGRAL", "TEC_LOGISTICA"]
+    form = forms.Condiciones
+    operation = staticmethod(ops.equipment_conditions)
+
+
+class CustodiaAutologaView(Mutation):
+    roles = ["ADMIN", "BIOQ_INTEGRAL", "TEC_LOGISTICA"]
+    form = forms.Custodia
+    operation = staticmethod(
+        lambda request, bolsa, d: ops.custody(request, bolsa, d, autologa=True)
+    )
+
+
+class ReactivarAutologaView(Mutation):
+    roles = ["ADMIN", "BIOQ_INTEGRAL"]
+    form = forms.Reactivacion
+    operation = staticmethod(ops.reactivate_autologous)

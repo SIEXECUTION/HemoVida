@@ -12,6 +12,38 @@ const names: Record<string, string> = {
   apellidos: "Apellidos",
   eventos: "Eventos",
   results: "Registros",
+  iddeuda: "Obligación",
+  idsolicitud: "Solicitud",
+  idpago: "Pago",
+  numerosolicitud: "Número de solicitud",
+  montooriginal: "Importe original (BOB)",
+  montoabonado: "Abonado (BOB)",
+  saldopendiente: "Saldo (BOB)",
+  montopagado: "Importe del pago (BOB)",
+  estado_actual: "Estado actual",
+  estadotransaccion: "Estado del pago",
+  estadopago: "Tratamiento",
+  metodopago: "Método de pago",
+  proveedorpasarela: "Proveedor",
+  referenciaexterna: "Referencia",
+  fechavencimiento: "Vencimiento",
+  fechahorapago: "Fecha del pago",
+  fechacreacion: "Fecha de registro",
+  numerorecibofactura: "Número de comprobante",
+  conceptoservicio: "Concepto",
+  montototal: "Total (BOB)",
+  moneda: "Moneda",
+  motivodeuda: "Motivo",
+  pagoposteriorautorizado: "Pago posterior autorizado",
+  observacionautorizacion: "Justificación",
+  idevento: "Notificación",
+  tipo: "Tipo",
+  resultado: "Resultado",
+  fecharecepcion: "Recibida",
+  dimension: "Agrupación",
+  cantidad: "Cantidad",
+  importe: "Importe (BOB)",
+  volumen: "Volumen (ml)",
 };
 function Content({ value }: { value: unknown }): React.ReactElement {
   if (value === null || value === undefined || value === "")
@@ -289,3 +321,5 @@ export function ApiRecords({
     </section>
   );
 }
+
+export { Content as DataContent };

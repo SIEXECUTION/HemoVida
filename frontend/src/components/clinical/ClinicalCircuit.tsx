@@ -1,10 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { API_BASE_URL } from "../../services/api";
 type Row = Record<string, any>;
-type Field = {
+export type Field = {
   name: string;
   label: string;
   type?: string;
+  required?: boolean;
+  step?: string;
+  maxLength?: number;
   options?: [string, string][];
 };
 const input =
@@ -28,15 +31,20 @@ export function Form({
         const f = e.currentTarget,
           fd = new FormData(f),
           d: Row = {};
-        fields.forEach(
-          (x) =>
-            (d[x.name] =
-              x.type === "checkbox"
-                ? fd.has(x.name)
-                : x.type === "number"
-                  ? Number(fd.get(x.name))
-                  : fd.get(x.name)),
-        );
+        fields.forEach((x) => {
+          const raw = fd.get(x.name);
+          if (x.type === "checkbox") {
+            d[x.name] = fd.has(x.name);
+            return;
+          }
+          if (!raw && x.required === false) return;
+          d[x.name] =
+            x.type === "number"
+              ? Number(raw)
+              : x.type === "datetime-local" && raw
+                ? new Date(String(raw)).toISOString()
+                : raw;
+        });
         setBusy(true);
         setError("");
         try {
@@ -55,7 +63,12 @@ export function Form({
           <label key={x.name} className="text-sm font-semibold">
             {x.label}
             {x.options ? (
-              <select required name={x.name} className={input}>
+              <select
+                aria-label={x.label}
+                required={x.required !== false}
+                name={x.name}
+                className={input}
+              >
                 <option value="">Seleccionar</option>
                 {x.options.map(([id, label]) => (
                   <option value={id} key={id}>
@@ -65,10 +78,12 @@ export function Form({
               </select>
             ) : (
               <input
-                required
+                aria-label={x.label}
+                required={x.required !== false}
                 name={x.name}
                 type={x.type || "text"}
-                step={x.type === "number" ? "any" : undefined}
+                step={x.step || (x.type === "number" ? "any" : undefined)}
+                maxLength={x.maxLength}
                 className={input}
               />
             )}
@@ -289,6 +304,12 @@ export function ClinicalCircuit({
               type: "number",
             })),
             {
+              name: "observaciones",
+              label: "Observaciones clínicas",
+              required: false,
+              maxLength: 4000,
+            },
+            {
               name: "resultadoaptitud",
               label: "Dictamen médico confirmado",
               options: [
@@ -450,13 +471,284 @@ export function ClinicalCircuit({
           />
         </>
       )}
+      {data.revision07 === false && (
+        <p className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+          Las extensiones del ciclo 3 requieren la migración 07.
+        </p>
+      )}
+      {collect && (
+        <>
+          <Form
+            title="CU15 · Colecta autóloga para el propio paciente"
+            fields={[
+              triage,
+              {
+                name: "idgrupo",
+                label: "Grupo registrado",
+                options: opts(
+                  "grupos",
+                  "idgrupo",
+                  (r) => `${r.grupoabo} ${r.factorrh}`,
+                ),
+              },
+              {
+                name: "brazoextraccion",
+                label: "Brazo",
+                options: [
+                  ["Izquierdo", "Izquierdo"],
+                  ["Derecho", "Derecho"],
+                ],
+              },
+              {
+                name: "volumenextraidoml",
+                label: "Volumen extraído (ml)",
+                type: "number",
+              },
+              {
+                name: "fechacirugia",
+                label: "Fecha de cirugía del paciente",
+                type: "date",
+              },
+              { name: "firmadigital", label: "Evidencia de firma previa" },
+              {
+                name: "declaracionjuradaaceptada",
+                label: "Consentimiento aceptado antes de la extracción",
+                type: "checkbox",
+              },
+            ]}
+            submit={(d) => save("colectas/", { ...d, autologa: true })}
+          />
+          <Form
+            title="CU15 · Colecta interrumpida"
+            fields={[
+              triage,
+              {
+                name: "motivo",
+                label: "Motivo e indicaciones",
+                maxLength: 4000,
+              },
+              {
+                name: "volumenobtenidoml",
+                label: "Volumen realmente obtenido (ml)",
+                type: "number",
+              },
+            ]}
+            submit={(d) => save("incidencias/", d)}
+          />
+        </>
+      )}
+      {["ADMIN", "DOC_TRIAJE", "BIOQ_INTEGRAL"].includes(role) && (
+        <>
+          <Form
+            title="CU11 · Diferimiento por hallazgo de laboratorio"
+            fields={[
+              person,
+              {
+                name: "tipoanalisis",
+                label: "Origen",
+                options: [
+                  ["idserologia", "CU13 · Serología"],
+                  ["idhematologia", "CU14 · Inmunohematología"],
+                ],
+              },
+              {
+                name: "idanalisis",
+                label: "ID del análisis registrado",
+                type: "number",
+              },
+              {
+                name: "tipo",
+                label: "Clasificación profesional",
+                options: [
+                  ["Temporal", "Temporal"],
+                  ["Definitivo", "Definitivo"],
+                ],
+              },
+              {
+                name: "diasinhabilitacion",
+                label: "Días (0 para definitivo)",
+                type: "number",
+              },
+              {
+                name: "motivodetallado",
+                label: "Motivo y seguimiento",
+                maxLength: 255,
+              },
+            ]}
+            submit={({ tipoanalisis, idanalisis, ...d }) =>
+              save("diferimientos/", { ...d, [tipoanalisis]: idanalisis })
+            }
+          />
+          <Form
+            title="CU11 · Confirmar comunicación al candidato"
+            fields={[
+              {
+                name: "diferimiento",
+                label: "Diferimiento registrado",
+                options: opts(
+                  "diferimientos",
+                  "iddiferimiento",
+                  (r) => `#${r.iddiferimiento} · Persona ${r.idposibledonador}`,
+                ),
+              },
+              {
+                name: "canal",
+                label: "Canal utilizado",
+                options: [
+                  ["Presencial", "Presencial"],
+                  ["Telefono", "Teléfono"],
+                  ["Correo", "Correo"],
+                ],
+              },
+              {
+                name: "confirmada",
+                label: "La indicación ya fue comunicada al candidato",
+                type: "checkbox",
+              },
+            ]}
+            submit={({ diferimiento, ...d }) =>
+              save(`diferimientos/${diferimiento}/comunicar/`, d)
+            }
+          />
+        </>
+      )}
+      {lab && (
+        <>
+          <Form
+            title="CU15 · Registrar condiciones verificadas del equipo"
+            fields={[
+              location,
+              {
+                name: "temperaturaregistro",
+                label: "Temperatura medida (°C)",
+                type: "number",
+                step: "0.1",
+              },
+              {
+                name: "tieneagitacion",
+                label: "Equipo con agitación verificada",
+                type: "checkbox",
+                required: false,
+              },
+              {
+                name: "verificadas",
+                label: "Confirmo las condiciones registradas",
+                type: "checkbox",
+              },
+            ]}
+            submit={({ idubicacion, ...d }) =>
+              save(`ubicaciones/${idubicacion}/condiciones/`, d)
+            }
+          />
+          <Form
+            title="CU15 · Traslado de custodia autóloga exclusiva"
+            fields={[
+              {
+                name: "bolsa",
+                label: "Componente autólogo",
+                options: opts(
+                  "componentes",
+                  "idejemplarbolsa",
+                  (r) =>
+                    `${r.codigoejemplark} · ${r.estadobolsak}${r.esexclusivoautologo ? " · Autólogo" : " · No autólogo"}`,
+                ),
+              },
+              location,
+            ]}
+            submit={({ bolsa, ...d }) =>
+              save(`componentes/${bolsa}/custodia-autologa/`, d)
+            }
+          />
+          {["ADMIN", "BIOQ_INTEGRAL"].includes(role) && (
+            <Form
+              title="CU15 · Revisar reserva autóloga después de corrección"
+              fields={[
+                {
+                  name: "madre",
+                  label: "Lote autólogo",
+                  options: opts(
+                    "autologas",
+                    "idunidadmadre",
+                    (r) =>
+                      `Lote #${r.idunidadmadre} · Paciente ${r.idreceptor} · Cirugía ${r.fechacirugia}`,
+                  ),
+                },
+                {
+                  name: "confirmada",
+                  label:
+                    "Revisé ambos análisis y la cirugía del paciente exclusivo",
+                  type: "checkbox",
+                },
+              ]}
+              submit={({ madre, ...d }) =>
+                save(`madres/${madre}/reactivar-autologa/`, d)
+              }
+            />
+          )}
+          <Form
+            title="CU15 · Baja del lote completo"
+            fields={[
+              {
+                name: "madre",
+                label: "Bolsa madre registrada",
+                options: opts(
+                  "madres",
+                  "idunidadmadre",
+                  (r) => `${r.codigobolsamadre} · ${r.estadoliberacion}`,
+                ),
+              },
+              { name: "motivobaja", label: "Motivo de baja", maxLength: 100 },
+            ]}
+            submit={({ madre, ...d }) => save(`madres/${madre}/baja/`, d)}
+          />
+        </>
+      )}
+      {role === "ADMIN" && (
+        <Form
+          title="CU15 · Aprobar protocolo institucional de conservación"
+          fields={[
+            {
+              name: "tipocomponente",
+              label: "Componente",
+              options: types.map((x) => [x, x]),
+            },
+            {
+              name: "temperaturamin",
+              label: "Temperatura mínima aprobada (°C)",
+              type: "number",
+              step: "0.1",
+            },
+            {
+              name: "temperaturamax",
+              label: "Temperatura máxima aprobada (°C)",
+              type: "number",
+              step: "0.1",
+            },
+            {
+              name: "diasconservacion",
+              label: "Días de conservación aprobados",
+              type: "number",
+            },
+            {
+              name: "requiereagitacion",
+              label: "Requiere agitación",
+              type: "checkbox",
+              required: false,
+            },
+          ]}
+          submit={(d) => save("protocolos/", d)}
+        />
+      )}
       <div className="border rounded-3xl p-6 bg-white">
         <h2 className="text-xl font-bold">Diferimientos registrados</h2>
         {(data.diferimientos || []).map((r: Row) => (
           <p className="py-3 border-b" key={r.iddiferimiento}>
             Persona {r.idposibledonador} · {r.motivodetallado} ·{" "}
             {r.fechainiciodiferimiento} a{" "}
-            {r.fechafindiferimiento || "Definitivo"}
+            {r.fechafindiferimiento || "Definitivo"} · Comunicación:{" "}
+            {r.comunicacionfecha
+              ? `${r.canalcomunicacion} · ${r.comunicacionfecha}`
+              : "Pendiente"}
           </p>
         ))}
       </div>

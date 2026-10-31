@@ -4,14 +4,14 @@ El código se ejecuta localmente. La base PostgreSQL permanece en Supabase y se 
 
 ## Git
 
-Rama de trabajo: `codex/ciclo3-desarrollo-local`, creada desde la `main` real de https://github.com/SIEXECUTION/HemoVida (origin/main en 44068007a834794091daa96fa55beee6d8e9ba8d). La rama main local sigue origin/main. No hay commits adicionales en la rama de trabajo: clínica, laboratorio, bitácora y preparación local permanecen como cambios sin commit.
+Rama de trabajo: `codex/ciclo3-desarrollo-local`, creada desde la `main` real de https://github.com/SIEXECUTION/HemoVida (origin/main en 44068007a834794091daa96fa55beee6d8e9ba8d). La rama main local sigue origin/main. Clínica, laboratorio, bitácora, preparación local y adaptación visual ya tienen commits en esta rama. La continuación de ciclo 3 permanece en esta misma rama secundaria.
 
 La versión del paquete agregaba laboratorio y migración 06 que aún no estaban en esa main. Se conservaron junto con los cambios nuevos. El commit anterior e1f2357 permanece únicamente en codex/ciclo3-clinica como respaldo; no pertenece al historial de esta rama. También se conservó un stash de respaldo de la transferencia. No se hicieron pushes.
 
 ## Entorno ya preparado en esta máquina
 
 - Python aislado en `.venv`, dependencias backend y npm instaladas.
-- `backend/.env`: secreto local aleatorio, DEBUG=True, USE_SQLITE=False, SUPABASE_TRANSACTION_POOLER=True. **Falta completar DATABASE_URL**.
+- `backend/.env`: secreto local aleatorio, DEBUG=True, USE_SQLITE=False, SUPABASE_TRANSACTION_POOLER=True. DATABASE_URL ya está configurada localmente y su conexión se verificó sin mostrar las credenciales.
 - `frontend/.env.development.local`: VITE_API_BASE_URL=/api; Vite envía las peticiones al backend en 127.0.0.1:8000. Este archivo se aplica solo al desarrollo.
 - Los archivos privados .env están excluidos de Git. No pegar contraseñas en código, terminales compartidas ni documentación.
 
@@ -19,7 +19,7 @@ La versión del paquete agregaba laboratorio y migración 06 que aún no estaban
 
 1. En Supabase, abrir Connect y copiar la URI del Transaction pooler, puerto 6543, para la base que se utilizará durante el desarrollo.
 2. Pegar esa URI como DATABASE_URL en `backend/.env`. Usar usuario y host exactos entregados por Supabase; no sustituir el host del pooler por db.PROJECT.supabase.co. Si la contraseña tiene caracteres especiales, codificarlos en la URI; el backend no los reescribe ni elimina corchetes.
-3. Ejecutar `verificar_conexion.bat`. Hace SELECT y comprueba tablas y función de migración 06. No crea tablas ni modifica datos. El diagnóstico no imprime credenciales.
+3. Ejecutar `verificar_conexion.bat`. Hace SELECT y comprueba tablas, función de migración 06 y columnas/tablas de 07. No crea tablas ni modifica datos. El diagnóstico no imprime credenciales.
 4. Ejecutar `iniciar_backend.bat` y `iniciar_frontend.bat` en dos terminales. Abrir http://localhost:3000. Backend: http://127.0.0.1:8000.
 
 En otra máquina Windows, ejecutar primero `powershell -ExecutionPolicy Bypass -File .\preparar_local.ps1` desde esta carpeta. El script crea el entorno y archivos privados solo si faltan, instala dependencias y no conecta a Supabase ni ejecuta SQL. Requiere Python y Node/npm.
@@ -28,7 +28,7 @@ El puerto 6543 corresponde a pooling de transacciones. Django usa psycopg2, SSL 
 
 ## Estado de la base y comprobaciones
 
-La migración financiera CU22 ya pertenece al esquema de referencia y no se vuelve a ejecutar. La migración 06 continúa pendiente en Supabase hasta que se aplique por un proceso separado. Las nuevas escrituras clínicas la exigen. Ninguno de los scripts de arranque aplica migraciones Django, restaura el schema, importa datos ni ejecuta SQL maestro.
+La migración financiera CU22 ya pertenece al esquema de referencia y no se vuelve a ejecutar. El usuario ya aplicó las migraciones 06 y 07 en Supabase y se verificó su estructura desde el backend. Las nuevas escrituras clínicas la exigen. Ninguno de los scripts de arranque aplica migraciones Django, restaura el schema, importa datos ni ejecuta SQL maestro.
 
 Pruebas de configuración, sin conexión remota:
 
@@ -39,7 +39,7 @@ Pruebas de configuración, sin conexión remota:
 
 Las pruebas PostgreSQL de clínica/laboratorio siguen restringidas a su base desechable local hemo_liberacion_test en 127.0.0.1:55439. No utilizan la cadena de Supabase.
 
-La conexión remota no está verificada mientras DATABASE_URL siga vacía. Completar el archivo y ejecutar el diagnóstico de solo lectura es el siguiente paso. No se realizaron commits, pushes ni despliegues durante esta preparación.
+La conexión remota está verificada. Los cambios siguientes, las variables de Stripe y las pruebas actuales se describen en [CICLO3_IMPLEMENTACION.md](CICLO3_IMPLEMENTACION.md). No se realizaron pushes ni despliegues.
 
 Referencias: https://supabase.com/docs/guides/database/connecting-to-postgres y https://docs.djangoproject.com/en/5.2/ref/databases/#transaction-pooling-and-server-side-cursors
 

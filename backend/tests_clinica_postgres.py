@@ -46,6 +46,7 @@ class ClinicalTests(unittest.TestCase):
                 "INSERT INTO ubicacionalmacen(identificadorcompartimento,tipoequipo,temperaturaregistro,capacidadmaxima) VALUES('TEST','Refrigerador',4,5) RETURNING idubicacion"
             )
             self.loc = c.fetchone()[0]
+            c.execute("INSERT INTO protocoloconservacion(tipocomponente,temperaturamin,temperaturamax,diasconservacion,aprobadopor) VALUES('Concentrado de Globulos Rojos',2,6,35,%s)",[self.person])
         self.vitals = dict(
             idpersona=self.pid,
             idcita=self.app,
@@ -300,7 +301,7 @@ class ClinicalTests(unittest.TestCase):
         from rest_framework.test import APIClient
         from apps.seguridad.utils import generate_tokens_for_usuario
 
-        client = APIClient()
+        client = APIClient(HTTP_HOST="localhost")
         client.credentials(
             HTTP_AUTHORIZATION="Bearer "
             + generate_tokens_for_usuario(self.user, "BIOQ_INTEGRAL")["access"]

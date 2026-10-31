@@ -15,6 +15,8 @@ def health_check(request):
     })
 
 urlpatterns = [
+    path('api/reportes/', include('apps.reportes.urls')),
+    path('api/finanzas/', include('apps.finanzas.urls')),
     path('api/clinica/', include('apps.clinica.urls')),
     path('api/laboratorio/', include('apps.laboratorio.urls')),
     # Health Check raíz para Render (evita 404 en HEAD /)

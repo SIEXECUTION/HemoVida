@@ -164,16 +164,17 @@ SIMPLE_JWT = {
     'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
 }
 
-# Configuración de CORS para Frontend React y Vercel
-CORS_ALLOW_ALL_ORIGINS = True  # Permite que el frontend en Vercel se comunique sin bloqueos
-CORS_ALLOWED_ORIGIN_REGEXES = [
-    r"^https?://.*\.pages\.dev$",
-    r"^https?://.*\.vercel\.app$",
-    r"^https?://.*\.koyeb\.app$",
-    r"^http://localhost:(3000|5173)$",
-    r"^http://127\.0\.0\.1:(3000|5173)$",
+# Cloudflare y desarrollo local: lista explícita de orígenes, configurable en Render.
+CORS_ALLOW_ALL_ORIGINS = False
+CORS_ALLOWED_ORIGINS = [
+    origin.strip().rstrip('/')
+    for origin in os.getenv(
+        'CORS_ALLOWED_ORIGINS',
+        'http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173,https://hemovidax.siexecution2026.workers.dev',
+    ).split(',')
+    if origin.strip()
 ]
-CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_CREDENTIALS = False  # El frontend utiliza Authorization: Bearer.
 CORS_ALLOW_HEADERS = [
     'accept',
     'accept-encoding',
@@ -220,3 +221,11 @@ EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', f"Banco de Sangre HemoVida <{EMAIL_HOST_USER}>" if EMAIL_HOST_USER else "Banco de Sangre HemoVida <seguridad@hemovida.org>")
 EMAIL_TIMEOUT = 10
+
+# CU22: cuenta de Estados Unidos, importes en bolivianos. Claves solo en backend.
+STRIPE_SECRET_KEY=os.getenv('STRIPE_SECRET_KEY','').strip()
+STRIPE_WEBHOOK_SECRET=os.getenv('STRIPE_WEBHOOK_SECRET','').strip()
+STRIPE_CURRENCY='bob'
+STRIPE_ACCOUNT_COUNTRY='US'
+STRIPE_MODE=os.getenv('STRIPE_MODE','test').strip()
+PAYMENT_FRONTEND_URL=os.getenv('PAYMENT_FRONTEND_URL','http://127.0.0.1:3000').rstrip('/')

@@ -142,6 +142,13 @@ def triage(request, d):
             "UPDATE citadonacion SET estadocita='Atendida' WHERE idcita=%s",
             [d["idcita"]],
         )
+        if d.get("observaciones"):
+            revision07(c)
+            c.execute(
+                "UPDATE triajeclinico SET observaciones=%s WHERE idtriaje=%s",
+                [d["observaciones"], r["idtriaje"]],
+            )
+            r["observaciones"] = d["observaciones"]
         audit(
             c,
             request,
@@ -156,19 +163,33 @@ def defer(request, d):
     with clinical_operation(request), connection.cursor() as c:
         professional(c, request)
         patient(c, d["idpersona"])
-        t = one(
-            c,
-            "SELECT * FROM triajeclinico WHERE idtriaje=%s FOR UPDATE",
-            [d["idtriaje"]],
-        )
-        if t["idposibledonador"] != d["idpersona"]:
-            raise ValidationError("Triaje de otra persona.")
+        if d.get("idtriaje"):
+            t = one(
+                c,
+                "SELECT idposibledonador AS idpersona FROM triajeclinico WHERE idtriaje=%s FOR UPDATE",
+                [d["idtriaje"]],
+            )
+        else:
+            revision07(c)
+            table, pk = (
+                ("analisisinmunoserologico", "idanalisis")
+                if d.get("idserologia")
+                else ("analisisinmunohematologico", "idanalisishematologico")
+            )
+            ident = d.get("idserologia") or d["idhematologia"]
+            t = one(
+                c,
+                f"SELECT e.idpersonadonante AS idpersona FROM {table} a JOIN unidadsangretotal m USING(idunidadmadre) JOIN extracciondonacion e USING(idextraccion) WHERE a.{pk}=%s",
+                [ident],
+            )
+        if t["idpersona"] != d["idpersona"]:
+            raise ValidationError("La evaluación pertenece a otra persona.")
         restrictions(c, d["idpersona"])
         r = one(
             c,
             "INSERT INTO diferimiento(idtriaje,idposibledonador,motivodetallado,diasinhabilitacion,fechainiciodiferimiento,fechafindiferimiento) VALUES(%s,%s,%s,%s,CURRENT_DATE,CASE WHEN %s='Temporal' THEN CURRENT_DATE+%s ELSE NULL END) RETURNING *",
             [
-                d["idtriaje"],
+                d.get("idtriaje"),
                 d["idpersona"],
                 d["motivodetallado"],
                 d["diasinhabilitacion"],
@@ -189,6 +210,12 @@ def defer(request, d):
             [d["idpersona"], r["fechafindiferimiento"], r["fechafindiferimiento"]],
         )
         ids = [x[0] for x in c.fetchall()]
+        if d.get("idserologia") or d.get("idhematologia"):
+            c.execute(
+                "UPDATE diferimiento SET idserologia=%s,idhematologia=%s WHERE iddiferimiento=%s",
+                [d.get("idserologia"), d.get("idhematologia"), r["iddiferimiento"]],
+            )
+
         for pk in ids:
             audit(
                 c, request, "citadonacion", pk, "CU11 cita cancelada por diferimiento"
@@ -225,6 +252,15 @@ def collect(request, d):
             raise ValidationError(
                 "Se requiere el último triaje apto de hoy de la misma persona."
             )
+        c.execute("SELECT to_regclass('public.incidenciacolecta')")
+        if c.fetchone()[0]:
+            c.execute(
+                "SELECT 1 FROM incidenciacolecta WHERE idtriaje=%s", [d["idtriaje"]]
+            )
+            if c.fetchone():
+                raise ValidationError(
+                    "La colecta de este triaje fue interrumpida; requiere reevaluación."
+                )
         c.execute("SELECT 1 FROM extracciondonacion WHERE idtriaje=%s", [d["idtriaje"]])
         if c.fetchone():
             raise ValidationError("El triaje ya tiene una extracción.")
@@ -258,6 +294,18 @@ def collect(request, d):
             "INSERT INTO unidadsangretotal(idextraccion,idgrupo,codigobolsamadre,tipobolsa) VALUES(%s,%s,%s,'Bolsa Cuadruple CPD-SAGM') RETURNING *",
             [ext["idextraccion"], d["idgrupo"], "MAD-" + uuid4().hex],
         )
+        if d.get("autologa"):
+            revision07(c)
+            one(
+                c, "SELECT idpersona FROM receptor WHERE idpersona=%s", [p["idpersona"]]
+            )
+            c.execute("SELECT %s::date > CURRENT_DATE", [d["fechacirugia"]])
+            if not c.fetchone()[0]:
+                raise ValidationError("La cirugía debe ser futura.")
+            c.execute(
+                "INSERT INTO colectaautologa(idunidadmadre,idreceptor,fechacirugia,idpersonalsalud) VALUES(%s,%s,%s,%s)",
+                [m["idunidadmadre"], p["idpersona"], d["fechacirugia"], staff],
+            )
         c.execute(
             "UPDATE donante SET fechaultimadonacion=CURRENT_DATE WHERE idpersona=%s",
             [p["idpersona"]],
@@ -293,6 +341,7 @@ def space(c, loc, additional=1):
 def fraction(request, madre, d):
     with clinical_operation(request), connection.cursor() as c:
         professional(c, request)
+        revision07(c)
         bloquear_madre(c, madre)
         m = one(
             c,
@@ -310,14 +359,15 @@ def fraction(request, madre, d):
         c.execute("SELECT 1 FROM ejemplarbolsa WHERE idunidadmadre=%s", [madre])
         if c.fetchone():
             raise ValidationError("La madre ya fue fraccionada.")
-        # No inferir la exclusividad autóloga: hasta integrar CU21, impedir este flujo general.
+        c.execute("SELECT * FROM colectaautologa WHERE idunidadmadre=%s", [madre])
+        autologa = c.fetchone()
         c.execute(
             "SELECT 1 FROM donante WHERE idpersona=(SELECT idpersonadonante FROM extracciondonacion WHERE idextraccion=%s) AND tipodonante='Autologo'",
             [m["idextraccion"]],
         )
-        if c.fetchone():
+        if c.fetchone() and not autologa:
             raise ValidationError(
-                "Colecta autóloga: requiere el circuito de reserva exclusiva CU21."
+                "La colecta autóloga debe tener paciente y fecha quirúrgica registrados."
             )
         parts = d["componentes"]
         if sum(p["volumenml"] for p in parts) > m["volumenextraidoml"]:
@@ -327,13 +377,8 @@ def fraction(request, madre, d):
             space(c, loc, sum(p["idubicacion"] == pk for p in parts))
         ids = []
         for p in parts:
-            days = {
-                "Concentrado de Globulos Rojos": 35,
-                "Paquete Globular": 35,
-                "Plasma Fresco Congelado": 365,
-                "Concentrado Plaquetario": 5,
-                "Crioprecipitado": 365,
-            }[p["tipocomponente"]]
+            protocol = conservation(c, locations[p["idubicacion"]], p["tipocomponente"])
+            days = protocol["diasconservacion"]
             category = p["categoriaetaria"]
             if category == "Pediátrico":
                 c.execute(
@@ -360,12 +405,28 @@ def fraction(request, madre, d):
                 ],
             )
             ids.append(r["idejemplarbolsa"])
+            if autologa:
+                receptor, fecha = autologa[1], autologa[2]
+                c.execute("SELECT %s::date<=%s::date+%s", [fecha, m["fechahora"], days])
+                if not c.fetchone()[0]:
+                    raise ValidationError(
+                        "El componente caduca antes de la cirugía programada."
+                    )
+                c.execute(
+                    "UPDATE ejemplarbolsa SET esexclusivoautologo=true WHERE idejemplarbolsa=%s",
+                    [r["idejemplarbolsa"]],
+                )
+                c.execute(
+                    "INSERT INTO reservasangre(idreceptor,idejemplarbolsa,esautologa,motivoreserva,fechavencimientoreserva) VALUES(%s,%s,true,'Custodia autologa exclusiva',%s)",
+                    [receptor, r["idejemplarbolsa"], fecha],
+                )
+
         for pk in locations:
             refresh_location(c, pk)
         return {"idunidadmadre": madre, "componentes": ids}
 
 
-def custody(request, bolsa, d, baja=False):
+def custody(request, bolsa, d, baja=False, autologa=False):
     with clinical_operation(request), connection.cursor() as c:
         staff = professional(c, request)
         row = one(
@@ -380,12 +441,26 @@ def custody(request, bolsa, d, baja=False):
             "SELECT * FROM ejemplarbolsa WHERE idejemplarbolsa=%s FOR UPDATE",
             [bolsa],
         )
-        if (
-            b["estadobolsak"] in ["Despachada", "Baja", "Reservada"]
-            or b["esexclusivoautologo"]
-        ):
+        if b["estadobolsak"] in ["Despachada", "Baja"]:
+            raise ValidationError("Componente ya despachado o dado de baja.")
+        if autologa:
+            revision07(c)
+            owner = one(
+                c,
+                "SELECT idreceptor FROM colectaautologa WHERE idunidadmadre=%s",
+                [b["idunidadmadre"]],
+            )
+            c.execute(
+                "SELECT 1 FROM reservasangre WHERE idejemplarbolsa=%s AND idreceptor=%s AND esautologa AND estadoreserva='Activa' AND fechavencimientoreserva>=CURRENT_DATE",
+                [bolsa, owner["idreceptor"]],
+            )
+            if not b["esexclusivoautologo"] or not c.fetchone():
+                raise ValidationError(
+                    "No hay una reserva autóloga exclusiva vigente para este componente."
+                )
+        elif b["estadobolsak"] == "Reservada" or b["esexclusivoautologo"]:
             raise ValidationError(
-                "Requiere circuito de despacho/reserva/autólogo o ya tiene baja."
+                "Utiliza la custodia autóloga o el circuito autorizado de reservas."
             )
         locations = lock_locations(
             c, [x for x in [b["idubicacion"], d.get("idubicacion")] if x]
@@ -402,6 +477,8 @@ def custody(request, bolsa, d, baja=False):
             )
         else:
             loc = lock_locations(c, [d["idubicacion"]])[d["idubicacion"]]
+            revision07(c)
+            conservation(c, loc, b["tipocomponente"])
             if b["idubicacion"] != d["idubicacion"]:
                 space(c, loc)
             c.execute(
@@ -448,3 +525,225 @@ def refresh_location(c, pk):
         "UPDATE ubicacionalmacen SET capacidadocupada=(SELECT count(*) FROM ejemplarbolsa WHERE idubicacion=%s AND estadobolsak NOT IN ('Baja','Despachada')) WHERE idubicacion=%s",
         [pk, pk],
     )
+
+
+def revision07(c):
+    from hemovida_project.schema_checks import missing_cycle3
+
+    if missing_cycle3(c):
+        from rest_framework.exceptions import APIException
+
+        e = APIException("Esta función requiere aplicar la migración 07 de ciclo 3.")
+        e.status_code = 503
+        raise e
+
+
+def conservation(c, loc, component):
+    c.execute(
+        "SELECT * FROM protocoloconservacion WHERE tipocomponente=%s", [component]
+    )
+    row = c.fetchone()
+    if not row:
+        raise ValidationError(
+            "El administrador debe aprobar un protocolo de conservación para "
+            + component
+        )
+    protocol = dict(zip([x[0] for x in c.description], row))
+    if (
+        not protocol["temperaturamin"]
+        <= loc["temperaturaregistro"]
+        <= protocol["temperaturamax"]
+    ):
+        raise ValidationError(
+            "Temperatura incompatible con el protocolo de " + component
+        )
+    if protocol["requiereagitacion"] and not loc.get("tieneagitacion"):
+        raise ValidationError(
+            "El componente requiere un equipo con agitación confirmada."
+        )
+    return protocol
+
+
+def protocol(request, d):
+    with clinical_operation(request), connection.cursor() as c:
+        revision07(c)
+        staff = professional(c, request)
+        r = one(
+            c,
+            "INSERT INTO protocoloconservacion(tipocomponente,temperaturamin,temperaturamax,diasconservacion,requiereagitacion,aprobadopor) VALUES(%s,%s,%s,%s,%s,%s) ON CONFLICT(tipocomponente) DO UPDATE SET temperaturamin=excluded.temperaturamin,temperaturamax=excluded.temperaturamax,diasconservacion=excluded.diasconservacion,requiereagitacion=excluded.requiereagitacion,aprobadopor=excluded.aprobadopor,fechaaprobacion=now() RETURNING *",
+            [
+                d["tipocomponente"],
+                d["temperaturamin"],
+                d["temperaturamax"],
+                d["diasconservacion"],
+                d["requiereagitacion"],
+                staff,
+            ],
+        )
+        audit(
+            c,
+            request,
+            "protocoloconservacion",
+            None,
+            "CU15 protocolo aprobado para " + d["tipocomponente"],
+        )
+        return r
+
+
+def incident(request, d):
+    with clinical_operation(request), connection.cursor() as c:
+        revision07(c)
+        staff = professional(c, request)
+        t = one(c, "SELECT * FROM triajeclinico WHERE idtriaje=%s", [d["idtriaje"]])
+        patient(c, t["idposibledonador"])
+        c.execute(
+            "SELECT 1 FROM extracciondonacion WHERE idtriaje=%s UNION ALL SELECT 1 FROM incidenciacolecta WHERE idtriaje=%s",
+            [d["idtriaje"], d["idtriaje"]],
+        )
+        if c.fetchone():
+            raise ValidationError("El triaje ya tiene colecta o incidencia registrada.")
+        return one(
+            c,
+            "INSERT INTO incidenciacolecta(idtriaje,idpersonalsalud,motivo,volumenobtenidoml) VALUES(%s,%s,%s,%s) RETURNING *",
+            [d["idtriaje"], staff, d["motivo"], d["volumenobtenidoml"]],
+        )
+
+
+def communicate(request, diferimiento, d):
+    with clinical_operation(request), connection.cursor() as c:
+        revision07(c)
+        staff = professional(c, request)
+        r = one(
+            c,
+            "UPDATE diferimiento SET comunicacionfecha=now(),canalcomunicacion=%s,comunicadopor=%s WHERE iddiferimiento=%s RETURNING *",
+            [d["canal"], staff, diferimiento],
+        )
+        audit(
+            c,
+            request,
+            "diferimiento",
+            diferimiento,
+            "CU11 comunicación confirmada por " + d["canal"],
+        )
+        return r
+
+
+def discard_mother(request, madre, d):
+    with clinical_operation(request), connection.cursor() as c:
+        staff = professional(c, request)
+        bloquear_madre(c, madre)
+        m = one(c, "SELECT * FROM unidadsangretotal WHERE idunidadmadre=%s", [madre])
+        if m["estadoliberacion"] == "Rechazada":
+            raise ValidationError("Madre ya rechazada.")
+        parts = rows(
+            c,
+            "SELECT * FROM ejemplarbolsa WHERE idunidadmadre=%s ORDER BY idejemplarbolsa FOR UPDATE",
+            [madre],
+        )
+        if any(p["estadobolsak"] == "Despachada" for p in parts):
+            raise ValidationError(
+                "Hay componentes despachados: requiere revisión urgente y circuito de retiro."
+            )
+        locations = lock_locations(
+            c, [p["idubicacion"] for p in parts if p["idubicacion"]]
+        )
+        for p in parts:
+            c.execute(
+                "UPDATE reservasangre SET estadoreserva='Cancelada' WHERE idejemplarbolsa=%s AND estadoreserva='Activa'",
+                [p["idejemplarbolsa"]],
+            )
+        one(
+            c,
+            "INSERT INTO bajainventario(idunidadmadre,idpersonalsalud,motivobaja) VALUES(%s,%s,%s) RETURNING idbaja",
+            [madre, staff, d["motivobaja"]],
+        )
+        c.execute(
+            "UPDATE unidadsangretotal SET estadoliberacion='Rechazada' WHERE idunidadmadre=%s",
+            [madre],
+        )
+        c.execute(
+            "UPDATE ejemplarbolsa SET estadobolsak='Baja' WHERE idunidadmadre=%s AND estadobolsak<>'Baja'",
+            [madre],
+        )
+        for pk in locations:
+            refresh_location(c, pk)
+        return {"idunidadmadre": madre, "componentes_afectados": len(parts)}
+
+
+def equipment_conditions(request, ubicacion, d):
+    with clinical_operation(request), connection.cursor() as c:
+        revision07(c)
+        professional(c, request)
+        before = one(
+            c,
+            "SELECT * FROM ubicacionalmacen WHERE idubicacion=%s FOR UPDATE",
+            [ubicacion],
+        )
+        result = one(
+            c,
+            "UPDATE ubicacionalmacen SET temperaturaregistro=%s,tieneagitacion=%s WHERE idubicacion=%s RETURNING *",
+            [d["temperaturaregistro"], d["tieneagitacion"], ubicacion],
+        )
+        audit(
+            c,
+            request,
+            "ubicacionalmacen",
+            ubicacion,
+            f"CU15 condiciones verificadas: temperatura {before['temperaturaregistro']} -> {d['temperaturaregistro']}; agitacion {d['tieneagitacion']}",
+        )
+        return result
+
+
+def reactivate_autologous(request, madre, d):
+    with clinical_operation(request), connection.cursor() as c:
+        revision07(c)
+        professional(c, request)
+        bloquear_madre(c, madre)
+        owner = one(c, "SELECT * FROM colectaautologa WHERE idunidadmadre=%s", [madre])
+        c.execute(
+            "SELECT hemo_lote_aprobado(%s),%s::date>=CURRENT_DATE",
+            [madre, owner["fechacirugia"]],
+        )
+        approved, future = c.fetchone()
+        if not approved or not future:
+            raise ValidationError(
+                "Reactivación requiere ambos análisis aprobados y cirugía vigente."
+            )
+        parts = rows(
+            c,
+            "SELECT * FROM ejemplarbolsa WHERE idunidadmadre=%s ORDER BY idejemplarbolsa FOR UPDATE",
+            [madre],
+        )
+        if not parts:
+            raise ValidationError("No hay componentes autólogos registrados.")
+        for part in parts:
+            if (
+                not part["esexclusivoautologo"]
+                or part["estadobolsak"] in ["Despachada", "Baja"]
+                or part["fechacaducidad"] < owner["fechacirugia"]
+            ):
+                raise ValidationError(
+                    "Algún componente no permite reactivar la custodia autóloga."
+                )
+            c.execute(
+                "UPDATE reservasangre SET estadoreserva='Activa',fechavencimientoreserva=%s WHERE idejemplarbolsa=%s AND idreceptor=%s AND esautologa AND estadoreserva IN ('Cancelada','Vencida') RETURNING idreserva",
+                [owner["fechacirugia"], part["idejemplarbolsa"], owner["idreceptor"]],
+            )
+            changed = c.fetchall()
+            c.execute(
+                "SELECT 1 FROM reservasangre WHERE idejemplarbolsa=%s AND esautologa AND idreceptor=%s AND estadoreserva='Activa'",
+                [part["idejemplarbolsa"], owner["idreceptor"]],
+            )
+            if not c.fetchone():
+                raise ValidationError(
+                    "Falta la reserva original autóloga; no se sustituye por otra persona."
+                )
+            for row in changed:
+                audit(
+                    c,
+                    request,
+                    "reservasangre",
+                    row[0],
+                    "CU15 reserva autóloga reactivada tras revisión de análisis",
+                )
+        return {"idunidadmadre": madre, "reservas_verificadas": len(parts)}

@@ -86,6 +86,10 @@
 }
 .reference-screen form fieldset {
   gap: 18px;
+  min-width: 0;
+}
+.reference-screen form label {
+  min-width: 0;
 }
 .reference-screen #circuito-clinico > header {
   display: none;

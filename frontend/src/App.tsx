@@ -15,6 +15,8 @@ import {
   CreditCard,
   CalendarDays,
 } from "lucide-react";
+import { FinancePage } from "./components/FinancePage";
+import { ReportsPage } from "./components/ReportsPage";
 import React, { useState } from "react";
 import { Navbar } from "./components/Navbar";
 import { LoginModal } from "./components/LoginModal";
@@ -149,6 +151,8 @@ export default function App() {
                   ? [
                       ["personal", "Personal"],
                       ["auditoria", "Auditoría"],
+                      ["finanzas", "Finanzas"],
+                      ["reportes", "Consultas y KPIs"],
                     ]
                   : []),
               ].map(([id, label]) => (
@@ -200,6 +204,12 @@ export default function App() {
                     token={session.token}
                   />
                 )}
+              {tab === "finanzas" && session.activeRole === "ADMIN" && (
+                <FinancePage token={session.token!} />
+              )}
+              {tab === "reportes" && session.activeRole === "ADMIN" && (
+                <ReportsPage token={session.token!} />
+              )}
               {tab === "stock" && clinical && (
                 <ApiRecords
                   key="stock"

@@ -22,6 +22,16 @@ services:
         sync: false
       - key: BREVO_SENDER_EMAIL
         sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: STRIPE_MODE
+        value: test
+      - key: PAYMENT_FRONTEND_URL
+        sync: false
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
       - key: SUPABASE_TRANSACTION_POOLER
         value: "True"
       - key: USE_SQLITE

@@ -1,5 +1,7 @@
 # Continuación local de HemoVida — 31 de octubre de 2026
 
+> Informe histórico de la primera etapa. El estado y las pruebas actuales se documentan en [CICLO3_IMPLEMENTACION.md](CICLO3_IMPLEMENTACION.md); varios pendientes de este informe ya se implementaron.
+
 Base: HemoVida_liberacion_conjunta_y_bitacora.zip. Referencia: schema_actual_supabase.txt del paquete. No se utilizó HemoVida_original.zip como versión operativa ni el SQL antiguo de correcciones.
 
 ## Cambios implementados

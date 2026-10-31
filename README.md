@@ -3,6 +3,8 @@
 > Plataforma modular integral para la gestión de donantes, hemocomponentes, auditoría forense y trazabilidad transfusional.
 > Desarrollado con **Python 3.12**, **Django 5**, **Django REST Framework (DRF)**, **PostgreSQL 18** y **React 19 + Vite**.
 
+> Estado actual del ciclo 3: consultar [CICLO3_IMPLEMENTACION.md](CICLO3_IMPLEMENTACION.md). Incluye validación 06/07, clínica, finanzas, Stripe, CU24 y límites de las pruebas locales.
+
 ---
 
 ## 🏛️ Arquitectura del Sistema
