@@ -2,6 +2,7 @@
 Pruebas unitarias para la app Donantes (CU05) y Posible Donador.
 """
 from django.test import TestCase
+from unittest.mock import patch
 from rest_framework.test import APIClient
 from rest_framework import status
 from datetime import date, timedelta
@@ -101,6 +102,8 @@ class DonanteCarnetDigitalTestCase(TestCase):
         self.assertFalse(data['esPosibleDonador'])
         self.assertEqual(data['carnetDigitalCodigo'], 'HV-DON-2024-0491')
         self.assertEqual(data['ci'], '7894561-SC')
+        self.assertIsNone(data['grupoSanguineo'])
+        self.assertIsNone(data['factorRh'])
         self.assertEqual(data['sexo'], 'M')
         self.assertEqual(data['periodoEsperaDias'], 90)
         self.assertEqual(data['diasRestantesEspera'], 60)
@@ -134,3 +137,21 @@ class DonanteCarnetDigitalTestCase(TestCase):
     def test_cu05_donante_no_encontrado(self):
         response = self.client.get('/api/donantes/9999999-INEXISTENTE/carnet/')
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    @patch('apps.donantes.views.connection')
+    def test_grupo_confirmado_proviene_del_ultimo_analisis(self, db):
+        db.vendor='postgresql'
+        db.cursor.return_value.__enter__.return_value.fetchone.return_value=('AB','Negativo','Apto')
+        response=self.client.get(f'/api/donantes/{self.persona_varon.ci}/carnet/')
+        self.assertEqual(response.status_code,200)
+        self.assertEqual(response.data['grupoSanguineo'],'AB')
+        self.assertEqual(response.data['factorRh'],'Negativo')
+
+    @patch('apps.donantes.views.connection')
+    def test_grupo_no_se_inventa_si_ultimo_analisis_no_esta_aprobado(self, db):
+        db.vendor='postgresql'
+        db.cursor.return_value.__enter__.return_value.fetchone.return_value=('O','Positivo','Pendiente')
+        response=self.client.get(f'/api/donantes/{self.persona_varon.ci}/carnet/')
+        self.assertEqual(response.status_code,200)
+        self.assertIsNone(response.data['grupoSanguineo'])
+        self.assertIsNone(response.data['factorRh'])

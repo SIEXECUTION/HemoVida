@@ -237,157 +237,19 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   };
 
   // Helper para construir la sesión autorizada con el rol activo seleccionado (Criterio Multi-Rol y Selector de Perfil Págs 20-21)
-  const executeSessionLogin = async (roleCode: RoleCode, res: any, email: string, pwd: string) => {
-    const persona = res.usuario?.persona;
-    const rolesDisp: RolDisponible[] = res.rolesDisponibles || [];
-    let token = res.token || res.tokens?.access || '';
-    try { const selected = await apiService.selectRole(token,roleCode);token=selected.access;localStorage.setItem('hemovida_jwt_token',token); }
-    catch(e) { setLoginError((e as Error).message);return; }
-    const usuarioId = res.usuarioId || res.usuario?.idUsuario || Date.now();
-    const nombreCompleto = res.nombreCompleto || persona?.nombreCompleto || `${persona?.nombres || ''} ${persona?.apellidos || ''}`.trim() || res.usuario?.username || 'Usuario HemoVida';
-
-    if (roleCode === 'POSIBLE_DONADOR') {
-      const donorObj: UserDonor = availableUsers.find(u => u.email.toLowerCase() === email) || {
-        id: usuarioId,
-        ci: persona?.ci || '0000000',
-        nombres: persona?.nombres || nombreCompleto,
-        apellidos: persona?.apellidos || '',
-        email: email,
-        celular: persona?.celular || '+591 700-00000',
-        sexo: (persona?.sexo as any) || 'M',
-        fechaNacimiento: persona?.fechaNacimiento || '1998-01-01',
-        nacionalidad: 'Boliviana',
-        direccion: persona?.direccion || 'Santa Cruz',
-        ocupacion: persona?.ocupacion || 'Postulante a Donante',
-        tipoDonante: 'Voluntario Altruista',
-        carnetDigitalCodigo: '',
-        grupoSanguineo: 'O',
-        factorRh: 'Positivo',
-        fechaUltimaDonacion: null,
-        estadoHabilitacion: 'Diferido Temporal',
-        totalDonaciones: 0,
-        volumenHistoricoMl: 0
-      };
-      donorObj.password = pwd;
-
-      const userSession: UserSession = {
-        role: 'POSIBLE_DONADOR',
-        activeRole: 'POSIBLE_DONADOR',
-        usuarioId,
-        nombreCompleto,
-        username: res.usuario?.username || email,
-        email,
-        token,
-        rolesDisponibles: rolesDisp,
-        user: donorObj,
-        posibleDonador: {
-          estadoAptitud: 'No Apto',
-          tieneAnalisis: false
-        }
-      };
-
-      onSelectAccount({ type: 'session', session: userSession });
+  const executeSessionLogin = async (roleCode: RoleCode, res: any, email: string, _pwd: string) => {
+    try {
+      const originalToken=res.token || res.tokens?.access;
+      if(!originalToken)throw new Error('La API no devolvió una sesión válida.');
+      const selected=await apiService.selectRole(originalToken,roleCode);
+      const account=res.usuario;
+      if(!account?.idUsuario)throw new Error('Falta la identidad de la cuenta.');
+      const rolesDisp:RolDisponible[]=res.rolesDisponibles||account.roles||[];
+      onSelectAccount({type:'session',session:{role:roleCode,activeRole:roleCode,usuarioId:account.idUsuario,nombreCompleto:res.nombreCompleto||account.persona?.nombreCompleto||account.username,username:account.username,email:account.email,token:selected.access,rolesDisponibles:rolesDisp,persona:account.persona||undefined}});
       onClose();
-      return;
-    }
-
-    if (roleCode === 'DONANTE') {
-      const donorObj: UserDonor = availableUsers.find(u => u.email.toLowerCase() === email) || {
-        id: usuarioId,
-        ci: persona?.ci || '0000000',
-        nombres: persona?.nombres || nombreCompleto,
-        apellidos: persona?.apellidos || '',
-        email: email,
-        celular: persona?.celular || '+591 700-00000',
-        sexo: (persona?.sexo as any) || 'M',
-        fechaNacimiento: persona?.fechaNacimiento || '1995-01-01',
-        nacionalidad: 'Boliviana',
-        direccion: persona?.direccion || 'Santa Cruz',
-        ocupacion: persona?.ocupacion || 'Donante',
-        tipoDonante: 'Voluntario Altruista',
-        carnetDigitalCodigo: `HV-DON-${usuarioId}`,
-        grupoSanguineo: 'O',
-        factorRh: 'Positivo',
-        fechaUltimaDonacion: null,
-        estadoHabilitacion: 'Apto',
-        totalDonaciones: 1,
-        volumenHistoricoMl: 450
-      };
-      donorObj.password = pwd;
-
-      const userSession: UserSession = {
-        role: 'donante',
-        activeRole: 'DONANTE',
-        usuarioId,
-        nombreCompleto,
-        username: res.usuario?.username || email,
-        email,
-        token,
-        rolesDisponibles: rolesDisp,
-        user: donorObj
-      };
-
-      onSelectAccount({ type: 'session', session: userSession });
-      onClose();
-      return;
-    }
-
-    // Roles de Personal de Salud
-    const staffRoleMap: Record<RoleCode, StaffRole> = {
-      'ADMIN': 'administrador',
-      'DOC_TRIAJE': 'medico',
-      'PERS_COLECTA': 'recepcion',
-      'BIOQ_INTEGRAL': 'bioquimico',
-      'TEC_LOGISTICA': 'despacho',
-      'POSIBLE_DONADOR': 'donante',
-      'DONANTE': 'donante',
-      'RECEPTOR': 'donante',
-      'MED_SOLICITANTE': 'medico'
-    };
-
-    const targetStaffRole: StaffRole = staffRoleMap[roleCode] || 'administrador';
-    const staffCargoMap: Record<RoleCode, string> = {
-      'ADMIN': 'Administrador del Sistema & Auditor RBAC',
-      'DOC_TRIAJE': 'Médico de Triaje Clínico & Hemoterapeuta',
-      'PERS_COLECTA': 'Personal de Admisión, Registro y Colecta',
-      'BIOQ_INTEGRAL': 'Bioquímico Integral de Laboratorio',
-      'TEC_LOGISTICA': 'Técnico de Logística, Almacén y Despacho',
-      'POSIBLE_DONADOR': 'Posible Donador',
-      'DONANTE': 'Donante Calificado',
-      'RECEPTOR': 'Receptor',
-      'MED_SOLICITANTE': 'Médico Solicitante'
-    };
-
-    const staffObj: StaffAccount = availableStaff.find(s => s.rol === targetStaffRole) || {
-      id: `staff-${usuarioId}`,
-      rol: targetStaffRole,
-      nombre: nombreCompleto,
-      cargo: staffCargoMap[roleCode] || res.usuario?.rol?.nombreRol || 'Personal de Salud',
-      ci: persona?.ci || '0000000',
-      email: email,
-      turno: 'Turno Mañana (07:00 - 15:00)',
-      credencial: `HV-${roleCode}-01`,
-      sede: 'Banco de Sangre Central'
-    };
-    staffObj.password = pwd;
-
-    const userSession: UserSession = {
-      role: targetStaffRole,
-      activeRole: roleCode,
-      usuarioId,
-      nombreCompleto,
-      username: res.usuario?.username || email,
-      email,
-      token,
-      rolesDisponibles: rolesDisp,
-      staff: staffObj
-    };
-
-    onSelectAccount({ type: 'session', session: userSession });
-    onClose();
+    }catch(e){setLoginError((e as Error).message);}
   };
 
-  // 1. INICIAR SESIÓN ESTRICTAMENTE CON CORREO ELECTRÓNICO Y CONTRASEÑA
   const handleEmailPasswordLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError(null);
@@ -416,7 +278,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
     try {
       const apiRes = await apiService.login(cleanEmail, cleanPwd);
       if (apiRes && (apiRes.token || apiRes.tokens)) {
-        localStorage.setItem('hemovida_jwt_token', apiRes.token || apiRes.tokens?.access);
+        const token=apiRes.token || apiRes.tokens?.access; if(!token)throw new Error('Token ausente.');
 
         const rolesDisp: RolDisponible[] = apiRes.rolesDisponibles || [];
 
@@ -429,13 +291,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
           executeSessionLogin(rolesDisp[0].codigo, apiRes, cleanEmail, cleanPwd);
           return;
         } else {
-          // Fallback en caso de que no tenga roles parametrizados
-          const legacyRol = (apiRes.usuario?.rol?.codigoRol || apiRes.usuario?.rol?.nombreRol || 'DONANTE').toUpperCase();
-          const targetCode: RoleCode = (['ADMIN', 'POSIBLE_DONADOR', 'DONANTE', 'DOC_TRIAJE', 'PERS_COLECTA', 'BIOQ_INTEGRAL', 'TEC_LOGISTICA'] as RoleCode[]).includes(legacyRol as any)
-            ? (legacyRol as RoleCode)
-            : 'DONANTE';
-          executeSessionLogin(targetCode, apiRes, cleanEmail, cleanPwd);
-          return;
+          throw new Error('La cuenta no tiene perfiles asignados. Contacta al administrador.');
         }
       }
     } catch (apiErr: any) {
@@ -567,7 +423,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
       // Iniciar sesión inmediatamente con las credenciales registradas
       const loginRes = await apiService.login(cleanEmail, regPassword);
       if (loginRes && (loginRes.token || loginRes.tokens)) {
-        localStorage.setItem('hemovida_jwt_token', loginRes.token || loginRes.tokens.access);
+        if (!(loginRes.token || loginRes.tokens?.access)) throw new Error('Sesión no válida.');
         executeSessionLogin('POSIBLE_DONADOR', loginRes, cleanEmail, regPassword);
         return;
       }
@@ -616,43 +472,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
       return;
     }
 
-    const prefixMap: Record<StaffRole, string> = {
-      medico: 'MED',
-      bioquimico: 'BIOQ',
-      despacho: 'DESP',
-      recepcion: 'REC',
-      administrador: 'ADM'
-    };
-    const prefix = prefixMap[regStaffRol] || 'STF';
-    const credCode = `${prefix}-2026-${Math.floor(1000 + Math.random() * 9000)}`;
-
-    const newStaffMember: StaffAccount = {
-      id: `staff-${regStaffRol}-${Date.now()}`,
-      rol: regStaffRol,
-      nombre: `${regStaffNombres.trim()} ${regStaffApellidos.trim()}`,
-      cargo: regStaffCargo.trim() || `Personal de Salud (${regStaffRol})`,
-      ci: regStaffCi.trim(),
-      email: regStaffEmail.trim().toLowerCase(),
-      turno: regStaffTurno,
-      credencial: credCode,
-      matriculaProfesional: regStaffMatricula.trim(),
-      especialidad: regStaffCargo.trim(),
-      telefono: regStaffCelular.trim() || '+591 700-00000',
-      sede: regStaffSede,
-      password: regStaffPassword,
-      fechaSolicitud: new Date().toLocaleDateString('es-BO', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
-      estadoAprobacion: 'pendiente'
-    };
-
-    if (onRequestStaffAccount) {
-      onRequestStaffAccount(newStaffMember);
-      setStaffRequestSent(true);
-      setSubmittedStaffName(newStaffMember.nombre);
-      setSubmittedStaffRole(newStaffMember.rol);
-    } else {
-      onSelectAccount({ type: regStaffRol, staff: newStaffMember } as any);
-      onClose();
-    }
+    setRegStaffError('El alta de personal debe ser realizada por un administrador. No se creó ninguna solicitud.');
   };
 
 

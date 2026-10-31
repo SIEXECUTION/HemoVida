@@ -9,7 +9,7 @@ type Field = {
 };
 const input =
   "w-full border border-slate-300 bg-slate-50 text-slate-900 rounded-xl p-3";
-function Form({
+export function Form({
   title,
   fields,
   submit,
@@ -128,7 +128,7 @@ export function ClinicalCircuit({
     [parts, setParts] = useState<Row[]>([]),
     [mother, setMother] = useState(""),
     [busy, setBusy] = useState(false);
-  const bearer = token || localStorage.getItem("hemovida_jwt_token");
+  const bearer = token || sessionStorage.getItem("hemovida_jwt_token");
   async function api(path: string, d?: Row) {
     if (!bearer) throw new Error("Inicia sesión con un perfil autorizado.");
     const r = await fetch(`${API_BASE_URL}/clinica/${path}`, {

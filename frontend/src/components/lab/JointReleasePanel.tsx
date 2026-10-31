@@ -15,7 +15,7 @@ export function JointReleasePanel({ token }: { token?: string }) {
   const [hema, setHema] = useState<Record<string, string>>(hemaEmpty);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
-  const bearer = token || localStorage.getItem('hemovida_jwt_token');
+  const bearer = token || sessionStorage.getItem('hemovida_jwt_token');
   async function api(path: string, method = 'GET', data?: unknown) {
     if (!bearer) throw new Error('Inicia sesión con tu cuenta de laboratorio.');
     const response = await fetch(`${API_BASE_URL}/laboratorio/${path}`, { method, headers: { Authorization: `Bearer ${bearer}`, 'Content-Type': 'application/json' }, ...(data ? { body: JSON.stringify(data) } : {}) });

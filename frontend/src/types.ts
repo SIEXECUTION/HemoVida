@@ -41,6 +41,7 @@ export type StaffRole =
   | 'bioquimico';
 
 export interface UserSession {
+  persona?: {idPersona?:number;ci?:string;nombres?:string;apellidos?:string;nombreCompleto?:string;sexo?:string;fechaNacimiento?:string;celular?:string;direccion?:string;ocupacion?:string;nacionalidad?:string};
   role: AppRole;
   activeRole: RoleCode;
   usuarioId: number;

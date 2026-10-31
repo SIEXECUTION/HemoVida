@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  X, 
-  Award, 
-  Droplet, 
-  QrCode, 
-  ShieldCheck, 
-  Download, 
-  Calendar, 
+import {
+  X,
+  Award,
+  Droplet,
+  QrCode,
+  ShieldCheck,
+  Download,
+  Calendar,
   Heart,
   CheckCircle2,
   Fingerprint,
@@ -40,8 +40,8 @@ export const DigitalCardModal: React.FC<DigitalCardModalProps> = ({
 
   const eligibility = calculateBiologicalEligibility(user);
 
-  const carnetCodeToUse = (user.ci && user.ci.trim()) 
-    ? user.ci.trim() 
+  const carnetCodeToUse = (user.ci && user.ci.trim())
+    ? user.ci.trim()
     : (user.carnetDigitalCodigo || '0000000');
 
   const carnetUrl = typeof window !== 'undefined'
@@ -107,7 +107,7 @@ export const DigitalCardModal: React.FC<DigitalCardModalProps> = ({
   };
 
   const isPostulante = Boolean(
-    user.totalDonaciones === 0 || 
+    user.totalDonaciones === 0 ||
     (user.carnetDigitalCodigo && user.carnetDigitalCodigo.startsWith('HV-POST')) ||
     user.ocupacion?.includes('Postulante')
   );
@@ -123,8 +123,8 @@ export const DigitalCardModal: React.FC<DigitalCardModalProps> = ({
           <div className="flex items-center gap-2">
             <Award className="w-5 h-5 text-rose-500 shrink-0" />
             <span className="font-bold text-sm font-['Outfit',sans-serif] truncate">
-              {isPublicVerification 
-                ? (isPostulante ? 'Validación Oficial: Postulante Registrado' : 'Validación Oficial: Donante Acreditado') 
+              {isPublicVerification
+                ? (isPostulante ? 'Validación Oficial: Postulante Registrado' : 'Validación Oficial: Donante Acreditado')
                 : (isPostulante ? 'Carnet Provisional de Postulante' : 'Carnet Digital del Donante')}
             </span>
           </div>
@@ -139,10 +139,10 @@ export const DigitalCardModal: React.FC<DigitalCardModalProps> = ({
 
         {/* Public Verification Medical Status Banner */}
         {isPublicVerification && (
-          <div className={`${isPostulante ? 'bg-amber-600' : (eligibility.habilitado ? 'bg-emerald-600' : 'bg-amber-600')} text-white px-5 sm:px-6 py-3 flex items-start gap-2.5 text-xs shadow-inner`}>
+          <div className={`${isPostulante ? 'bg-amber-600' : (eligibility.isEligible ? 'bg-emerald-600' : 'bg-amber-600')} text-white px-5 sm:px-6 py-3 flex items-start gap-2.5 text-xs shadow-inner`}>
             {isPostulante ? (
               <Clock className="w-5 h-5 shrink-0 text-white mt-0.5" />
-            ) : eligibility.habilitado ? (
+            ) : eligibility.isEligible ? (
               <CheckCircle2 className="w-5 h-5 shrink-0 text-white mt-0.5" />
             ) : (
               <Calendar className="w-5 h-5 shrink-0 text-white mt-0.5" />
@@ -151,14 +151,14 @@ export const DigitalCardModal: React.FC<DigitalCardModalProps> = ({
               <p className="font-bold tracking-tight text-xs sm:text-sm">
                 {isPostulante
                   ? '📋 POSTULANTE REGISTRADO EN HEMOVIDA (EN EVALUACIÓN)'
-                  : eligibility.habilitado 
-                    ? '✓ CERTIFICACIÓN OFICIAL: HABILITADO PARA DONAR' 
+                  : eligibility.isEligible
+                    ? '✓ CERTIFICACIÓN OFICIAL: HABILITADO PARA DONAR'
                     : '⏳ EN PERÍODO DE RECUPERACIÓN BIOLÓGICA'}
               </p>
               <p className="text-[11px] opacity-90 mt-0.5 leading-snug">
                 {isPostulante
                   ? 'Usuario registrado en la base de datos de HemoVida. Habilitado para triaje clínico presencial y primera colecta (tamizaje serológico pendiente tras extracción).'
-                  : eligibility.habilitado
+                  : eligibility.isEligible
                     ? `Donante apto y verificado en la base de datos central de HemoVida Santa Cruz (${user.sexo === 'M' ? '90 días' : '120 días'} de intervalo biológico reglamentario).`
                     : `Reposo celular en curso. Próxima fecha autorizada: ${eligibility.fechaProximaHabilitada.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })} (${eligibility.diasRestantes} días restantes).`
                 }
@@ -169,7 +169,7 @@ export const DigitalCardModal: React.FC<DigitalCardModalProps> = ({
 
         <div className="p-5 sm:p-6 space-y-4 max-h-[80vh] overflow-y-auto">
           {/* THE DIGITAL CREDENTIAL CARD (SIN FOTO DE PERSONA) */}
-          <div 
+          <div
             id="printable-donor-card"
             className={`bg-gradient-to-br ${isPostulante ? 'from-amber-700 via-orange-600 to-amber-900 border-amber-400/40' : 'from-rose-700 via-rose-600 to-red-800 border-rose-400/40'} text-white rounded-3xl p-5 sm:p-6 shadow-xl relative overflow-hidden border select-none`}
           >
@@ -283,8 +283,8 @@ export const DigitalCardModal: React.FC<DigitalCardModalProps> = ({
               {/* Código QR Real y Escaneable */}
               <div className="bg-white p-1.5 rounded-xl text-slate-900 flex items-center gap-2 shadow-md">
                 <div className="w-11 h-11 sm:w-12 sm:h-12 bg-white rounded-lg flex items-center justify-center p-0.5 border border-slate-200 shrink-0">
-                  <img 
-                    src={qrCodeImageUrl} 
+                  <img
+                    src={qrCodeImageUrl}
                     alt={`QR de Verificación ${user.carnetDigitalCodigo}`}
                     className="w-full h-full object-contain"
                   />
@@ -336,11 +336,11 @@ export const DigitalCardModal: React.FC<DigitalCardModalProps> = ({
             <div className="flex justify-between items-center">
               <span className="font-semibold text-slate-700">Estado de Habilitación:</span>
               <strong className={`px-2 py-0.5 rounded font-bold ${
-                isPostulante 
-                  ? 'text-amber-800 bg-amber-100' 
-                  : (eligibility.habilitado ? 'text-emerald-700 bg-emerald-100' : 'text-amber-800 bg-amber-100')
+                isPostulante
+                  ? 'text-amber-800 bg-amber-100'
+                  : (eligibility.isEligible ? 'text-emerald-700 bg-emerald-100' : 'text-amber-800 bg-amber-100')
               }`}>
-                {isPostulante ? 'En Evaluación (Pre-filtro)' : (eligibility.habilitado ? 'Habilitado' : 'Diferido Temporal')}
+                {isPostulante ? 'En Evaluación (Pre-filtro)' : (eligibility.isEligible ? 'Habilitado' : 'Diferido Temporal')}
               </strong>
             </div>
             <div className="flex justify-between items-center">
@@ -350,8 +350,8 @@ export const DigitalCardModal: React.FC<DigitalCardModalProps> = ({
             <div className="flex justify-between items-center">
               <span className="text-slate-500">{isPostulante ? 'Tamizaje serológico:' : 'Próxima fecha autorizada:'}</span>
               <span className={`font-bold ${isPostulante ? 'text-amber-700' : 'text-rose-700'}`}>
-                {isPostulante 
-                  ? '6 marcadores tras primera extracción' 
+                {isPostulante
+                  ? '6 marcadores tras primera extracción'
                   : eligibility.fechaProximaHabilitada.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })
                 }
               </span>
@@ -378,9 +378,9 @@ export const DigitalCardModal: React.FC<DigitalCardModalProps> = ({
             </div>
             <div className="bg-white p-2 rounded-xl border border-slate-200/80 font-mono text-[11px] text-slate-700 truncate select-all flex items-center justify-between">
               <span className="truncate">{carnetUrl}</span>
-              <a 
-                href={carnetUrl} 
-                target="_blank" 
+              <a
+                href={carnetUrl}
+                target="_blank"
                 rel="noreferrer"
                 className="text-slate-400 hover:text-rose-600 ml-2 shrink-0"
                 title="Abrir enlace en pestaña nueva"
@@ -396,8 +396,8 @@ export const DigitalCardModal: React.FC<DigitalCardModalProps> = ({
               onClick={handleDownloadImage}
               disabled={isDownloading}
               className={`w-full py-2.5 sm:py-3 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-2 transition-all shadow-md ${
-                isDownloading 
-                  ? 'bg-rose-400 cursor-wait' 
+                isDownloading
+                  ? 'bg-rose-400 cursor-wait'
                   : 'bg-rose-600 hover:bg-rose-700 cursor-pointer shadow-rose-600/25 active:scale-[0.99]'
               }`}
               id="btn-download-carnet-digital"

@@ -122,31 +122,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
     setIsSubmitting(true);
     try {
       if (mode === 'standard') {
-        const storedPwd = session.role === 'donante' ? session.user?.password : session.staff?.password;
-
-        try {
-          await apiService.changePassword(userEmail || session.username, currentPassword, null, newPassword);
-        } catch (apiErr: any) {
-          // Si el servidor detectó que la contraseña actual es errónea:
-          if (apiErr?.message && (apiErr.message.toLowerCase().includes('incorrecta') || apiErr.message.toLowerCase().includes('actual'))) {
-            setErrorMsg('La contraseña actual ingresada es incorrecta.');
-            setIsSubmitting(false);
-            return;
-          }
-
-          // Si el usuario es un donante local verificado o sesión local y el backend está offline
-          if (storedPwd && storedPwd === currentPassword) {
-            console.warn('Contraseña actualizada en sesión local:', apiErr?.message);
-          } else if (storedPwd && storedPwd !== currentPassword) {
-            setErrorMsg('La contraseña actual ingresada es incorrecta.');
-            setIsSubmitting(false);
-            return;
-          } else if (apiErr?.message && !apiErr.message.includes('Fallo de conexión')) {
-            setErrorMsg(apiErr.message);
-            setIsSubmitting(false);
-            return;
-          }
-        }
+        await apiService.changePassword(userEmail || session.username, currentPassword, null, newPassword);
       } else {
         // Modo recuperación por correo
         if (!tokenCode.trim() || tokenCode.trim().length !== 6) {

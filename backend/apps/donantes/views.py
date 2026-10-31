@@ -7,6 +7,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from django.db.models import Sum, Count, Q
+from django.db import connection
 from datetime import date, timedelta
 from django.shortcuts import get_object_or_404
 
@@ -76,6 +77,12 @@ class DonanteCarnetDigitalView(APIView):
             total_donaciones = agregados['total_donaciones'] or 0
             volumen_total = agregados['volumen_total'] or 0
 
+            grupo, rh = None, None
+            if connection.vendor == 'postgresql':
+                with connection.cursor() as cursor:
+                    cursor.execute("SELECT h.grupoaboconfirmado,h.factorrhconfirmado,h.dictameninmunohematologico FROM analisisinmunohematologico h JOIN unidadsangretotal m USING(idunidadmadre) JOIN extracciondonacion e USING(idextraccion) WHERE e.idpersonadonante=%s AND h.etapaanalisis='Post-Extraccion' ORDER BY h.fechaanalisis DESC,h.idanalisishematologico DESC LIMIT 1", [persona.idPersona])
+                    result=cursor.fetchone()
+                    if result and result[2]=='Apto':grupo,rh=result[:2]
             payload = {
                 'esPosibleDonador': False,
                 'carnetDigitalCodigo': donante.carnetDigitalCodigo,
@@ -97,8 +104,8 @@ class DonanteCarnetDigitalView(APIView):
                 'totalDonacionesHistoricas': total_donaciones,
                 'volumenHistoricoAportadoMl': volumen_total,
                 'nacionalidad': getattr(persona, 'nacionalidad', 'Boliviana') or 'Boliviana',
-                'grupoSanguineo': 'O',
-                'factorRh': 'Positivo',
+                'grupoSanguineo': grupo,
+                'factorRh': rh,
                 'extraccionesRecientes': extracciones_qs[:10],
             }
 

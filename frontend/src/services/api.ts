@@ -216,7 +216,7 @@ export const apiService = {
 
     const queryString = params.toString() ? `?${params.toString()}` : '';
     const headers: Record<string, string> = { 'Accept': 'application/json' };
-    const savedToken = token || localStorage.getItem('hemovida_jwt_token');
+    const savedToken = token || sessionStorage.getItem('hemovida_jwt_token');
     if (savedToken) {
       headers['Authorization'] = `Bearer ${savedToken}`;
     }
@@ -248,7 +248,7 @@ export const apiService = {
         'Content-Type': 'application/json',
         'Accept': 'application/json'
       };
-      const savedToken = localStorage.getItem('hemovida_jwt_token');
+      const savedToken = sessionStorage.getItem('hemovida_jwt_token');
       if (savedToken) {
         headers['Authorization'] = `Bearer ${savedToken}`;
       }
@@ -376,7 +376,7 @@ export const apiService = {
    * CU02: Actualizar estado de usuario (Desbloquear / Activar / Inactivar)
    */
   async updateUsuarioEstado(idUsuario: number, estado: 'Activo' | 'Inactivo' | 'Bloqueado', token?: string): Promise<any> {
-    const savedToken = token || localStorage.getItem('hemovida_jwt_token');
+    const savedToken = token || sessionStorage.getItem('hemovida_jwt_token');
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       'Accept': 'application/json'
@@ -385,7 +385,7 @@ export const apiService = {
       headers['Authorization'] = `Bearer ${savedToken}`;
     }
     const res = await fetch(`${API_BASE_URL}/usuarios/${idUsuario}/estado/`, {
-      method: 'PUT',
+      method: 'PATCH',
       headers,
       body: JSON.stringify({ estado })
     });

@@ -70,13 +70,13 @@ export const Navbar: React.FC<NavbarProps> = ({
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 overflow-x-auto">
           <div className="flex items-center gap-2 shrink-0">
             <span className="inline-flex items-center gap-1 bg-rose-600 text-white font-bold px-2 py-0.5 rounded-full text-[11px] animate-pulse">
-              <AlertTriangle className="w-3 h-3" /> URGENCIA
+              <AlertTriangle className="w-3 h-3" /> HEMOVIDA
             </span>
             <span>
-              Reserva crítica en Santa Cruz de la Sierra: <strong>Grupos O- Negativo y A- Negativo</strong> se requieren con urgencia.
+              Donar es compartir vida. Consulta tu estado y atención con el banco de sangre.
             </span>
           </div>
-          {session?.role === 'donante' && (
+          {activeRole === 'DONANTE' && (
             <button 
               onClick={() => onSelectTab('citas')}
               className="text-rose-200 hover:text-white underline text-[11px] font-semibold whitespace-nowrap cursor-pointer ml-4"
@@ -95,7 +95,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div className="flex items-center gap-3 sm:gap-4">
             <div 
               onClick={() => {
-                if (session?.role === 'donante') {
+                if (activeRole === 'DONANTE') {
                   onSelectTab('inicio');
                 }
               }}

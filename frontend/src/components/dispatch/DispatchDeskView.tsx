@@ -83,9 +83,9 @@ export const DispatchDeskView: React.FC<DispatchDeskViewProps> = ({
 
     if (onRecordAudit) {
       onRecordAudit({
-        accion: `Despacho Transfusional Emitido: ${dispatchRecord.codigoComprobante}`,
+        accion: `Despacho Transfusional Emitido: ${dispatchRecord.cobroServicio.numeroReciboFactura}`,
         tablaAfectada: 'ComprobanteDespacho',
-        detalles: `Despacho de ${dispatchRecord.unidadesDespachadas.length} unidades para paciente ${dispatchRecord.pacienteNombre} (C.I. ${dispatchRecord.pacienteCi}) en ${dispatchRecord.hospitalDestino}. Estado de Cobro: ${dispatchRecord.cobroServicio.estadoPago}.`
+        detalles: `Despacho de ${dispatchRecord.unidadesDespachadas.length} unidades para paciente ${dispatchRecord.pacienteReceptor.nombres} (C.I. ${dispatchRecord.pacienteReceptor.ci}) en ${dispatchRecord.hospitalDestino}. Estado de Cobro: ${dispatchRecord.cobroServicio.estadoPago}.`
       });
     }
   };
