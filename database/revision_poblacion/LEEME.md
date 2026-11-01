@@ -1,9 +1,14 @@
 # Población académica de los ciclos 2 y 3
 
-Estado al 1 de noviembre de 2026: SQL adaptado a las migraciones 06–10 y
-probado en PostgreSQL local. La consulta de solo lectura a Supabase encontró
-0 personas y 0 citas DEMO-C3, además de 6 requisitos activos. Esta versión
-no se aplicó en Supabase. La instrucción vigente es preparar para revisión.
+Estado al 1 de noviembre de 2026: **población aplicada en Supabase**, después
+de autorización explícita del usuario y respaldo privado de estructura y datos.
+La verificación desde una conexión nueva confirmó 6 personas, 4 citas con
+prefiltros completos, 1 programa pendiente y 2 deudas por 300 BOB, entre los
+registros detallados abajo. Las API de agenda, programas y finanzas respondieron
+200 con esos datos. Los 23 usuarios anteriores se conservaron sin modificaciones.
+Ver [informe de aplicación](../../informes/POBLACION_DEMO_2026-11-01.md).
+El archivo SQL del repositorio conserva ROLLBACK para evitar cargas accidentales;
+la ejecución autorizada se confirmó mediante COMMIT controlado.
 
 ## Archivos
 
@@ -97,7 +102,9 @@ días cerrados, catálogo/hash/respuestas, programa e historial pendientes,
 detalles de solicitudes, 300 BOB de saldo y ausencia de cuentas/pagos nuevos.
 También comprueban las API reales de agenda, programas y finanzas; el acceso
 financiero de logística devuelve 403. No se llamó a Stripe ni Brevo.
-No se declara una comprobación visual manual del navegador ni una carga remota.
+Se verificaron además las mismas API sobre Supabase, en transacción de solo
+lectura y con perfil ADMIN de prueba técnica. No se declara una comprobación
+visual manual del navegador ni una nueva prueba de inicio de sesión.
 
 El informe individual de usuarios y el CSV original permanecen fuera de Git en
 `C:/Users/Sebas/Desktop/pg/revision_hemovida`. No se desactivaron usuarios por

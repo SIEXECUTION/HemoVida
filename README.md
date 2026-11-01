@@ -7,7 +7,9 @@
 
 > Cierre técnico académico actualizado: [Informe de ciclos 2 y 3](informes/INFORME_CIERRE_CICLOS_2_Y_3_2026-11-01.md). Supabase tiene 08/09 verificadas y 10 aplicada; conservación académica configurada, calendario Bolivia y permisos heredados corregidos. Código local probado; publicación en Render/Cloudflare separada.
 
-> Estado actual del ciclo 2: [CICLO2_CU21_CU23_Y_AJUSTES.md](CICLO2_CU21_CU23_Y_AJUSTES.md). CU21/CU23, borradores, cierres, búsqueda y admisión presencial están implementados y probados localmente. Se detectó 08 en Supabase; falta aplicar `database/09_ciclo2_programacion_y_ajustes.sql` y realizar aceptación operativa/despliegue.
+> Estado actual del ciclo 2: [CICLO2_CU21_CU23_Y_AJUSTES.md](CICLO2_CU21_CU23_Y_AJUSTES.md). CU21/CU23, borradores, cierres, búsqueda y admisión presencial están implementados y probados localmente. 08/09 están verificadas en Supabase y 10 aplicada; la aceptación del despliegue sigue separada.
+
+> Población académica aplicada en Supabase con respaldo previo: [registros y verificación](informes/POBLACION_DEMO_2026-11-01.md). Seis personas DEMO, cuatro citas para el 02/11/2026, programa autólogo pendiente y dos deudas por 300 BOB; usuarios existentes conservados.
 
 ---
 

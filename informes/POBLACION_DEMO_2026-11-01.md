@@ -1,32 +1,82 @@
-# Población académica preparada — 1 de noviembre de 2026
+# Población académica aplicada — 1 de noviembre de 2026
 
-Se actualizó `database/revision_poblacion/02_poblacion_demo_revision.sql` para
-el esquema final de los ciclos 2 y 3. Se conservan seis escenarios identificados
-por `DEMO-C3-*`, sin crear credenciales ni cambiar usuarios existentes.
+**Supabase quedó poblado con los escenarios DEMO autorizados.** Se ejecutó la
+versión `7489429` del SQL, después de aprobación explícita del usuario para
+cargar en Supabase con respaldo previo. El COMMIT se verificó desde otra conexión.
 
-Incluye 6 personas/candidaturas, 4 citas de evaluación con turno y prefiltro
-versionado, 3 receptores, 1 programación autóloga pendiente con historial,
-1 institución, 3 solicitudes con detalle, 2 deudas por 300 BOB y 1 equipo vacío.
-Dos citas tienen una respuesta pendiente para evaluación profesional.
-La carga no genera resultados médicos, liberaciones o pagos aprobados.
+## Registros guardados
 
-## Evidencia
+| Registro nuevo | Cantidad |
+| --- | ---: |
+| Personas / candidaturas | 6 / 6 |
+| Citas / prefiltros históricos | 4 / 4 |
+| Respuestas de detalle | 24 (6 requisitos por cita) |
+| Receptores | 3 |
+| Programación autóloga / historial | 1 / 1 |
+| Institución | 1 |
+| Solicitudes / detalles de componente | 3 / 3 |
+| Deudas pendientes | 2, por 100 y 200 BOB |
+| Equipo de almacenamiento vacío | 1 |
 
-- Consulta de Supabase de solo lectura: 0 personas y 0 citas DEMO-C3; 6 requisitos
-  activos y perfiles existentes suficientes para el escenario.
-- Dos pruebas integradas pasan en PostgreSQL local: SQL real, repetición,
-  secuencias, integridad de prefiltro y horarios, días cerrados, programa,
-  historial, solicitudes y cartera.
-- API de agenda: 4 citas y 6 candidatos; programación: 1 pendiente; finanzas:
-  2 deudas y 300 BOB sin pagos/comprobantes. Logística recibe 403 en finanzas.
-- Los registros creados por las pruebas se revierten. Las secuencias locales
-  sí pueden avanzar. No se insertaron datos ni ajustaron secuencias en Supabase.
+Códigos identificadores: `DEMO-C3-*`. El programa `DEMO-C3-AUTO-04` quedó
+`PendienteRevision`, versión 1. No se crearon pagos, firmas, extracciones,
+análisis aprobados ni bolsas liberadas. Los protocolos existentes se conservaron.
 
-## Próximo paso
+Las citas son de evaluación y quedaron sin asistencia confirmada:
 
-Revisar y autorizar esta población concreta para Supabase. Después, respaldo
-privado, ejecución transaccional con COMMIT y comprobación desde otra conexión.
-El archivo del repositorio conserva ROLLBACK por la instrucción previa de
-preparar SQL para revisión sin aplicarlo. Esta preparación no implica que la
-base compartida ya esté poblada ni que todos los circuitos clínicos hayan sido
-recorridos con los datos DEMO. El Word aún no se ha actualizado.
+| Persona | ID cita | Fecha y hora de Bolivia | Prefiltro |
+| --- | ---: | --- | --- |
+| DEMO-C3-P01 | 110 | 02/11/2026 08:00 | Cumple requisitos declarados sintéticos |
+| DEMO-C3-P02 | 111 | 02/11/2026 08:15 | Un requisito pendiente de revisión |
+| DEMO-C3-P03 | 112 | 02/11/2026 08:30 | Un requisito pendiente de revisión |
+| DEMO-C3-P04 | 113 | 02/11/2026 08:45 | Cumple requisitos declarados sintéticos |
+
+Son turnos de 15 minutos, con un cupo cada uno. Ningún prefiltro constituye
+aptitud clínica ni autorización para extraer. La cirugía sintética del programa
+se calcula a 30 días de su creación y todavía requiere revisión por Bioquímica.
+
+## Respaldo y ejecución
+
+Respaldo privado fuera de Git:
+`.venv/poblacion_respaldos/20261101T105502Z/public_antes.dump`.
+Contiene estructura y datos del esquema public; no incluye roles globales,
+configuración de Supabase Auth/Storage ni servicios externos.
+Tamaño: 260478 bytes. SHA256:
+`cb998cb38c31c870fa9a6a708ae5d1a44f24ad0ae7a0f35cc38bc4acfb620a65`.
+Se comprobó que pg_restore puede leer su índice. No se realizó una restauración.
+
+Antes del COMMIT se compararon conteos de 31 tablas y huellas de usuario,
+usuariorol, rol, requisitos y protocolos. Las diferencias coincidieron con los
+registros autorizados. Se conservaron los 23 usuarios y sus datos, sin cambios
+de contraseñas o permisos. La bitácora distingue la carga como `BD directa`,
+usuario de sesión nulo y origen `poblacion_demo_revision`.
+
+La validación técnica inicial del ejecutor se detuvo antes de insertar debido
+a una comprobación de texto del ROLLBACK. Se corrigió, se generó un nuevo respaldo
+y se completó una única carga confirmada. No hubo una población parcial.
+El SQL del repositorio mantiene ROLLBACK; el ejecutor privado retiró los límites
+de transacción del archivo, comprobó resultados y confirmó una sola transacción.
+Los ajustes de secuencia pueden persistir aunque una transacción se revierta.
+
+## Pruebas y comprobaciones
+
+- Dos pruebas integradas locales: secuencias, repetición sin duplicados, horarios,
+  días cerrados, catálogo/hash/respuestas, programación, historial y cartera.
+- Verificación posterior desde otra conexión a Supabase: seis personas,
+  cuatro citas con turnos/snapshots y 24 respuestas, programa pendiente y saldo
+  exacto de 300 BOB sin abonos.
+- API de agenda sobre Supabase: HTTP 200, 4 citas DEMO y 6 candidatos.
+- API de programas sobre Supabase: HTTP 200, 1 programa DEMO pendiente.
+- API de finanzas sobre Supabase: HTTP 200, 2 deudas DEMO y 300 BOB de saldo.
+
+Estas últimas comprobaciones invocaron las vistas reales con perfil ADMIN
+técnico y transacción de solo lectura. No equivalen a una nueva prueba del
+login ni a aceptación visual en navegador. No se llamó a Stripe o Brevo.
+
+Para revisar en la aplicación: buscar `DEMO-C3-` en Agenda y Programación autóloga;
+en Agenda seleccionar el 2 de noviembre de 2026. En Finanzas (ADMIN), localizar
+las solicitudes `DEMO-C3-SOL-04` y `DEMO-C3-SOL-05`.
+
+La población inicial está completada. Falta recorrer desde la aplicación los
+actos que correspondan a cada escenario. El despliegue del código nuevo y la
+actualización del Word siguen separados de esta carga de datos.
