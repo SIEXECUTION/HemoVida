@@ -155,3 +155,14 @@ class DonanteCarnetDigitalTestCase(TestCase):
         self.assertEqual(response.status_code,200)
         self.assertIsNone(response.data['grupoSanguineo'])
         self.assertIsNone(response.data['factorRh'])
+
+
+class CarnetExactMatchTests(TestCase):
+    setUp = DonanteCarnetDigitalTestCase.setUp
+    def test_partial_number_does_not_return_another_person(self):
+        self.assertEqual(self.client.get('/api/donantes/7894/carnet/').status_code,404)
+
+    def test_complete_card_code_works(self):
+        r=self.client.get('/api/donantes/HV-DON-2024-0491/carnet/')
+        self.assertEqual(r.status_code,200)
+        self.assertEqual(r.data['carnetDigitalCodigo'],'HV-DON-2024-0491')

@@ -92,6 +92,16 @@ export default function App() {
       setError((e as Error).message);
     }
   }
+  const verificationCode = new URLSearchParams(window.location.search).get("carnet");
+  if (verificationCode) {
+    return <main className="min-h-screen bg-slate-50 p-4 sm:p-8">
+      <div className="max-w-4xl mx-auto space-y-4">
+        <a href="/" className="underline">Volver a HemoVida</a>
+        <p>Consulta del carnet registrado. La evaluación clínica confirma la aptitud para donar.</p>
+        <ApiRecords path={`donantes/${encodeURIComponent(verificationCode)}/carnet/`} title="Verificación de carnet" token="" />
+      </div>
+    </main>;
+  }
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col font-['Plus_Jakarta_Sans',sans-serif]">
       <Navbar

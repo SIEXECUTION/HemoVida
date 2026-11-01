@@ -125,7 +125,7 @@ function CardQR({ code }: { code: string }) {
   const [qr, setQR] = useState("");
   useEffect(() => {
     let active = true;
-    QRCode.toDataURL(code, { width: 180 })
+    QRCode.toDataURL(`${window.location.origin}/?carnet=${encodeURIComponent(code)}`, { width: 240, margin: 4 })
       .then((v) => {
         if (active) setQR(v);
       })
@@ -139,6 +139,7 @@ function CardQR({ code }: { code: string }) {
   return qr ? (
     <div className="rounded-2xl bg-white text-slate-900 p-3 inline-flex flex-col items-center gap-2 text-xs font-bold">
       <img src={qr} width={150} height={150} alt="QR del carnet registrado" />
+      <a href={`/?carnet=${encodeURIComponent(code)}`}>Abrir verificación</a>
       <a href={qr} download="carnet-qr.png">
         Descargar QR
       </a>
@@ -225,7 +226,7 @@ export function ApiRecords({
     setData(null);
     setError("");
     fetch(`${API_BASE_URL}/${path}${path.includes("?") ? "&" : "?"}${filter}`, {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
       signal: controller.signal,
     })
       .then(async (r) => {
