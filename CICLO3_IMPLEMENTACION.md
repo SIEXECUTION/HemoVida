@@ -1,5 +1,7 @@
 # Ciclo 3: implementación y validación local
 
+Estado posterior actualizado: [Informe de cierre académico de ciclos 2 y 3](informes/INFORME_CIERRE_CICLOS_2_Y_3_2026-11-01.md). Incluye Supabase con 10 aplicada, parámetros académicos y nuevas reglas de calendario/permisos. Las secciones siguientes conservan la evidencia histórica de cada entrega.
+
 Estado al 31 de octubre de 2026. Rama: `codex/ciclo3-desarrollo-local`.
 Este documento actualiza el estado de los informes anteriores. El código y las pruebas son locales; no se publicó este cambio en Render ni Cloudflare.
 

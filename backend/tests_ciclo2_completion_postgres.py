@@ -98,7 +98,7 @@ class Cycle2CompletionTests(unittest.TestCase):
             self.assertEqual(
                 self.call(AnalisisView, payload, madre=mid, tipo=kind).status_code, 201
             )
-        self.assertEqual(self.call(LiberarView, madre=mid).status_code, 200)
+        self.assertEqual(self.call(LiberarView, madre=mid, role="BIOQ_INTEGRAL").status_code, 200)
         return mid, d
 
     def test_program_roles_confirmation_version_and_patient_agenda(self):
@@ -190,16 +190,16 @@ class Cycle2CompletionTests(unittest.TestCase):
                 [mid],
             )
             self.assertEqual(c.fetchone()[0], "Cancelada")
-        self.assertEqual(self.call(LiberarView, madre=mid).status_code, 400)
+        self.assertEqual(self.call(LiberarView, madre=mid, role="BIOQ_INTEGRAL").status_code, 400)
         approved = self.revise(changed, "Aprobar")
-        self.assertEqual(self.call(LiberarView, madre=mid).status_code, 400)
+        self.assertEqual(self.call(LiberarView, madre=mid, role="BIOQ_INTEGRAL").status_code, 400)
         self.assertEqual(
             self.call(
                 ReactivarAutologaView, dict(confirmada=True), madre=mid
             ).status_code,
             201,
         )
-        self.assertEqual(self.call(LiberarView, madre=mid).status_code, 200)
+        self.assertEqual(self.call(LiberarView, madre=mid, role="BIOQ_INTEGRAL").status_code, 200)
         with connection.cursor() as c:
             c.execute(
                 "SELECT fechacirugia,idprograma FROM colectaautologa WHERE idunidadmadre=%s",
@@ -517,7 +517,7 @@ class Cycle2CompletionTests(unittest.TestCase):
         p = self.program()
         mid, _ = self.lot(p)
         with patch("apps.agenda.autologous.today", return_value=self.surgery):
-            self.assertEqual(self.call(LiberarView, madre=mid).status_code, 200)
+            self.assertEqual(self.call(LiberarView, madre=mid, role="BIOQ_INTEGRAL").status_code, 200)
         with connection.cursor() as c:
             c.execute(
                 "UPDATE ejemplarbolsa SET estadobolsak='Despachada' WHERE idunidadmadre=%s",

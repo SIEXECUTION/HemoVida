@@ -1,5 +1,7 @@
 # Ciclo 2: CU21, CU23 y ajustes del primer bloque
 
+Actualización posterior: 09 está verificada en Supabase y 10 fue aplicada para el cierre académico. Consultar el [informe vigente](informes/INFORME_CIERRE_CICLOS_2_Y_3_2026-11-01.md); las secciones siguientes conservan el estado y las pruebas de esta entrega anterior.
+
 Estado al **1 de noviembre de 2026**. Rama `codex/ciclo3-desarrollo-local`.
 Este informe actualiza `CICLO2_IMPLEMENTACION.md`. La implementación funcional descrita está probada localmente; no equivale a validación clínica institucional ni a despliegue en Render/Cloudflare.
 

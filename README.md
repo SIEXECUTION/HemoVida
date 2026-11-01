@@ -5,6 +5,8 @@
 
 > Estado actual del ciclo 3: consultar [CICLO3_IMPLEMENTACION.md](CICLO3_IMPLEMENTACION.md). Incluye validación 06/07, clínica, finanzas, Stripe, CU24 y límites de las pruebas locales.
 
+> Cierre técnico académico actualizado: [Informe de ciclos 2 y 3](informes/INFORME_CIERRE_CICLOS_2_Y_3_2026-11-01.md). Supabase tiene 08/09 verificadas y 10 aplicada; conservación académica configurada, calendario Bolivia y permisos heredados corregidos. Código local probado; publicación en Render/Cloudflare separada.
+
 > Estado actual del ciclo 2: [CICLO2_CU21_CU23_Y_AJUSTES.md](CICLO2_CU21_CU23_Y_AJUSTES.md). CU21/CU23, borradores, cierres, búsqueda y admisión presencial están implementados y probados localmente. Se detectó 08 en Supabase; falta aplicar `database/09_ciclo2_programacion_y_ajustes.sql` y realizar aceptación operativa/despliegue.
 
 ---

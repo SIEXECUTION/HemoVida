@@ -88,6 +88,8 @@ def guardar_analisis(request, madre, tipo, datos, analisis_id=None):
 
 def liberar_lote(request, madre):
     with operacion_auditada(request), connection.cursor() as cursor:
+        from hemovida_project.clinical_time import require_calendar
+        require_calendar(cursor)
         bloquear_madre(cursor, madre)
         cursor.execute("SELECT to_regclass('public.programacionautologa')")
         if cursor.fetchone()[0]:
@@ -107,7 +109,7 @@ def liberar_lote(request, madre):
         cursor.execute("UPDATE public.unidadsangretotal SET estadoliberacion='Liberada Apta' WHERE idunidadmadre=%s AND estadoliberacion<>'Liberada Apta'", [madre])
         if ids:
             # Una reserva autóloga permanece exclusiva y debe reactivarse por su flujo.
-            cursor.execute("SELECT 1 FROM ejemplarbolsa b WHERE b.idejemplarbolsa=ANY(%s) AND b.esexclusivoautologo AND NOT EXISTS(SELECT 1 FROM reservasangre r WHERE r.idejemplarbolsa=b.idejemplarbolsa AND r.esautologa AND r.estadoreserva='Activa' AND r.fechavencimientoreserva>=CURRENT_DATE)",[ids])
+            cursor.execute("SELECT 1 FROM ejemplarbolsa b WHERE b.idejemplarbolsa=ANY(%s) AND b.esexclusivoautologo AND NOT EXISTS(SELECT 1 FROM reservasangre r WHERE r.idejemplarbolsa=b.idejemplarbolsa AND r.esautologa AND r.estadoreserva='Activa' AND r.fechavencimientoreserva>=public.hemo_dia_clinico())",[ids])
             if cursor.fetchone():raise ValidationError('Falta reserva exclusiva autóloga vigente; no se libera el lote.')
             cursor.execute("UPDATE public.ejemplarbolsa SET estadobolsak=CASE WHEN esexclusivoautologo THEN 'Reservada' ELSE 'Disponible' END WHERE idejemplarbolsa=ANY(%s)", [ids])
         return ids

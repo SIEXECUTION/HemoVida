@@ -23,6 +23,9 @@ def clinical_operation(request):
             )
             if not c.fetchone()[0]:
                 raise MigrationRequired()
+            from hemovida_project.clinical_time import require_calendar
+
+            require_calendar(c)
         yield
 
 
@@ -70,7 +73,7 @@ def patient(c, pid):
 
 def restrictions(c, pid):
     c.execute(
-        "SELECT 1 FROM diferimiento WHERE idposibledonador=%s AND fechainiciodiferimiento<=CURRENT_DATE AND (fechafindiferimiento IS NULL OR fechafindiferimiento>=CURRENT_DATE)",
+        "SELECT 1 FROM diferimiento WHERE idposibledonador=%s AND fechainiciodiferimiento<=public.hemo_dia_clinico() AND (fechafindiferimiento IS NULL OR fechafindiferimiento>=public.hemo_dia_clinico())",
         [pid],
     )
     if c.fetchone():
@@ -90,6 +93,15 @@ def triage(request, d):
         staff = professional(c, request)
         patient(c, d["idpersona"])
         restrictions(c, d["idpersona"])
+        if d["resultadoaptitud"] == "Apto":
+            c.execute(
+                "SELECT extract(year FROM age(public.hemo_dia_clinico(),fechanacimiento))>=18 FROM persona WHERE idpersona=%s",
+                [d["idpersona"]],
+            )
+            if not c.fetchone()[0]:
+                raise ValidationError(
+                    "El proyecto exige mayoría de edad para un dictamen Apto."
+                )
         one(
             c,
             "SELECT idpersona FROM posibledonador WHERE idpersona=%s",
@@ -105,7 +117,7 @@ def triage(request, d):
         ):
             raise ValidationError("Se requiere cita admitida de la misma persona.")
         c.execute(
-            "SELECT 1 FROM triajeclinico WHERE idposibledonador=%s AND fechahora::date=CURRENT_DATE",
+            "SELECT 1 FROM triajeclinico WHERE idposibledonador=%s AND public.hemo_fecha_clinica(fechahora)=public.hemo_dia_clinico()",
             [d["idpersona"]],
         )
         if c.fetchone():
@@ -187,7 +199,7 @@ def defer(request, d):
         restrictions(c, d["idpersona"])
         r = one(
             c,
-            "INSERT INTO diferimiento(idtriaje,idposibledonador,motivodetallado,diasinhabilitacion,fechainiciodiferimiento,fechafindiferimiento) VALUES(%s,%s,%s,%s,CURRENT_DATE,CASE WHEN %s='Temporal' THEN CURRENT_DATE+%s ELSE NULL END) RETURNING *",
+            "INSERT INTO diferimiento(idtriaje,idposibledonador,motivodetallado,diasinhabilitacion,fechainiciodiferimiento,fechafindiferimiento) VALUES(%s,%s,%s,%s,public.hemo_dia_clinico(),CASE WHEN %s='Temporal' THEN public.hemo_dia_clinico()+%s ELSE NULL END) RETURNING *",
             [
                 d.get("idtriaje"),
                 d["idpersona"],
@@ -206,7 +218,7 @@ def defer(request, d):
             ["Diferido " + d["tipo"], d["idpersona"]],
         )
         c.execute(
-            "UPDATE citadonacion SET estadocita='Cancelada' WHERE idpersona=%s AND estadocita='Programada' AND fechahoraprogramada>=CURRENT_TIMESTAMP AND (%s::date IS NULL OR fechahoraprogramada::date<=%s::date) RETURNING idcita",
+            "UPDATE citadonacion SET estadocita='Cancelada' WHERE idpersona=%s AND estadocita='Programada' AND fechahoraprogramada>=CURRENT_TIMESTAMP AND (%s::date IS NULL OR public.hemo_fecha_clinica(fechahoraprogramada)<=%s::date) RETURNING idcita",
             [d["idpersona"], r["fechafindiferimiento"], r["fechafindiferimiento"]],
         )
         ids = [x[0] for x in c.fetchall()]
@@ -239,13 +251,14 @@ def collect(request, d):
         t = one(c, "SELECT * FROM triajeclinico WHERE idtriaje=%s", [d["idtriaje"]])
         p = patient(c, t["idposibledonador"])
         restrictions(c, p["idpersona"])
-        if d.get('autologa'):
+        if d.get("autologa"):
             from apps.agenda.autologous import ready09, validate_program
+
             ready09(c)
-            validate_program(c, d['idprograma'], p['idpersona'], d['fechacirugia'])
+            validate_program(c, d["idprograma"], p["idpersona"], d["fechacirugia"])
         latest = one(
             c,
-            "SELECT idtriaje,resultadoaptitud,fechahora::date=CURRENT_DATE AS hoy FROM triajeclinico WHERE idposibledonador=%s ORDER BY fechahora DESC,idtriaje DESC LIMIT 1 FOR UPDATE",
+            "SELECT idtriaje,resultadoaptitud,public.hemo_fecha_clinica(fechahora)=public.hemo_dia_clinico() AS hoy FROM triajeclinico WHERE idposibledonador=%s ORDER BY fechahora DESC,idtriaje DESC LIMIT 1 FOR UPDATE",
             [p["idpersona"]],
         )
         if (
@@ -269,7 +282,7 @@ def collect(request, d):
         if c.fetchone():
             raise ValidationError("El triaje ya tiene una extracción.")
         c.execute(
-            "SELECT 1 FROM extracciondonacion WHERE idpersonadonante=%s AND fechahora::date + %s > CURRENT_DATE",
+            "SELECT 1 FROM extracciondonacion WHERE idpersonadonante=%s AND public.hemo_fecha_clinica(fechahora) + %s > public.hemo_dia_clinico()",
             [p["idpersona"], 90 if p["sexo"] == "M" else 120],
         )
         if c.fetchone():
@@ -303,15 +316,23 @@ def collect(request, d):
             one(
                 c, "SELECT idpersona FROM receptor WHERE idpersona=%s", [p["idpersona"]]
             )
-            c.execute("SELECT %s::date > CURRENT_DATE", [d["fechacirugia"]])
+            c.execute(
+                "SELECT %s::date > public.hemo_dia_clinico()", [d["fechacirugia"]]
+            )
             if not c.fetchone()[0]:
                 raise ValidationError("La cirugía debe ser futura.")
             c.execute(
                 "INSERT INTO colectaautologa(idunidadmadre,idreceptor,fechacirugia,idpersonalsalud,idprograma) VALUES(%s,%s,%s,%s,%s)",
-                [m["idunidadmadre"], p["idpersona"], d["fechacirugia"], staff, d['idprograma']],
+                [
+                    m["idunidadmadre"],
+                    p["idpersona"],
+                    d["fechacirugia"],
+                    staff,
+                    d["idprograma"],
+                ],
             )
         c.execute(
-            "UPDATE donante SET fechaultimadonacion=CURRENT_DATE WHERE idpersona=%s",
+            "UPDATE donante SET fechaultimadonacion=public.hemo_dia_clinico() WHERE idpersona=%s",
             [p["idpersona"]],
         )
         audit(
@@ -353,8 +374,8 @@ def fraction(request, madre, d):
             [madre],
         )
         c.execute(
-            "SELECT CURRENT_TIMESTAMP AT TIME ZONE 'UTC' <= %s::timestamp + interval '8 hours'",
-            [m["fechahora"]],
+            "SELECT CURRENT_TIMESTAMP AT TIME ZONE 'UTC' BETWEEN %s::timestamp AND %s::timestamp + interval '8 hours'",
+            [m["fechahora"], m["fechahora"]],
         )
         if not c.fetchone()[0] or m["estadoliberacion"] != "En Cuarentena":
             raise ValidationError(
@@ -365,10 +386,22 @@ def fraction(request, madre, d):
             raise ValidationError("La madre ya fue fraccionada.")
         c.execute("SELECT * FROM colectaautologa WHERE idunidadmadre=%s", [madre])
         autologa_row = c.fetchone()
-        autologa = dict(zip([x[0] for x in c.description], autologa_row)) if autologa_row else None
-        if autologa and autologa.get('idprograma'):
+        autologa = (
+            dict(zip([x[0] for x in c.description], autologa_row))
+            if autologa_row
+            else None
+        )
+        if autologa and autologa.get("idprograma"):
             from apps.agenda.autologous import validate_program
-            validate_program(c, autologa['idprograma'], autologa['idreceptor'], autologa['fechacirugia'], lock=False, allow_today=True)
+
+            validate_program(
+                c,
+                autologa["idprograma"],
+                autologa["idreceptor"],
+                autologa["fechacirugia"],
+                lock=False,
+                allow_today=True,
+            )
         c.execute(
             "SELECT 1 FROM donante WHERE idpersona=(SELECT idpersonadonante FROM extracciondonacion WHERE idextraccion=%s) AND tipodonante='Autologo'",
             [m["idextraccion"]],
@@ -397,7 +430,7 @@ def fraction(request, madre, d):
                     category = "Pedi\ufffdtrico"
             r = one(
                 c,
-                "INSERT INTO ejemplarbolsa(idunidadmadre,idgrupo,idubicacion,codigoejemplark,tipocomponente,volumenml,capacidadbolsaml,fechaextraccion,fechacaducidad,categoriaetaria) VALUES(%s,%s,%s,%s,%s,%s,%s,%s::date,%s::date+%s,%s) RETURNING idejemplarbolsa",
+                "INSERT INTO ejemplarbolsa(idunidadmadre,idgrupo,idubicacion,codigoejemplark,tipocomponente,volumenml,capacidadbolsaml,fechaextraccion,fechacaducidad,categoriaetaria) VALUES(%s,%s,%s,%s,%s,%s,%s,public.hemo_fecha_clinica(%s::timestamp),public.hemo_fecha_clinica(%s::timestamp)+%s,%s) RETURNING idejemplarbolsa",
                 [
                     madre,
                     m["idgrupo"],
@@ -414,8 +447,11 @@ def fraction(request, madre, d):
             )
             ids.append(r["idejemplarbolsa"])
             if autologa:
-                receptor, fecha = autologa['idreceptor'], autologa['fechacirugia']
-                c.execute("SELECT %s::date<=%s::date+%s", [fecha, m["fechahora"], days])
+                receptor, fecha = autologa["idreceptor"], autologa["fechacirugia"]
+                c.execute(
+                    "SELECT %s::date<=public.hemo_fecha_clinica(%s::timestamp)+%s",
+                    [fecha, m["fechahora"], days],
+                )
                 if not c.fetchone()[0]:
                     raise ValidationError(
                         "El componente caduca antes de la cirugía programada."
@@ -459,7 +495,7 @@ def custody(request, bolsa, d, baja=False, autologa=False):
                 [b["idunidadmadre"]],
             )
             c.execute(
-                "SELECT 1 FROM reservasangre WHERE idejemplarbolsa=%s AND idreceptor=%s AND esautologa AND estadoreserva='Activa' AND fechavencimientoreserva>=CURRENT_DATE",
+                "SELECT 1 FROM reservasangre WHERE idejemplarbolsa=%s AND idreceptor=%s AND esautologa AND estadoreserva='Activa' AND fechavencimientoreserva>=public.hemo_dia_clinico()",
                 [bolsa, owner["idreceptor"]],
             )
             if not b["esexclusivoautologo"] or not c.fetchone():
@@ -506,24 +542,39 @@ def admit(request, d):
         a = one(
             c, "SELECT * FROM citadonacion WHERE idcita=%s FOR UPDATE", [d["idcita"]]
         )
-        c.execute("SELECT ((%s::timestamp AT TIME ZONE 'UTC') AT TIME ZONE 'America/La_Paz')::date = (CURRENT_TIMESTAMP AT TIME ZONE 'America/La_Paz')::date", [a['fechahoraprogramada']])
+        c.execute(
+            "SELECT ((%s::timestamp AT TIME ZONE 'UTC') AT TIME ZONE 'America/La_Paz')::date = (CURRENT_TIMESTAMP AT TIME ZONE 'America/La_Paz')::date",
+            [a["fechahoraprogramada"]],
+        )
         if not c.fetchone()[0]:
-            raise ValidationError('La asistencia solo se confirma el día de la cita, en hora de Bolivia.')
-        if a.get('idturno'):
+            raise ValidationError(
+                "La asistencia solo se confirma el día de la cita, en hora de Bolivia."
+            )
+        if a.get("idturno"):
             from apps.agenda.services import requirements
-            c.execute('LOCK TABLE requisitodonacion IN SHARE MODE')
+
+            c.execute("LOCK TABLE requisitodonacion IN SHARE MODE")
             _, version = requirements(c)
-            c.execute('SELECT (aprobado OR %s) AND versioncatalogo=%s FROM prefiltrocita WHERE idcita=%s', [a.get('tipoatencion') == 'Evaluacion', version, d['idcita']])
+            c.execute(
+                "SELECT (aprobado OR %s) AND versioncatalogo=%s FROM prefiltrocita WHERE idcita=%s",
+                [a.get("tipoatencion") == "Evaluacion", version, d["idcita"]],
+            )
             snapshot = c.fetchone()
             if not snapshot or not snapshot[0]:
-                raise ValidationError('El prefiltro cambió o está pendiente; requiere revisión antes de admitir.')
-        if a.get('idprograma'):
+                raise ValidationError(
+                    "El prefiltro cambió o está pendiente; requiere revisión antes de admitir."
+                )
+        if a.get("idprograma"):
             from apps.agenda.autologous import validate_program
-            validate_program(c, a['idprograma'], d['idpersona'], lock=False)
+
+            validate_program(c, a["idprograma"], d["idpersona"], lock=False)
         if (
             a["idpersona"] != d["idpersona"]
             or a["estadocita"] != "Programada"
-            or (not a["prefiltroaprobado"] and not (a.get('idturno') and a.get('tipoatencion') == 'Evaluacion'))
+            or (
+                not a["prefiltroaprobado"]
+                and not (a.get("idturno") and a.get("tipoatencion") == "Evaluacion")
+            )
         ):
             raise ValidationError(
                 "Verifique identidad, prefiltro aprobado y cita programada."
@@ -567,7 +618,7 @@ def conservation(c, loc, component):
     row = c.fetchone()
     if not row:
         raise ValidationError(
-            "El administrador debe aprobar un protocolo de conservación para "
+            "Logística debe configurar un protocolo académico de conservación para "
             + component
         )
     protocol = dict(zip([x[0] for x in c.description], row))
@@ -592,7 +643,7 @@ def protocol(request, d):
         staff = professional(c, request)
         r = one(
             c,
-            "INSERT INTO protocoloconservacion(tipocomponente,temperaturamin,temperaturamax,diasconservacion,requiereagitacion,aprobadopor) VALUES(%s,%s,%s,%s,%s,%s) ON CONFLICT(tipocomponente) DO UPDATE SET temperaturamin=excluded.temperaturamin,temperaturamax=excluded.temperaturamax,diasconservacion=excluded.diasconservacion,requiereagitacion=excluded.requiereagitacion,aprobadopor=excluded.aprobadopor,fechaaprobacion=now() RETURNING *",
+            "INSERT INTO protocoloconservacion(tipocomponente,temperaturamin,temperaturamax,diasconservacion,requiereagitacion,aprobadopor,contexto,referencia) VALUES(%s,%s,%s,%s,%s,%s,'Academico',%s) ON CONFLICT(tipocomponente) DO UPDATE SET temperaturamin=excluded.temperaturamin,temperaturamax=excluded.temperaturamax,diasconservacion=excluded.diasconservacion,requiereagitacion=excluded.requiereagitacion,aprobadopor=excluded.aprobadopor,fechaaprobacion=now(),contexto='Academico',referencia=excluded.referencia RETURNING *",
             [
                 d["tipocomponente"],
                 d["temperaturamin"],
@@ -600,6 +651,7 @@ def protocol(request, d):
                 d["diasconservacion"],
                 d["requiereagitacion"],
                 staff,
+                d["referencia"],
             ],
         )
         audit(
@@ -607,7 +659,7 @@ def protocol(request, d):
             request,
             "protocoloconservacion",
             None,
-            "CU15 protocolo aprobado para " + d["tipocomponente"],
+            "CU15 configuración académica de conservación para " + d["tipocomponente"],
         )
         return r
 
@@ -722,11 +774,19 @@ def reactivate_autologous(request, madre, d):
         professional(c, request)
         bloquear_madre(c, madre)
         owner = one(c, "SELECT * FROM colectaautologa WHERE idunidadmadre=%s", [madre])
-        if owner.get('idprograma'):
+        if owner.get("idprograma"):
             from apps.agenda.autologous import validate_program
-            validate_program(c, owner['idprograma'], owner['idreceptor'], owner['fechacirugia'], lock=False, allow_today=True)
+
+            validate_program(
+                c,
+                owner["idprograma"],
+                owner["idreceptor"],
+                owner["fechacirugia"],
+                lock=False,
+                allow_today=True,
+            )
         c.execute(
-            "SELECT hemo_lote_aprobado(%s),%s::date>=CURRENT_DATE",
+            "SELECT hemo_lote_aprobado(%s),%s::date>=public.hemo_dia_clinico()",
             [madre, owner["fechacirugia"]],
         )
         approved, future = c.fetchone()

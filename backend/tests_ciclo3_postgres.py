@@ -191,7 +191,7 @@ class Cycle3Tests(ClinicalTests):
             self.assertEqual(
                 self.call(AnalisisView, payload, madre=m, tipo=kind).status_code, 201
             )
-        r = self.call(LiberarView, madre=m)
+        r = self.call(LiberarView, madre=m, role="BIOQ_INTEGRAL")
         self.assertEqual(r.status_code, 200, r.data)
         with connection.cursor() as c:
             c.execute(
@@ -357,7 +357,7 @@ class Cycle3Tests(ClinicalTests):
             self.assertEqual(
                 self.call(AnalisisView, payload, madre=m, tipo=kind).status_code, 201
             )
-        self.assertEqual(self.call(LiberarView, madre=m).status_code, 200)
+        self.assertEqual(self.call(LiberarView, madre=m, role="BIOQ_INTEGRAL").status_code, 200)
         self.assertEqual(
             self.call(CustodiaView, {"idubicacion": self.loc}, bolsa=bolsa).status_code,
             400,
@@ -397,10 +397,10 @@ class Cycle3Tests(ClinicalTests):
         self.assertEqual(
             correct(dict(self.sero, codigoanalisis="SER-REVIEW")).status_code, 200
         )
-        self.assertEqual(self.call(LiberarView, madre=m).status_code, 400)
+        self.assertEqual(self.call(LiberarView, madre=m, role="BIOQ_INTEGRAL").status_code, 400)
         r = self.call(ReactivarAutologaView, {"confirmada": True}, madre=m)
         self.assertEqual(r.status_code, 201, r.data)
-        self.assertEqual(self.call(LiberarView, madre=m).status_code, 200)
+        self.assertEqual(self.call(LiberarView, madre=m, role="BIOQ_INTEGRAL").status_code, 200)
         with connection.cursor() as c:
             c.execute(
                 "SELECT estadobolsak,esexclusivoautologo FROM ejemplarbolsa WHERE idejemplarbolsa=%s",
@@ -669,7 +669,7 @@ class Cycle3Tests(ClinicalTests):
             requiereagitacion=True,
         )
         self.assertEqual(
-            self.call(ProtocoloView, protocol, role="TEC_LOGISTICA").status_code, 403
+            self.call(ProtocoloView, protocol, role="DOC_TRIAJE").status_code, 403
         )
         self.assertEqual(self.call(ProtocoloView, protocol).status_code, 201)
         parts = {

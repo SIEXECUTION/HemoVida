@@ -18,7 +18,7 @@ class Triaje(s.Serializer):
         if d["presiondiastolicammhg"] >= d["presionsistolicammhg"]:
             raise s.ValidationError("Presión diastólica debe ser menor que sistólica.")
         if d["resultadoaptitud"] == "Apto" and (
-            d["pesokg"] < 50 or d["nivelhemoglobina"] < 12.5 or d["temperatura"] > 37.5
+            d["pesokg"] <= 50 or d["nivelhemoglobina"] < 12.5 or d["temperatura"] > 37.5
         ):
             raise s.ValidationError(
                 "No cumple las restricciones básicas implementadas de peso, hemoglobina o temperatura. Revise el dictamen con el protocolo institucional."
@@ -55,16 +55,21 @@ class Colecta(s.Serializer):
     def validate(self, d):
         if d["autologa"] and not d.get("fechacirugia"):
             raise s.ValidationError("La colecta autóloga exige fecha de cirugía.")
-        if d['autologa'] and not d.get('idprograma'):
-            raise s.ValidationError('La nueva colecta autóloga requiere programación CU21 aprobada.')
-        if not d['autologa'] and d.get('idprograma'):
-            raise s.ValidationError('La programación autóloga no se usa en una colecta ordinaria.')
+        if d["autologa"] and not d.get("idprograma"):
+            raise s.ValidationError(
+                "La nueva colecta autóloga requiere programación CU21 aprobada."
+            )
+        if not d["autologa"] and d.get("idprograma"):
+            raise s.ValidationError(
+                "La programación autóloga no se usa en una colecta ordinaria."
+            )
         return d
 
     idtriaje = s.IntegerField(min_value=1)
     idgrupo = s.IntegerField(min_value=1)
     brazoextraccion = s.ChoiceField(choices=["Izquierdo", "Derecho"])
-    volumenextraidoml = s.IntegerField(min_value=300, max_value=9999)
+    # Modelo académico: volumen de la bolsa de 450 ml descrita por el proyecto.
+    volumenextraidoml = s.IntegerField(min_value=300, max_value=450)
     declaracionjuradaaceptada = s.BooleanField()
     firmadigital = s.CharField(max_length=100000)
 
@@ -134,7 +139,10 @@ class Comunicacion(s.Serializer):
 
 
 class Protocolo(s.Serializer):
-    tipocomponente = s.ChoiceField(choices=COMPONENTS)
+    tipocomponente = s.ChoiceField(choices=COMPONENTS + ["Sangre Total"])
+    referencia = s.CharField(
+        max_length=500, default="Parámetros del proyecto académico"
+    )
     temperaturamin = s.DecimalField(max_digits=5, decimal_places=1)
     temperaturamax = s.DecimalField(max_digits=5, decimal_places=1)
     diasconservacion = s.IntegerField(min_value=1, max_value=3650)

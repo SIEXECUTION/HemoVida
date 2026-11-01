@@ -310,7 +310,7 @@ test("El protocolo sin agitación se envía como false y requiere confirmación 
     await p
       .getByRole("button", { name: "Atención clínica", exact: true })
       .click();
-    const f = form(p, "CU15 · Aprobar protocolo institucional de conservación");
+    const f = form(p, "CU15 · Configurar conservación académica");
     await f
       .locator("select")
       .selectOption({ label: "Concentrado de Globulos Rojos" });
@@ -503,6 +503,56 @@ test("ADMIN consulta laboratorio pero no puede editar ABO/Rh existente ni concil
         .count(),
       0,
     );
+    assert.deepEqual(ui.errors, []);
+    assert.equal(
+      await p
+        .getByRole("button", { name: "Liberar lote", exact: true })
+        .count(),
+      0,
+    );
+  } finally {
+    await ui.close();
+  }
+});
+
+test("Logística configura los parámetros académicos de conservación sin liberar biología", async () => {
+  let saved = false;
+  const ui = await open(
+    async (url, req) => {
+      if (url.pathname === "/api/clinica/protocolos/") {
+        const d = req.postDataJSON();
+        assert.equal(d.tipocomponente, "Plasma Fresco Congelado");
+        assert.equal(d.temperaturamin, -30);
+        assert.equal(d.temperaturamax, -18);
+        assert.equal(d.diasconservacion, 365);
+        assert.equal(d.requiereagitacion, false);
+        saved = true;
+        return { body: { ...d, contexto: "Academico" } };
+      }
+    },
+    390,
+    "TEC_LOGISTICA",
+  );
+  try {
+    const p = ui.page;
+    await p
+      .getByRole("button", { name: "Atención clínica", exact: true })
+      .click();
+    const f = form(p, "CU15 · Configurar conservación académica");
+    await f
+      .getByLabel("Componente", { exact: true })
+      .selectOption("Plasma Fresco Congelado");
+    await f.getByLabel("Temperatura mínima aprobada (°C)").fill("-30");
+    await f.getByLabel("Temperatura máxima aprobada (°C)").fill("-18");
+    await f.getByLabel("Días de conservación aprobados").fill("365");
+    await f
+      .getByLabel("Fuente del parámetro académico")
+      .fill("Proyecto universitario autorizado");
+    await f.getByRole("button").click();
+    await p
+      .getByText("Operación guardada en la base de datos.", { exact: true })
+      .waitFor();
+    assert.equal(saved, true);
     assert.deepEqual(ui.errors, []);
   } finally {
     await ui.close();

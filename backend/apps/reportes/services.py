@@ -233,7 +233,7 @@ def query(params):
         metrics = f"count(*) AS cantidad,count(*) FILTER(WHERE 'Reactivo'=ANY({markers}) AND NOT ('Indeterminado'=ANY({markers}))) AS reactivas,count(*) FILTER(WHERE 'Indeterminado'=ANY({markers})) AS indeterminadas,count(*) FILTER(WHERE NOT ('Indeterminado'=ANY({markers}))) AS concluidas"
         values.insert(0, end)
     elif kind == "stock":
-        base = f"SELECT e.*,g.grupoabo,g.factorrh FROM ejemplarbolsa e JOIN gruposanguineo g USING(idgrupo) WHERE estadobolsak='Disponible' AND fechacaducidad>={TODAY_SQL} AND NOT esexclusivoautologo"
+        base = f"SELECT e.*,g.grupoabo,g.factorrh FROM ejemplarbolsa e JOIN gruposanguineo g USING(idgrupo) WHERE estadobolsak='Disponible' AND fechacaducidad>={TODAY_SQL} AND NOT esexclusivoautologo AND public.hemo_lote_aprobado(e.idunidadmadre) AND EXISTS(SELECT 1 FROM unidadsangretotal m WHERE m.idunidadmadre=e.idunidadmadre AND m.idgrupo=e.idgrupo AND m.estadoliberacion='Liberada Apta')"
         metrics = f"count(*) AS cantidad,coalesce(sum(volumenml),0) AS volumen,count(*) FILTER(WHERE fechacaducidad<={TODAY_SQL}+%s) AS vencimiento_proximo"
         # Horizonte es parte de la selección agregada, después de parámetros de base.
         values.insert(0, horizon)
@@ -316,7 +316,7 @@ def query(params):
             "zona_horaria": "Fechas y agrupaciones en America/La_Paz; columnas heredadas sin zona interpretadas como UTC, igual que las nuevas escrituras del backend.",
             "diferimiento": "Evaluaciones con dictamen Rechazado / evaluaciones del mismo período y filtros; no cuenta filas de diferimiento. El total se calcula con los conteos, sin promediar porcentajes de grupos.",
             "canceladas": "Canceladas y solicitudes pendientes excluidas del denominador de asistencia; pendientes no reservan cupo.",
-            "stock": "Actual, disponible, no caducado y no autólogo",
+            "stock": "Actual, disponible, no caducado, no autólogo y con liberación conjunta vigente de madre y componente",
             "serologia": "Último análisis por madre hasta la fecha final; indeterminados separados",
             "finanzas": "Solo BOB; pagos confirmados, sin sumar comprobantes",
         },

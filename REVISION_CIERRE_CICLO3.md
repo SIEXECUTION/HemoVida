@@ -1,5 +1,7 @@
 # Revisión de las dos observaciones de cierre del ciclo 3
 
+Actualización del 1 de noviembre: el usuario confirmó contexto universitario y parámetros académicos. Las observaciones técnicas se resolvieron con 10 y la configuración aplicada a Supabase; consultar el [informe de cierre](informes/INFORME_CIERRE_CICLOS_2_Y_3_2026-11-01.md). Este archivo conserva el diagnóstico histórico anterior.
+
 Fecha de revisión: 31 de octubre de 2026. Rama `codex/ciclo3-desarrollo-local`.
 El usuario eligió el documento del proyecto como referencia **provisional**; esto no equivale a un protocolo médico institucional aprobado.
 

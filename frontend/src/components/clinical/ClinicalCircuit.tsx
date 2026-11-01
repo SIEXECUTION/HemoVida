@@ -718,14 +718,14 @@ export function ClinicalCircuit({
           />
         </>
       )}
-      {role === "ADMIN" && (
+      {["ADMIN", "TEC_LOGISTICA"].includes(role) && (
         <Form
-          title="CU15 · Aprobar protocolo institucional de conservación"
+          title="CU15 · Configurar conservación académica"
           fields={[
             {
               name: "tipocomponente",
               label: "Componente",
-              options: types.map((x) => [x, x]),
+              options: [...types, "Sangre Total"].map((x) => [x, x]),
             },
             {
               name: "temperaturamin",
@@ -749,6 +749,12 @@ export function ClinicalCircuit({
               label: "Requiere agitación",
               type: "checkbox",
               required: false,
+            },
+            {
+              name: "referencia",
+              label: "Fuente del parámetro académico",
+              required: false,
+              maxLength: 500,
             },
           ]}
           submit={(d) => save("protocolos/", d)}

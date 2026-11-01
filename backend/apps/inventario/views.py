@@ -5,7 +5,8 @@ from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from django.db import transaction
+from django.db import transaction, connection
+from django.utils import timezone
 from django.shortcuts import get_object_or_404
 
 from .models import ParametroStockMinimo, EjemplarBolsa, GrupoSanguineo
@@ -101,11 +102,19 @@ class StockAlertasListView(APIView):
         alertas = []
         for p in parametros:
             # Conteo de bolsas disponibles en inventario físico real
-            disponibles = EjemplarBolsa.objects.filter(
+            disponibles_qs = EjemplarBolsa.objects.filter(
                 grupo=p.grupo,
                 tipoComponente=p.tipoComponente,
-                estadoBolsaK='Disponible'
-            ).count()
+                estadoBolsaK='Disponible',
+                fechaCaducidad__gte=timezone.localdate(),
+                esExclusivoAutologo=False,
+            )
+            if connection.vendor == 'postgresql':
+                disponibles_qs = disponibles_qs.extra(where=[
+                    'public.hemo_lote_aprobado(ejemplarbolsa.idunidadmadre)',
+                    "EXISTS(SELECT 1 FROM unidadsangretotal m WHERE m.idunidadmadre=ejemplarbolsa.idunidadmadre AND m.idgrupo=ejemplarbolsa.idgrupo AND m.estadoliberacion='Liberada Apta')",
+                ])
+            disponibles = disponibles_qs.count()
 
             esta_en_deficit = disponibles < p.stockMinimoSeguridad
 

@@ -48,7 +48,7 @@ class AnalisisView(APIView):
 
 
 class LiberarView(APIView):
-    permission_classes = [RolLaboratorio]
+    permission_classes = [SoloBioquimico]
 
     def post(self, request, madre):
         try:

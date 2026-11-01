@@ -9,6 +9,7 @@ from rest_framework.permissions import AllowAny
 from django.db.models import Sum, Count, Q
 from django.db import connection
 from datetime import date, timedelta
+from django.utils import timezone
 from django.shortcuts import get_object_or_404
 
 from .models import Donante, PosibleDonador, ExtraccionDonacion
@@ -47,7 +48,7 @@ class DonanteCarnetDigitalView(APIView):
             persona = donante.persona
             sexo = (persona.sexo or 'M').upper()
             fecha_ultima = donante.fechaUltimaDonacion
-            hoy = date.today()
+            hoy = timezone.localdate()
 
             # REGLA BIOLÓGICA (CONSULTA C1):
             # Varones (M): 90 días de intervalo biológico entre donaciones.
@@ -132,7 +133,7 @@ class DonanteCarnetDigitalView(APIView):
 
         if posible:
             persona = posible.persona
-            codigo_provisional = posible.carnetProvisionalCodigo or f"HV-POST-{date.today().year}-{persona.idPersona}"
+            codigo_provisional = posible.carnetProvisionalCodigo or f"HV-POST-{timezone.localdate().year}-{persona.idPersona}"
             payload_posible = {
                 'esPosibleDonador': True,
                 'carnetDigitalCodigo': codigo_provisional,

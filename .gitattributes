@@ -1,0 +1,2 @@
+# Los PDF son binarios: conservar offsets internos y evitar conversión CRLF.
+*.pdf binary

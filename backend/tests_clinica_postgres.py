@@ -103,7 +103,7 @@ class ClinicalTests(unittest.TestCase):
         for tipo, d in [("serologia", self.sero), ("hematologia", self.hema)]:
             r = self.call(AnalisisView, d, madre=m, tipo=tipo)
             self.assertEqual(r.status_code, 201, r.data)
-        r = self.call(LiberarView, madre=m)
+        r = self.call(LiberarView, madre=m, role="BIOQ_INTEGRAL")
         self.assertEqual(r.status_code, 200, r.data)
         bag = parts["componentes"][0]
         r = self.call(CustodiaView, {"idubicacion": self.loc}, bolsa=bag)
@@ -384,12 +384,12 @@ class ClinicalTests(unittest.TestCase):
         )
 
     def test_provisional_triage_boundaries_are_explicit(self):
-        # Caracteriza restricciones existentes; no acredita aprobación médica.
+        # Límite académico acordado: el texto del proyecto exige peso >50 kg.
         from apps.clinica.serializers import Triaje
 
-        boundary = dict(self.vitals, pesokg=50, nivelhemoglobina=12.5, temperatura=37.5)
+        boundary = dict(self.vitals, pesokg=50.01, nivelhemoglobina=12.5, temperatura=37.5)
         self.assertTrue(Triaje(data=boundary).is_valid())
-        for change in [dict(pesokg=49.99), dict(nivelhemoglobina=12.4), dict(temperatura=37.6)]:
+        for change in [dict(pesokg=50), dict(pesokg=49.99), dict(nivelhemoglobina=12.4), dict(temperatura=37.6)]:
             with self.subTest(change=change):
                 self.assertFalse(Triaje(data=dict(boundary, **change)).is_valid())
                 # Un rechazo profesional sí se registra para continuar por CU11.
@@ -407,7 +407,7 @@ class ClinicalTests(unittest.TestCase):
         # Valores sintéticos deliberadamente distintos de los 35 días heredados.
         protocol = dict(tipocomponente="Concentrado de Globulos Rojos", temperaturamin=2,
                         temperaturamax=6, diasconservacion=7, requiereagitacion=True)
-        self.assertEqual(self.call(ProtocoloView, protocol, role="TEC_LOGISTICA").status_code, 403)
+        self.assertEqual(self.call(ProtocoloView, protocol, role="DOC_TRIAJE").status_code, 403)
         self.assertEqual(self.call(ProtocoloView, protocol).status_code, 201)
         for temperature, agitation in [(1.9, True), (6.1, True), (4, False)]:
             with self.subTest(temperature=temperature, agitation=agitation):
@@ -431,7 +431,7 @@ class ClinicalTests(unittest.TestCase):
                              dict(base, tipocomponente="Plasma Fresco Congelado")]}
         response = self.call(FraccionamientoView, d, madre=m)
         self.assertEqual(response.status_code, 400, response.data)
-        self.assertIn("aprobar un protocolo", str(response.data))
+        self.assertIn("configurar un protocolo", str(response.data))
         with connection.cursor() as c:
             c.execute("SELECT count(*) FROM ejemplarbolsa WHERE idunidadmadre=%s", [m])
             self.assertEqual(c.fetchone()[0], 0)

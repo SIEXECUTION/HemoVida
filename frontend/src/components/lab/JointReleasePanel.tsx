@@ -93,7 +93,11 @@ export function JointReleasePanel({
     try {
       const row: Lot = await api(`madres/${id}/`);
       setLot(row);
-      setLots((previous) => previous.map((item) => item.id === row.id ? {...item, estado: row.estado} : item));
+      setLots((previous) =>
+        previous.map((item) =>
+          item.id === row.id ? { ...item, estado: row.estado } : item,
+        ),
+      );
       setSero(
         Object.fromEntries(
           Object.keys(seroEmpty()).map((k) => [
@@ -447,15 +451,21 @@ export function JointReleasePanel({
               </li>
             ))}
           </ul>
-          <button
-            onClick={release}
-            disabled={
-              busy || !lot.analisis_aprobados || lot.estado === "Rechazada"
-            }
-            className="bg-teal-800 disabled:opacity-40 text-white rounded p-3"
-          >
-            Liberar lote
-          </button>
+          {role === "BIOQ_INTEGRAL" ? (
+            <button
+              onClick={release}
+              disabled={
+                busy || !lot.analisis_aprobados || lot.estado === "Rechazada"
+              }
+              className="bg-teal-800 disabled:opacity-40 text-white rounded p-3"
+            >
+              Liberar lote
+            </button>
+          ) : (
+            <p>
+              La liberación biológica requiere el perfil Bioquímico Integral.
+            </p>
+          )}
           <button
             onClick={() => load(selected)}
             disabled={busy}

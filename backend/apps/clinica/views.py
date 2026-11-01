@@ -164,7 +164,7 @@ class PerfilView(APIView):
 
 
 class ProtocoloView(Mutation):
-    roles = ["ADMIN"]
+    roles = ["ADMIN", "TEC_LOGISTICA"]
     form = forms.Protocolo
     operation = staticmethod(ops.protocol)
 
