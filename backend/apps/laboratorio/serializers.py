@@ -20,6 +20,7 @@ class SerologiaSerializer(serializers.Serializer):
 
 
 class HematologiaSerializer(serializers.Serializer):
+    motivo_correccion = serializers.CharField(required=False, min_length=10, max_length=120)
     grupoaboconfirmado = serializers.ChoiceField(choices=['A', 'B', 'AB', 'O'])
     factorrhconfirmado = serializers.ChoiceField(choices=['Positivo', 'Negativo'])
     pruebacoombsdirecta = serializers.CharField(max_length=30)
@@ -27,3 +28,17 @@ class HematologiaSerializer(serializers.Serializer):
     rastreoanticuerposirregulares = serializers.CharField(max_length=100)
     dictameninmunohematologico = serializers.ChoiceField(choices=['Apto', 'No Apto', 'Pendiente'])
     observaciones = serializers.CharField(required=False, allow_blank=True, default='')
+
+
+class CorreccionGrupoSerializer(serializers.Serializer):
+    grupoaboconfirmado = serializers.ChoiceField(choices=['A','B','AB','O'])
+    factorrhconfirmado = serializers.ChoiceField(choices=['Positivo','Negativo'])
+    idgrupo_anterior = serializers.IntegerField(min_value=1)
+    idanalisishematologico = serializers.IntegerField(min_value=1)
+    motivo = serializers.CharField(min_length=10, max_length=120)
+    confirmada = serializers.BooleanField()
+
+    def validate_confirmada(self, value):
+        if not value:
+            raise serializers.ValidationError('Confirma la verificación del análisis y rotulado del lote.')
+        return value

@@ -6,6 +6,8 @@ from rest_framework.views import APIView
 
 from .serializers import SerologiaSerializer, HematologiaSerializer
 from .services import guardar_analisis, liberar_lote
+from .serializers import CorreccionGrupoSerializer
+from .corrections import correct_group
 
 
 class RolLaboratorio(permissions.BasePermission):
@@ -19,6 +21,11 @@ class RolLaboratorio(permissions.BasePermission):
 class ConflictoLaboratorio(APIException):
     status_code = status.HTTP_409_CONFLICT
     default_detail = 'No se completó la operación. Revise los datos y el estado del lote; si hubo concurrencia, reintente.'
+
+
+class SoloBioquimico(RolLaboratorio):
+    def has_permission(self, request, view):
+        return super().has_permission(request, view) and request.auth.get('rolActivo') == 'BIOQ_INTEGRAL'
 
 
 class AnalisisView(APIView):
@@ -51,6 +58,19 @@ class LiberarView(APIView):
         return Response({'idunidadmadre': madre, 'componentes_liberados': ids})
 
 
+class CorreccionGrupoView(APIView):
+    permission_classes = [SoloBioquimico]
+    roles = ['BIOQ_INTEGRAL']
+
+    def post(self, request, madre):
+        form = CorreccionGrupoSerializer(data=request.data)
+        form.is_valid(raise_exception=True)
+        try:
+            return Response(correct_group(request, madre, form.validated_data))
+        except DatabaseError as exc:
+            raise ConflictoLaboratorio() from exc
+
+
 class LotesView(APIView):
     permission_classes = [RolLaboratorio]
 
@@ -62,11 +82,11 @@ class LotesView(APIView):
                 if madre is None:
                     cursor.execute('SELECT idunidadmadre,codigobolsamadre,estadoliberacion FROM public.unidadsangretotal ORDER BY idunidadmadre DESC LIMIT 100')
                     return Response([dict(zip(['id', 'codigo', 'estado'], r)) for r in cursor.fetchall()])
-                cursor.execute('SELECT idunidadmadre,codigobolsamadre,estadoliberacion FROM public.unidadsangretotal WHERE idunidadmadre=%s', [madre])
+                cursor.execute('SELECT m.idunidadmadre,m.codigobolsamadre,m.estadoliberacion,m.idgrupo,g.grupoabo,g.factorrh FROM public.unidadsangretotal m JOIN public.gruposanguineo g USING(idgrupo) WHERE m.idunidadmadre=%s', [madre])
                 row = cursor.fetchone()
                 if not row:
                     return Response({'detail': 'Bolsa madre inexistente.'}, status=404)
-                result = dict(zip(['id', 'codigo', 'estado'], row))
+                result = dict(zip(['id', 'codigo', 'estado', 'idgrupo', 'grupoabo', 'factorrh'], row))
                 for key, table, pk, extra in [
                     ('serologia', 'analisisinmunoserologico', 'idanalisis', ''),
                     ('hematologia', 'analisisinmunohematologico', 'idanalisishematologico', " AND etapaanalisis='Post-Extraccion'"),

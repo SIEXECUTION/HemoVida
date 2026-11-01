@@ -826,6 +826,290 @@ class Cycle3Tests(ClinicalTests):
         self.assertEqual(next_day["totales"]["cantidad"], 1)
         self.assertEqual(next_day["totales"]["porcentaje_diferimiento"], 0)
 
+    def group_discrepancy(self):
+        m = self.collect()["idunidadmadre"]
+        parts, _ = self.fraction(m)
+        with connection.cursor() as c:
+            c.execute(
+                "INSERT INTO gruposanguineo(grupoabo,factorrh) VALUES('A','Positivo') RETURNING idgrupo"
+            )
+            target = c.fetchone()[0]
+        self.assertEqual(
+            self.call(AnalisisView, self.sero, madre=m, tipo="serologia").status_code,
+            201,
+        )
+        h = self.call(
+            AnalisisView,
+            dict(self.hema, grupoaboconfirmado="A"),
+            madre=m,
+            tipo="hematologia",
+        )
+        self.assertEqual(h.status_code, 201, h.data)
+        data = dict(
+            idgrupo_anterior=self.group,
+            idanalisishematologico=h.data["id"],
+            grupoaboconfirmado="A",
+            factorrhconfirmado="Positivo",
+            motivo="Rotulado verificado con CU14 certificado",
+            confirmada=True,
+        )
+        return m, parts["componentes"][0], target, data
+
+    def test_group_reconciliation_only_integral_and_explicit_release(self):
+        from apps.laboratorio.views import CorreccionGrupoView
+
+        m, part, target, data = self.group_discrepancy()
+        for role in ["ADMIN", "DOC_TRIAJE", "PERS_COLECTA", "TEC_LOGISTICA"]:
+            self.assertEqual(
+                self.call(CorreccionGrupoView, data, madre=m, role=role).status_code,
+                403,
+            )
+        r = self.call(CorreccionGrupoView, data, madre=m, role="BIOQ_INTEGRAL")
+        self.assertEqual(r.status_code, 200, r.data)
+        with connection.cursor() as c:
+            c.execute(
+                "SELECT idgrupo,estadoliberacion FROM unidadsangretotal WHERE idunidadmadre=%s",
+                [m],
+            )
+            self.assertEqual(c.fetchone(), (target, "En Cuarentena"))
+            c.execute(
+                "SELECT idgrupo,estadobolsak FROM ejemplarbolsa WHERE idejemplarbolsa=%s",
+                [part],
+            )
+            self.assertEqual(c.fetchone(), (target, "En Cuarentena"))
+            c.execute(
+                "SELECT idusuario,rolactivo,accionrealizada FROM bitacoraauditoria WHERE tablaafectada='correccion_grupo' AND idregistroafectado=%s",
+                [m],
+            )
+            events = c.fetchall()
+            self.assertEqual(len(events), 1)
+            self.assertEqual(events[0][:2], (self.uid, "BIOQ_INTEGRAL"))
+            self.assertIn(data["motivo"], events[0][2])
+        self.assertEqual(
+            self.call(LiberarView, madre=m, role="BIOQ_INTEGRAL").status_code, 200
+        )
+        self.assertEqual(
+            self.call(
+                CorreccionGrupoView, data, madre=m, role="BIOQ_INTEGRAL"
+            ).status_code,
+            400,
+        )
+
+    def test_group_reconciliation_requires_confirmation_reason_and_current_snapshot(
+        self,
+    ):
+        from apps.laboratorio.views import CorreccionGrupoView
+
+        m, part, target, data = self.group_discrepancy()
+        for bad in [
+            dict(data, confirmada=False),
+            dict(data, motivo="breve"),
+            dict(data, idgrupo_anterior=target),
+            dict(data, idanalisishematologico=99999),
+            dict(data, grupoaboconfirmado="B"),
+        ]:
+            self.assertEqual(
+                self.call(
+                    CorreccionGrupoView, bad, madre=m, role="BIOQ_INTEGRAL"
+                ).status_code,
+                400,
+            )
+        with connection.cursor() as c:
+            c.execute(
+                "SELECT idgrupo FROM unidadsangretotal WHERE idunidadmadre=%s", [m]
+            )
+            self.assertEqual(c.fetchone()[0], self.group)
+            c.execute(
+                "SELECT count(*) FROM bitacoraauditoria WHERE tablaafectada='correccion_grupo'"
+            )
+            self.assertEqual(c.fetchone()[0], 0)
+
+    def test_group_reconciliation_preserves_discarded_history(self):
+        from apps.laboratorio.views import CorreccionGrupoView
+
+        m, part, target, data = self.group_discrepancy()
+        with connection.cursor() as c:
+            c.execute(
+                "UPDATE ejemplarbolsa SET estadobolsak='Baja' WHERE idejemplarbolsa=%s",
+                [part],
+            )
+        self.assertEqual(
+            self.call(
+                CorreccionGrupoView, data, madre=m, role="BIOQ_INTEGRAL"
+            ).status_code,
+            400,
+        )
+        with connection.cursor() as c:
+            c.execute(
+                "SELECT idgrupo,estadobolsak FROM ejemplarbolsa WHERE idejemplarbolsa=%s",
+                [part],
+            )
+            self.assertEqual(c.fetchone(), (self.group, "Baja"))
+
+    def test_group_reconciliation_rollback_after_late_audit_error(self):
+        from apps.laboratorio.views import CorreccionGrupoView
+        from django.db import DatabaseError
+
+        m, part, target, data = self.group_discrepancy()
+        with patch(
+            "apps.laboratorio.corrections.audit",
+            side_effect=DatabaseError("local synthetic"),
+        ):
+            self.assertEqual(
+                self.call(
+                    CorreccionGrupoView, data, madre=m, role="BIOQ_INTEGRAL"
+                ).status_code,
+                409,
+            )
+        with connection.cursor() as c:
+            c.execute(
+                "SELECT idgrupo FROM unidadsangretotal WHERE idunidadmadre=%s", [m]
+            )
+            self.assertEqual(c.fetchone()[0], self.group)
+            c.execute(
+                "SELECT idgrupo FROM ejemplarbolsa WHERE idejemplarbolsa=%s", [part]
+            )
+            self.assertEqual(c.fetchone()[0], self.group)
+            c.execute(
+                "SELECT count(*) FROM bitacoraauditoria WHERE tablaafectada='correccion_grupo'"
+            )
+            self.assertEqual(c.fetchone()[0], 0)
+
+    def test_group_result_correction_cannot_bypass_role_or_reason_via_put_or_post(self):
+        m, part, target, data = self.group_discrepancy()
+        payload = dict(self.hema, grupoaboconfirmado="B")
+
+        def put(payload, role):
+            req = APIRequestFactory().put("/", payload, format="json")
+            force_authenticate(req, user=self.user, token={"rolActivo": role})
+            return AnalisisView.as_view()(
+                req,
+                madre=m,
+                tipo="hematologia",
+                analisis_id=data["idanalisishematologico"],
+            )
+
+        self.assertEqual(
+            put(
+                dict(payload, motivo_correccion="Corrección de muestra documentada"),
+                "ADMIN",
+            ).status_code,
+            403,
+        )
+        self.assertEqual(
+            self.call(
+                AnalisisView,
+                dict(payload, motivo_correccion="Corrección de muestra documentada"),
+                madre=m,
+                tipo="hematologia",
+                role="ADMIN",
+            ).status_code,
+            403,
+        )
+        self.assertEqual(put(payload, "BIOQ_INTEGRAL").status_code, 400)
+        r = put(
+            dict(payload, motivo_correccion="Corrección de muestra documentada"),
+            "BIOQ_INTEGRAL",
+        )
+        self.assertEqual(r.status_code, 200, r.data)
+        with connection.cursor() as c:
+            c.execute(
+                "SELECT grupoaboconfirmado FROM analisisinmunohematologico WHERE idanalisishematologico=%s",
+                [data["idanalisishematologico"]],
+            )
+            self.assertEqual(c.fetchone()[0], "B")
+            c.execute(
+                "SELECT count(*) FROM bitacoraauditoria WHERE tablaafectada='correccion_resultado'"
+            )
+            self.assertEqual(c.fetchone()[0], 1)
+
+    def test_group_reconciliation_cancels_reservations_without_losing_autologous_exclusivity(
+        self,
+    ):
+        from apps.laboratorio.views import CorreccionGrupoView
+        from apps.clinica.views import ReactivarAutologaView
+
+        m, part, target, data = self.group_discrepancy()
+        with connection.cursor() as c:
+            c.execute(
+                "INSERT INTO colectaautologa(idunidadmadre,idreceptor,fechacirugia,idpersonalsalud) VALUES(%s,%s,CURRENT_DATE+10,%s)",
+                [m, self.pid, self.person],
+            )
+            c.execute(
+                "UPDATE ejemplarbolsa SET esexclusivoautologo=true WHERE idejemplarbolsa=%s",
+                [part],
+            )
+            c.execute(
+                "INSERT INTO reservasangre(idreceptor,idejemplarbolsa,esautologa,motivoreserva,fechavencimientoreserva) VALUES(%s,%s,true,'Reserva local',CURRENT_DATE+10)",
+                [self.pid, part],
+            )
+        self.assertEqual(
+            self.call(
+                CorreccionGrupoView, data, madre=m, role="BIOQ_INTEGRAL"
+            ).status_code,
+            400,
+        )
+        with connection.cursor() as c:
+            c.execute(
+                "UPDATE receptor SET idgrupo=%s WHERE idpersona=%s", [target, self.pid]
+            )
+        r = self.call(CorreccionGrupoView, data, madre=m, role="BIOQ_INTEGRAL")
+        self.assertEqual(r.status_code, 200, r.data)
+        self.assertEqual(r.data["reservas_canceladas"], 1)
+        with connection.cursor() as c:
+            c.execute(
+                "SELECT estadobolsak,esexclusivoautologo FROM ejemplarbolsa WHERE idejemplarbolsa=%s",
+                [part],
+            )
+            self.assertEqual(c.fetchone(), ("En Cuarentena", True))
+            c.execute(
+                "SELECT estadoreserva,esautologa,idreceptor FROM reservasangre WHERE idejemplarbolsa=%s",
+                [part],
+            )
+            self.assertEqual(c.fetchone(), ("Cancelada", True, self.pid))
+        self.assertEqual(
+            self.call(LiberarView, madre=m, role="BIOQ_INTEGRAL").status_code, 400
+        )
+        self.assertEqual(
+            self.call(
+                ReactivarAutologaView,
+                {"confirmada": True},
+                madre=m,
+                role="BIOQ_INTEGRAL",
+            ).status_code,
+            201,
+        )
+        self.assertEqual(
+            self.call(LiberarView, madre=m, role="BIOQ_INTEGRAL").status_code, 200
+        )
+        with connection.cursor() as c:
+            c.execute(
+                "SELECT estadobolsak,esexclusivoautologo FROM ejemplarbolsa WHERE idejemplarbolsa=%s",
+                [part],
+            )
+            self.assertEqual(c.fetchone(), ("Reservada", True))
+
+    def test_group_reconciliation_blocks_pretransfusion_tests(self):
+        from apps.laboratorio.views import CorreccionGrupoView
+
+        m, part, target, data = self.group_discrepancy()
+        with connection.cursor() as c:
+            c.execute(
+                "INSERT INTO pruebacompatibilidad(idsolicitud,idejemplarbolsa,idpersonalsalud,resultadocompatibilidad) VALUES(%s,%s,%s,'Dudoso')",
+                [self.order, part, self.person],
+            )
+        self.assertEqual(
+            self.call(
+                CorreccionGrupoView, data, madre=m, role="BIOQ_INTEGRAL"
+            ).status_code,
+            400,
+        )
+        with connection.cursor() as c:
+            c.execute(
+                "SELECT idgrupo FROM ejemplarbolsa WHERE idejemplarbolsa=%s", [part]
+            )
+            self.assertEqual(c.fetchone()[0], self.group)
+
     def test_partial_migration07_prevents_financial_write(self):
         with connection.cursor() as c:
             c.execute(

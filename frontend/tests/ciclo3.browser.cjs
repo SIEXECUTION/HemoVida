@@ -379,3 +379,132 @@ test("Logística inicia CU24 con stock y no ofrece finanzas", async () => {
     await ui.close();
   }
 });
+
+function discrepantLabLot() {
+  return {
+    id: 1,
+    codigo: "MAD-TEST",
+    estado: "En Cuarentena",
+    idgrupo: 1,
+    grupoabo: "O",
+    factorrh: "Positivo",
+    analisis_aprobados: false,
+    serologia: null,
+    hematologia: {
+      idanalisishematologico: 7,
+      grupoaboconfirmado: "A",
+      factorrhconfirmado: "Positivo",
+      pruebacoombsdirecta: "Negativo",
+      pruebacoombsindirecta: "Negativo",
+      rastreoanticuerposirregulares: "Negativo",
+      dictameninmunohematologico: "Apto",
+      observaciones: "",
+    },
+    componentes: [
+      { id: 1, codigo: "COMP-TEST", estado: "En Cuarentena", autologo: false },
+    ],
+  };
+}
+test("BIOQ concilia el grupo con motivo y confirmación, conservando datos ante rechazo", async () => {
+  let attempts = 0;
+  const row = discrepantLabLot();
+  const ui = await open(
+    async (url, req) => {
+      if (url.pathname === "/api/laboratorio/madres/") return { body: [row] };
+      if (url.pathname === "/api/laboratorio/madres/1/") return { body: row };
+      if (url.pathname === "/api/laboratorio/madres/1/corregir-grupo/") {
+        const body = req.postDataJSON();
+        assert.equal(body.idgrupo_anterior, 1);
+        assert.equal(body.idanalisishematologico, 7);
+        assert.equal(body.grupoaboconfirmado, "A");
+        assert.equal(body.confirmada, true);
+        assert.equal(
+          body.motivo,
+          "Rotulado contrastado con análisis certificado",
+        );
+        if (++attempts === 1)
+          return {
+            status: 400,
+            body: { detail: "El análisis cambió. Recarga el lote." },
+          };
+        row.idgrupo = 2;
+        row.grupoabo = "A";
+        return { body: { estado: "En Cuarentena" } };
+      }
+    },
+    1280,
+    "BIOQ_INTEGRAL",
+  );
+  try {
+    const p = ui.page;
+    await p.getByRole("button", { name: "Laboratorio", exact: true }).click();
+    await p.getByLabel("Bolsa madre").selectOption("1");
+    const f = form(p, "Conciliar clasificación ABO/Rh del lote");
+    await f
+      .getByLabel("Motivo de la conciliación")
+      .fill("Rotulado contrastado con análisis certificado");
+    await f
+      .getByLabel(
+        "Verifiqué el análisis y el rotulado de la madre y sus componentes",
+      )
+      .check();
+    await f.getByRole("button").click();
+    await f.getByRole("alert").waitFor();
+    assert.equal(
+      await f.getByLabel("Motivo de la conciliación").inputValue(),
+      "Rotulado contrastado con análisis certificado",
+    );
+    await f.getByRole("button").click();
+    await p
+      .getByRole("status")
+      .filter({ hasText: "Clasificación conciliada" })
+      .waitFor();
+    assert.equal(
+      await p
+        .getByRole("heading", {
+          name: "Conciliar clasificación ABO/Rh del lote",
+          exact: true,
+        })
+        .count(),
+      0,
+    );
+    assert.deepEqual(ui.errors, []);
+  } finally {
+    await ui.close();
+  }
+});
+test("ADMIN consulta laboratorio pero no puede editar ABO/Rh existente ni conciliarlo", async () => {
+  const row = discrepantLabLot();
+  const ui = await open(async (url) => {
+    if (url.pathname === "/api/laboratorio/madres/") return { body: [row] };
+    if (url.pathname === "/api/laboratorio/madres/1/") return { body: row };
+  });
+  try {
+    const p = ui.page;
+    await p.getByRole("button", { name: "Laboratorio", exact: true }).click();
+    await p.getByLabel("Bolsa madre").selectOption("1");
+    await p
+      .getByRole("heading", { name: "CU14 Inmunohematología", exact: true })
+      .waitFor();
+    assert.equal(
+      await p.getByLabel("Grupo ABO", { exact: true }).isDisabled(),
+      true,
+    );
+    assert.equal(
+      await p.getByLabel("Factor Rh", { exact: true }).isDisabled(),
+      true,
+    );
+    assert.equal(
+      await p
+        .getByRole("heading", {
+          name: "Conciliar clasificación ABO/Rh del lote",
+          exact: true,
+        })
+        .count(),
+      0,
+    );
+    assert.deepEqual(ui.errors, []);
+  } finally {
+    await ui.close();
+  }
+});

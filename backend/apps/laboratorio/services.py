@@ -1,7 +1,7 @@
 from contextlib import contextmanager
 
 from django.db import connection, transaction
-from rest_framework.exceptions import NotFound, ValidationError
+from rest_framework.exceptions import NotFound, ValidationError, PermissionDenied
 
 
 @contextmanager
@@ -46,6 +46,20 @@ def guardar_analisis(request, madre, tipo, datos, analisis_id=None):
         if not cursor.fetchone():
             raise ValidationError('La cuenta debe estar vinculada a un profesional de salud.')
         valores = dict(datos, idpersonalsalud=request.user.persona_id)
+        motivo = valores.pop('motivo_correccion', None)
+        changed_group = False
+        if tipo == 'hematologia':
+            if analisis_id is None:
+                cursor.execute("SELECT grupoaboconfirmado,factorrhconfirmado FROM analisisinmunohematologico WHERE idunidadmadre=%s AND etapaanalisis='Post-Extraccion' ORDER BY fechaanalisis DESC,idanalisishematologico DESC LIMIT 1", [madre])
+            else:
+                cursor.execute("SELECT grupoaboconfirmado,factorrhconfirmado FROM analisisinmunohematologico WHERE idunidadmadre=%s AND idanalisishematologico=%s", [madre,analisis_id])
+            previous = cursor.fetchone()
+            changed_group = bool(previous and previous != (valores['grupoaboconfirmado'], valores['factorrhconfirmado']))
+            if changed_group:
+                if request.auth.get('rolActivo') != 'BIOQ_INTEGRAL':
+                    raise PermissionDenied('Solo BIOQ_INTEGRAL puede corregir ABO/Rh.')
+                if not motivo:
+                    raise ValidationError('Indica el motivo de la corrección ABO/Rh (10 a 120 caracteres).')
         if tipo == 'hematologia':
             valores['etapaanalisis'] = 'Post-Extraccion'
         else:
@@ -67,6 +81,8 @@ def guardar_analisis(request, madre, tipo, datos, analisis_id=None):
         row = cursor.fetchone()
         if not row:
             raise NotFound('Análisis inexistente en esta bolsa madre.')
+        if changed_group:
+            cursor.execute('INSERT INTO bitacoraauditoria(idusuario,rolactivo,accionrealizada,tablaafectada,idregistroafectado,iporigen) VALUES(%s,%s,%s,%s,%s,%s)', [request.user.idUsuario, request.auth['rolActivo'], f"CU14 ABO/Rh {previous[0]}/{previous[1]} -> {valores['grupoaboconfirmado']}/{valores['factorrhconfirmado']}; motivo: {motivo}", 'correccion_resultado', row[0], request.META.get('REMOTE_ADDR','')[:45]])
         return row[0]
 
 

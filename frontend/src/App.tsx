@@ -207,6 +207,7 @@ export default function App() {
               {tab === "laboratorio" &&
                 ["ADMIN", "BIOQ_INTEGRAL"].includes(session.activeRole) && (
                   <JointReleasePanel
+                    role={session.activeRole}
                     key={session.activeRole}
                     token={session.token}
                   />

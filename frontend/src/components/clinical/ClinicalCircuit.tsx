@@ -8,6 +8,7 @@ export type Field = {
   required?: boolean;
   step?: string;
   maxLength?: number;
+  minLength?: number;
   options?: [string, string][];
 };
 const input =
@@ -84,6 +85,7 @@ export function Form({
                 type={x.type || "text"}
                 step={x.step || (x.type === "number" ? "any" : undefined)}
                 maxLength={x.maxLength}
+                minLength={x.minLength}
                 className={input}
               />
             )}
