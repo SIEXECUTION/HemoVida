@@ -3,6 +3,8 @@
 Estado al 31 de octubre de 2026. Rama: `codex/ciclo3-desarrollo-local`.
 Este documento actualiza el estado de los informes anteriores. El código y las pruebas son locales; no se publicó este cambio en Render ni Cloudflare.
 
+La revisión de las dos observaciones de cierre está en [REVISION_CIERRE_CICLO3.md](REVISION_CIERRE_CICLO3.md): reglas clínicas provisionales, configuración de conservación aún vacía en Supabase y separación comprobada entre servicios actuales y SP heredados. No equivale al cierre clínico/operativo del ciclo.
+
 ## Base de datos
 
 Se verificó la conexión real a Supabase por `DATABASE_URL`, SSL y pooler de transacciones en puerto 6543. Se comprobaron las tablas y columnas de 07, la función de liberación de 06 y los triggers de auditoría nuevos. El diagnóstico realiza únicamente consultas y devuelve error si detecta una migración incompleta.

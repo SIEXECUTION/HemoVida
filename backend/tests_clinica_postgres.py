@@ -383,6 +383,76 @@ class ClinicalTests(unittest.TestCase):
             400,
         )
 
+    def test_provisional_triage_boundaries_are_explicit(self):
+        # Caracteriza restricciones existentes; no acredita aprobación médica.
+        from apps.clinica.serializers import Triaje
+
+        boundary = dict(self.vitals, pesokg=50, nivelhemoglobina=12.5, temperatura=37.5)
+        self.assertTrue(Triaje(data=boundary).is_valid())
+        for change in [dict(pesokg=49.99), dict(nivelhemoglobina=12.4), dict(temperatura=37.6)]:
+            with self.subTest(change=change):
+                self.assertFalse(Triaje(data=dict(boundary, **change)).is_valid())
+                # Un rechazo profesional sí se registra para continuar por CU11.
+                self.assertTrue(Triaje(data=dict(boundary, **change, resultadoaptitud="Rechazado")).is_valid())
+
+    def test_fraction_uses_approved_protocol_days_temperature_and_agitation(self):
+        from apps.clinica.views import ProtocoloView
+
+        m = self.collect()["idunidadmadre"]
+        d = {"componentes": [dict(tipocomponente="Concentrado de Globulos Rojos",
+             volumenml=250, capacidadbolsaml=350, idubicacion=self.loc, categoriaetaria="Adulto")]}
+        with connection.cursor() as c:
+            c.execute("DELETE FROM protocoloconservacion")
+        self.assertEqual(self.call(FraccionamientoView, d, madre=m).status_code, 400)
+        # Valores sintéticos deliberadamente distintos de los 35 días heredados.
+        protocol = dict(tipocomponente="Concentrado de Globulos Rojos", temperaturamin=2,
+                        temperaturamax=6, diasconservacion=7, requiereagitacion=True)
+        self.assertEqual(self.call(ProtocoloView, protocol, role="TEC_LOGISTICA").status_code, 403)
+        self.assertEqual(self.call(ProtocoloView, protocol).status_code, 201)
+        for temperature, agitation in [(1.9, True), (6.1, True), (4, False)]:
+            with self.subTest(temperature=temperature, agitation=agitation):
+                with connection.cursor() as c:
+                    c.execute("UPDATE ubicacionalmacen SET temperaturaregistro=%s,tieneagitacion=%s WHERE idubicacion=%s",
+                              [temperature, agitation, self.loc])
+                self.assertEqual(self.call(FraccionamientoView, d, madre=m).status_code, 400)
+        with connection.cursor() as c:
+            c.execute("UPDATE ubicacionalmacen SET temperaturaregistro=4,tieneagitacion=true WHERE idubicacion=%s", [self.loc])
+        self.assertEqual(self.call(FraccionamientoView, d, madre=m).status_code, 201)
+        with connection.cursor() as c:
+            c.execute("SELECT fechacaducidad-fechaextraccion FROM ejemplarbolsa WHERE idunidadmadre=%s", [m])
+            self.assertEqual(c.fetchone()[0], 7)
+            c.execute("SELECT aprobadopor FROM protocoloconservacion")
+            self.assertEqual(c.fetchone()[0], self.person)
+
+    def test_missing_second_protocol_rolls_back_entire_fraction(self):
+        m = self.collect()["idunidadmadre"]
+        base = dict(volumenml=150, capacidadbolsaml=350, idubicacion=self.loc, categoriaetaria="Adulto")
+        d = {"componentes": [dict(base, tipocomponente="Concentrado de Globulos Rojos", volumenml=250),
+                             dict(base, tipocomponente="Plasma Fresco Congelado")]}
+        response = self.call(FraccionamientoView, d, madre=m)
+        self.assertEqual(response.status_code, 400, response.data)
+        self.assertIn("aprobar un protocolo", str(response.data))
+        with connection.cursor() as c:
+            c.execute("SELECT count(*) FROM ejemplarbolsa WHERE idunidadmadre=%s", [m])
+            self.assertEqual(c.fetchone()[0], 0)
+            c.execute("SELECT capacidadocupada FROM ubicacionalmacen WHERE idubicacion=%s", [self.loc])
+            self.assertEqual(c.fetchone()[0], 0)
+
+    def test_active_clinical_circuit_does_not_invoke_legacy_procedures(self):
+        legacy = ("sp_procesar_triaje_clinico", "sp_registrar_flebotomia", "sp_registrar_fraccionamiento")
+
+        def guard(execute, sql, params, many, context):
+            self.assertFalse(any(name in sql.lower() for name in legacy), sql)
+            return execute(sql, params, many, context)
+
+        with connection.execute_wrapper(guard):
+            t = self.triage()
+            m = self.collect(t)["idunidadmadre"]
+            self.fraction(m)
+            r = self.call(DiferimientoView, dict(idpersona=self.pid, idtriaje=t,
+                          tipo="Temporal", diasinhabilitacion=500, motivodetallado="Prueba de contrato explícito"))
+            self.assertEqual(r.status_code, 201, r.data)
+
     def test_autologous_general_fraction_blocked(self):
         m = self.collect()["idunidadmadre"]
         with connection.cursor() as c:

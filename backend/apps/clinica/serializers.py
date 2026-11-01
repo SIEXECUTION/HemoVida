@@ -21,7 +21,7 @@ class Triaje(s.Serializer):
             d["pesokg"] < 50 or d["nivelhemoglobina"] < 12.5 or d["temperatura"] > 37.5
         ):
             raise s.ValidationError(
-                "No cumple los criterios básicos del procedimiento institucional. Revise el dictamen."
+                "No cumple las restricciones básicas implementadas de peso, hemoglobina o temperatura. Revise el dictamen con el protocolo institucional."
             )
         return d
 
