@@ -1,0 +1,1113 @@
+[
+  {
+    "id": 1,
+    "ciclo": 1,
+    "titulo": "Autenticar usuario y controlar el bloqueo progresivo diario",
+    "modulo": "seguridad",
+    "actores": [
+      "Usuario registrado"
+    ],
+    "entidades": [
+      "usuario",
+      "persona",
+      "rol",
+      "usuariorol",
+      "bitacoraauditoria"
+    ],
+    "rutas": "POST /api/auth/login/",
+    "precondicion": "Cuenta existente; contraseña registrada mediante hash compatible con Django.",
+    "flujo": [
+      "Introduce usuario o correo y contraseña.",
+      "El sistema bloquea la fila de usuario y revisa estado, día del contador y plazo.",
+      "Si cambió el día de Bolivia, reinicia los fallos y el bloqueo temporal.",
+      "Verifica la contraseña; si es válida, recupera roles y entrega tokens.",
+      "El usuario elige su rol autorizado y el sistema registra el acceso exitoso."
+    ],
+    "excepciones": [
+      "Contraseña incorrecta: suma un fallo; cada tres aplica bloqueo progresivo.",
+      "Bloqueo vigente: informa el vencimiento y no suma intentos.",
+      "Cuenta inactiva o bloqueada manualmente: requiere administración."
+    ],
+    "postcondicion": "Sesión autenticada o rechazo; los fallos persisten aunque la validación devuelva error.",
+    "reglas": "Validar credenciales y habilitar los perfiles asignados con control de fallos diarios. 3 fallos: 15 min; 6: 30 min; 9: 60 min; continúa duplicándose. Reinicio diario en America/La_Paz al siguiente intento. Un acceso correcto conserva los fallos del día. El bloqueo manual no expira. El contador histórico de bloqueos se conserva.",
+    "eventos": [
+      [
+        "S",
+        "D",
+        "Bloquear cuenta; consultar día, estado y plazo"
+      ],
+      [
+        "S",
+        "S",
+        "Reiniciar contador al cambiar el día de Bolivia"
+      ],
+      [
+        "S",
+        "S",
+        "Verificar hash Django y credenciales"
+      ],
+      [
+        "S",
+        "D",
+        "Guardar fallos y plazo, o registrar acceso válido"
+      ],
+      [
+        "S",
+        "U",
+        "Rechazo, o JWT y roles asignados"
+      ]
+    ]
+  },
+  {
+    "id": 2,
+    "ciclo": 1,
+    "titulo": "Gestionar cuentas roles y rehabilitación de acceso",
+    "modulo": "seguridad",
+    "actores": [
+      "Solicitante",
+      "ADMIN"
+    ],
+    "entidades": [
+      "persona",
+      "usuario",
+      "personalsalud",
+      "usuariorol"
+    ],
+    "rutas": "POST /api/auth/autoregistro/; POST /api/personal/crear/; PATCH /api/usuarios/{id}/estado/",
+    "precondicion": "ADMIN autenticado para altas internas, asignación de cargos y cambios de estado.",
+    "flujo": [
+      "Registra o consulta la cuenta y su persona.",
+      "Valida identificadores y requisitos del perfil.",
+      "Asigna roles permitidos y vínculo de PersonalSalud cuando corresponde.",
+      "Activa, inactiva o rehabilita la cuenta.",
+      "Registra la acción administrativa."
+    ],
+    "excepciones": [
+      "Identidad o cuenta duplicada: rechaza sin dejar registros huérfanos.",
+      "Perfil no autorizado: deniega.",
+      "Al rehabilitar, reinicia fallos y elimina plazo temporal."
+    ],
+    "postcondicion": "Cuenta y roles persistidos o solicitud rechazada.",
+    "reglas": "Administrar usuarios y habilitar perfiles de personal acreditado. Las contraseñas utilizan el mecanismo Django existente. No se crean roles profesionales mediante autorregistro público. La rehabilitación y el login protegen la fila del usuario.",
+    "eventos": [
+      [
+        "S",
+        "S",
+        "Distinguir autorregistro público y alta administrativa"
+      ],
+      [
+        "S",
+        "D",
+        "Validar identidad y cuenta duplicada"
+      ],
+      [
+        "S",
+        "D",
+        "Guardar cuenta y rol permitido; auditar"
+      ],
+      [
+        "S",
+        "U",
+        "Cuenta creada o estado actualizado"
+      ]
+    ]
+  },
+  {
+    "id": 3,
+    "ciclo": 1,
+    "titulo": "Registrar y consultar bitácora integral",
+    "modulo": "seguridad",
+    "actores": [
+      "ADMIN",
+      "Operador autorizado"
+    ],
+    "entidades": [
+      "bitacoraauditoria",
+      "usuario"
+    ],
+    "rutas": "GET /api/auditoria/",
+    "precondicion": "Operación autenticada o contexto técnico explícito; auditoría habilitada en PostgreSQL.",
+    "flujo": [
+      "El operador ejecuta una acción.",
+      "La transacción establece usuario, rol y origen.",
+      "El sistema registra cambios mediante auditoría transaccional y eventos específicos.",
+      "ADMIN consulta el registro y su contexto."
+    ],
+    "excepciones": [
+      "Operación inválida: revierte sus escrituras transaccionales.",
+      "Carga directa: identifica origen técnico y no inventa una sesión personal."
+    ],
+    "postcondicion": "Registro consultable del cambio confirmado.",
+    "reglas": "Conservar trazabilidad de operaciones y permitir su consulta autorizada. No registrar contraseñas ni secretos. Preservar identidad y trazabilidad; las correcciones no borran el historial.",
+    "eventos": [
+      [
+        "S",
+        "S",
+        "Exigir ADMIN para consultar auditoría"
+      ],
+      [
+        "S",
+        "D",
+        "Consultar eventos con filtros"
+      ],
+      [
+        "D",
+        "S",
+        "Eventos persistidos, sin contraseñas"
+      ],
+      [
+        "S",
+        "U",
+        "Listado de auditoría"
+      ]
+    ]
+  },
+  {
+    "id": 4,
+    "ciclo": 1,
+    "titulo": "Monitorear stock crítico y caducidad",
+    "modulo": "inventario",
+    "actores": [
+      "ADMIN",
+      "BIOQ_INTEGRAL",
+      "TEC_LOGISTICA"
+    ],
+    "entidades": [
+      "ejemplarbolsa",
+      "unidadsangretotal",
+      "parametrostockminimo"
+    ],
+    "rutas": "GET /api/stock/alertas/; PATCH /api/stock/parametros/{id}/",
+    "precondicion": "Usuario con rol de inventario; unidades y parámetros existentes.",
+    "flujo": [
+      "Consulta stock y umbrales.",
+      "Excluye componentes caducados y unidades autólogas del stock general.",
+      "Verifica aprobación conjunta, madre liberada y grupo concordante.",
+      "Presenta existencias y alertas."
+    ],
+    "excepciones": [
+      "Estado Disponible heredado sin respaldo biológico: excluye.",
+      "Falta de permisos: deniega."
+    ],
+    "postcondicion": "Información calculada desde PostgreSQL.",
+    "reglas": "Consultar inventario utilizable y alertas con filtros biológicos concordantes. Una bolsa marcada Disponible no basta para contabilizar stock. Conservar los circuitos de baja y trazabilidad.",
+    "eventos": [
+      [
+        "S",
+        "D",
+        "Consultar stock, madre, análisis y caducidad"
+      ],
+      [
+        "S",
+        "S",
+        "Excluir cuarentena, caducados y autólogos del stock general"
+      ],
+      [
+        "S",
+        "S",
+        "Comparar stock utilizable con mínimos"
+      ],
+      [
+        "S",
+        "U",
+        "Alertas y cantidades verificables"
+      ]
+    ]
+  },
+  {
+    "id": 5,
+    "ciclo": 1,
+    "titulo": "Consultar carnet digital e historial",
+    "modulo": "donantes",
+    "actores": [
+      "Donante o candidato",
+      "Personal autorizado"
+    ],
+    "entidades": [
+      "persona",
+      "donante",
+      "extracciondonacion"
+    ],
+    "rutas": "GET /api/donantes/{ci_o_codigo}/carnet/",
+    "precondicion": "Persona identificada; acceso permitido a la información.",
+    "flujo": [
+      "Consulta la credencial.",
+      "El backend recupera identidad e historial.",
+      "Calcula fechas de descanso con calendario de Bolivia.",
+      "Presenta carnet, QR e información disponible."
+    ],
+    "excepciones": [
+      "Sin historial: muestra ausencia de donaciones.",
+      "Identidad ajena sin permiso: rechaza."
+    ],
+    "postcondicion": "Carnet generado con datos persistidos.",
+    "reglas": "Presentar la credencial e historial autorizado del donante. No inventar donaciones ni aptitud; el carnet no sustituye la evaluación clínica.",
+    "eventos": [
+      [
+        "S",
+        "D",
+        "Resolver identificador completo y persona"
+      ],
+      [
+        "S",
+        "D",
+        "Consultar historial de extracciones"
+      ],
+      [
+        "S",
+        "S",
+        "Calcular descanso y fecha habilitada"
+      ],
+      [
+        "S",
+        "U",
+        "Carnet con datos persistidos"
+      ],
+      [
+        "U",
+        "U",
+        "Generar QR hacia verificación del carnet"
+      ]
+    ]
+  },
+  {
+    "id": 6,
+    "ciclo": 2,
+    "titulo": "Gestionar postulantes y prefiltro versionado",
+    "modulo": "agenda",
+    "actores": [
+      "DONANTE",
+      "POSIBLE_DONADOR",
+      "RECEPTOR",
+      "PERS_COLECTA",
+      "ADMIN"
+    ],
+    "entidades": [
+      "requisitodonacion",
+      "prefiltroborrador",
+      "prefiltrocita",
+      "detallecitarequisito"
+    ],
+    "rutas": "GET /api/agenda/requisitos/; GET/POST /api/agenda/borrador/",
+    "precondicion": "Catálogo de requisitos activos; persona identificada.",
+    "flujo": [
+      "Consulta el catálogo y su versión.",
+      "Responde cada requisito como cumple o no cumple.",
+      "Puede guardar un borrador sin reservar cupo.",
+      "Al confirmar, el sistema valida versión y totalidad de respuestas.",
+      "Conserva catálogo, respuestas y versión histórica con la cita."
+    ],
+    "excepciones": [
+      "Catálogo modificado: exige actualizar respuestas.",
+      "Requisito pendiente: permite evaluación profesional; no declara aptitud.",
+      "Borrador parcial: no confirma cita."
+    ],
+    "postcondicion": "Borrador guardado o prefiltro asociado a una cita.",
+    "reglas": "Registrar respuestas declarativas que orientan la atención. Una respuesta por requisito. No interpretar preguntas ambiguas ni convertir respuestas en un diagnóstico. El paciente gestiona sus propios datos.",
+    "eventos": [
+      [
+        "S",
+        "D",
+        "Consultar catálogo activo y versión"
+      ],
+      [
+        "S",
+        "U",
+        "Requisitos y versión del catálogo"
+      ],
+      [
+        "U",
+        "S",
+        "Guardar respuestas y versión"
+      ],
+      [
+        "S",
+        "S",
+        "Validar tipos, integridad y versión"
+      ],
+      [
+        "S",
+        "D",
+        "Guardar borrador sin reservar turno"
+      ],
+      [
+        "S",
+        "U",
+        "Prefiltro persistido"
+      ]
+    ]
+  },
+  {
+    "id": 7,
+    "ciclo": 2,
+    "titulo": "Gestionar agenda y citas de atención",
+    "modulo": "agenda",
+    "actores": [
+      "ADMIN",
+      "PERS_COLECTA",
+      "Paciente"
+    ],
+    "entidades": [
+      "agendaturno",
+      "citadonacion",
+      "cierreagenda",
+      "prefiltrocita"
+    ],
+    "rutas": "GET/POST /api/agenda/turnos/; GET/POST /api/agenda/citas/",
+    "precondicion": "Turno habilitado, futuro y con cupo; prefiltro vigente.",
+    "flujo": [
+      "Consulta disponibilidad.",
+      "Selecciona modalidad y turno.",
+      "El backend bloquea la agenda y verifica cupo y cierres.",
+      "Guarda cita, turno y prefiltro de forma atómica.",
+      "Permite reprogramar o cancelar según estado."
+    ],
+    "excepciones": [
+      "Día cerrado o turno ocupado: rechaza.",
+      "Donación con requisitos pendientes: estado Pendiente.",
+      "Autóloga: exige programa aprobado y cirugía concordante."
+    ],
+    "postcondicion": "Cita y ocupación consistentes.",
+    "reglas": "Reservar reprogramar y cancelar citas con disponibilidad real. Lunes a viernes, 08:00–12:00 y 13:00–17:00; turnos de 15 min, un cupo. Reabrir un día no reactiva citas canceladas. Zona America/La_Paz.",
+    "eventos": [
+      [
+        "S",
+        "D",
+        "Bloquear agenda y comprobar turno y cierres"
+      ],
+      [
+        "S",
+        "D",
+        "Validar prefiltro, cupo y programa si es autóloga"
+      ],
+      [
+        "S",
+        "D",
+        "Confirmar cita y prefiltro en transacción"
+      ],
+      [
+        "S",
+        "U",
+        "Cita y disponibilidad actualizada"
+      ]
+    ]
+  },
+  {
+    "id": 8,
+    "ciclo": 2,
+    "titulo": "Admitir al donante con validación integral",
+    "modulo": "clinica",
+    "actores": [
+      "ADMIN",
+      "PERS_COLECTA"
+    ],
+    "entidades": [
+      "persona",
+      "citadonacion",
+      "prefiltrocita"
+    ],
+    "rutas": "POST /api/clinica/admision/",
+    "precondicion": "Persona identificada y cita para el día local; o atención presencial autorizada.",
+    "flujo": [
+      "Busca persona y cita.",
+      "Verifica identidad, fecha, estado y prefiltro.",
+      "Confirma asistencia.",
+      "Para atención presencial, registra autorización y motivo y valida turno libre.",
+      "Guarda cita y admisión conjuntamente."
+    ],
+    "excepciones": [
+      "Cita de otro día, persona o catálogo vencido: rechaza.",
+      "Evaluación permite requisitos pendientes para revisión.",
+      "Sin cupo presencial: no crea una admisión parcial."
+    ],
+    "postcondicion": "Asistencia persistida y atención habilitada para evaluación.",
+    "reglas": "Confirmar identidad y asistencia antes del circuito clínico. La admisión no exige un triaje previo ni autoriza por sí misma extracción.",
+    "eventos": [
+      [
+        "S",
+        "D",
+        "Buscar persona y cita del día local"
+      ],
+      [
+        "S",
+        "S",
+        "Validar identidad, prefiltro y autorización presencial"
+      ],
+      [
+        "S",
+        "D",
+        "Registrar asistencia y admisión conjuntamente"
+      ],
+      [
+        "S",
+        "U",
+        "Candidato admitido; sin colecta automática"
+      ]
+    ]
+  },
+  {
+    "id": 9,
+    "ciclo": 2,
+    "titulo": "Registrar refrigerio e incentivos",
+    "modulo": "agenda",
+    "actores": [
+      "ADMIN",
+      "PERS_COLECTA"
+    ],
+    "entidades": [
+      "extracciondonacion",
+      "incentivoentrega"
+    ],
+    "rutas": "GET/POST /api/agenda/incentivos/; POST /api/agenda/incentivos/{id}/confirmar-refrigerio/",
+    "precondicion": "Extracción existente y acceso autorizado.",
+    "flujo": [
+      "Localiza la extracción.",
+      "Registra incentivo y estado real del refrigerio.",
+      "Si está pendiente, conserva ese estado.",
+      "Confirma posteriormente la entrega sin duplicar el registro."
+    ],
+    "excepciones": [
+      "Extracción inexistente: rechaza.",
+      "Repetición de confirmación: no duplica.",
+      "Paciente sin rol operativo: deniega."
+    ],
+    "postcondicion": "Entrega o pendiente persistido con trazabilidad.",
+    "reglas": "Controlar entrega de refrigerio e incentivo asociada a una extracción real. No dar por entregado un refrigerio pendiente. Un registro por extracción; confirmación idempotente.",
+    "eventos": [
+      [
+        "S",
+        "D",
+        "Comprobar extracción e incentivo existente"
+      ],
+      [
+        "S",
+        "D",
+        "Crear o confirmar entrega idempotente"
+      ],
+      [
+        "S",
+        "U",
+        "Estado real: pendiente o entregado"
+      ]
+    ]
+  },
+  {
+    "id": 10,
+    "ciclo": 3,
+    "titulo": "Realizar triaje y dictamen de aptitud",
+    "modulo": "clinica",
+    "actores": [
+      "DOC_TRIAJE",
+      "ADMIN"
+    ],
+    "entidades": [
+      "persona",
+      "citadonacion",
+      "triajeclinico"
+    ],
+    "rutas": "POST /api/clinica/triajes/",
+    "precondicion": "Persona identificada, cita admitida del día local y acceso autorizado.",
+    "flujo": [
+      "Selecciona candidato y cita.",
+      "Registra peso, presión, hemoglobina y temperatura.",
+      "El servicio valida identidad, fecha y parámetros.",
+      "El profesional indica Apto o Rechazado.",
+      "Guarda evaluación y deriva a diferimiento cuando corresponda como acción expresa."
+    ],
+    "excepciones": [
+      "Cita o persona discordante: rechaza.",
+      "Parámetros incompatibles con Apto: rechaza el registro de ese dictamen.",
+      "Menor de edad: no acepta Apto."
+    ],
+    "postcondicion": "Evaluación registrada con el dictamen válido, o rechazo sin escritura parcial.",
+    "reglas": "Evaluar al candidato admitido y registrar el dictamen. Referencia académica: edad mínima 18, peso mayor de 50 kg, Hb mínima 12,5 y temperatura máxima 37,5; presión coherente. No sustituye un protocolo clínico institucional.",
+    "eventos": [
+      [
+        "S",
+        "D",
+        "Consultar candidato, cita admitida y restricciones"
+      ],
+      [
+        "S",
+        "S",
+        "Validar fecha y parámetros del dictamen"
+      ],
+      [
+        "S",
+        "D",
+        "Registrar triaje válido y auditoría"
+      ],
+      [
+        "S",
+        "U",
+        "Apto o Rechazado; diferimiento como acción expresa"
+      ]
+    ]
+  },
+  {
+    "id": 11,
+    "ciclo": 3,
+    "titulo": "Registrar diferimiento y comunicación",
+    "modulo": "clinica",
+    "actores": [
+      "DOC_TRIAJE",
+      "BIOQ_INTEGRAL",
+      "ADMIN"
+    ],
+    "entidades": [
+      "diferimiento",
+      "triajeclinico",
+      "analisisinmunoserologico",
+      "analisisinmunohematologico"
+    ],
+    "rutas": "POST /api/clinica/diferimientos/; POST /api/clinica/diferimientos/{id}/comunicar/",
+    "precondicion": "Persona y exactamente un origen de triaje o análisis concordante.",
+    "flujo": [
+      "Selecciona evaluación de origen.",
+      "Registra tipo Temporal o Definitivo y motivo.",
+      "Para temporal, indica días positivos.",
+      "El sistema calcula fechas y cancela citas incompatibles.",
+      "Confirma canal y comunicación al candidato."
+    ],
+    "excepciones": [
+      "Dos orígenes o evaluación ajena: rechaza.",
+      "Temporal sin días: rechaza.",
+      "Comunicación no confirmada: no la registra como efectuada."
+    ],
+    "postcondicion": "Diferimiento persistido con trazabilidad y fechas concordantes.",
+    "reglas": "Registrar restricción clínica y comunicar su alcance. El definitivo se selecciona expresamente; no se infiere de superar 365 días. El diferimiento no bloquea la cuenta de acceso.",
+    "eventos": [
+      [
+        "S",
+        "D",
+        "Validar persona y exactamente un origen clínico"
+      ],
+      [
+        "S",
+        "S",
+        "Validar tipo, motivo y duración"
+      ],
+      [
+        "S",
+        "D",
+        "Guardar diferimiento y cancelar citas incompatibles"
+      ],
+      [
+        "S",
+        "U",
+        "Restricción registrada; comunicación pendiente o confirmada"
+      ]
+    ]
+  },
+  {
+    "id": 12,
+    "ciclo": 3,
+    "titulo": "Registrar consentimiento y colecta de sangre",
+    "modulo": "clinica",
+    "actores": [
+      "PERS_COLECTA",
+      "ADMIN"
+    ],
+    "entidades": [
+      "triajeclinico",
+      "consentimientoinformado",
+      "extracciondonacion",
+      "unidadsangretotal"
+    ],
+    "rutas": "POST /api/clinica/colectas/",
+    "precondicion": "Cita admitida; último triaje Apto del día; descanso cumplido; consentimiento aceptado.",
+    "flujo": [
+      "Selecciona persona y triaje vigente.",
+      "Confirma declaración y consentimiento.",
+      "Registra grupo, brazo y volumen de 300–450 ml.",
+      "Verifica programa aprobado si es autóloga.",
+      "Guarda extracción, consentimiento y bolsa madre en una transacción.",
+      "Deriva al registro de refrigerio y al fraccionamiento."
+    ],
+    "excepciones": [
+      "Sin consentimiento o triaje vigente: rechaza.",
+      "Descanso no cumplido: rechaza.",
+      "Colecta interrumpida: registra incidencia; no simula extracción normal."
+    ],
+    "postcondicion": "Extracción y consentimiento vinculados a madre en cuarentena, o rechazo sin registros parciales.",
+    "reglas": "Documentar una colecta vinculada a identidad, evaluación y consentimiento. La colecta no libera componentes. No se ejecuta el SP clínico heredado restringido. Las firmas académicas se identifican como sintéticas.",
+    "eventos": [
+      [
+        "S",
+        "D",
+        "Bloquear persona; validar triaje, descanso y programa"
+      ],
+      [
+        "S",
+        "S",
+        "Exigir consentimiento y volumen válido"
+      ],
+      [
+        "S",
+        "D",
+        "Guardar consentimiento, extracción y madre en transacción"
+      ],
+      [
+        "S",
+        "U",
+        "Colecta registrada y madre en cuarentena"
+      ]
+    ]
+  },
+  {
+    "id": 13,
+    "ciclo": 3,
+    "titulo": "Registrar serología y participar en liberación conjunta",
+    "modulo": "laboratorio",
+    "actores": [
+      "BIOQ_INTEGRAL",
+      "ADMIN"
+    ],
+    "entidades": [
+      "analisisinmunoserologico",
+      "analisisinmunohematologico",
+      "unidadsangretotal"
+    ],
+    "rutas": "POST /api/laboratorio/madres/{id}/serologia/; POST /api/laboratorio/madres/{id}/liberar/",
+    "precondicion": "Bolsa madre existente y operador autorizado.",
+    "flujo": [
+      "Selecciona madre y registra panel serológico.",
+      "Valida resultados y dictamen.",
+      "Guarda análisis con trazabilidad.",
+      "Un resultado incompatible invalida liberación y pone unidades en cuarentena.",
+      "BIOQ solicita liberación solo con ambas evaluaciones aprobadas."
+    ],
+    "excepciones": [
+      "Reactivo o indeterminado: no libera.",
+      "Falta inmunohematología: no libera.",
+      "Unidad entregada: conserva historial y emite advertencia para revisión."
+    ],
+    "postcondicion": "Resultados persistidos y estado biológico concordante.",
+    "reglas": "Conservar resultados serológicos y bloquear unidades sin aprobación completa. Se requiere panel íntegramente no reactivo y dictamen Apto, junto con CU14. Solo BIOQ_INTEGRAL ejecuta liberación.",
+    "eventos": [
+      [
+        "S",
+        "D",
+        "Bloquear madre; guardar serología y auditoría"
+      ],
+      [
+        "S",
+        "U",
+        "Resultado guardado; sin liberar automáticamente"
+      ],
+      [
+        "U",
+        "S",
+        "BIOQ solicita liberación conjunta"
+      ],
+      [
+        "S",
+        "D",
+        "Comprobar ambos análisis y concordancia de grupo"
+      ],
+      [
+        "S",
+        "D",
+        "Actualizar madre y componentes en transacción"
+      ],
+      [
+        "S",
+        "U",
+        "Liberación, o rechazo conservando cuarentena"
+      ]
+    ]
+  },
+  {
+    "id": 14,
+    "ciclo": 3,
+    "titulo": "Registrar inmunohematología y corregir grupo con trazabilidad",
+    "modulo": "laboratorio",
+    "actores": [
+      "BIOQ_INTEGRAL",
+      "Operador de registro autorizado"
+    ],
+    "entidades": [
+      "analisisinmunohematologico",
+      "unidadsangretotal",
+      "ejemplarbolsa",
+      "reservasangre"
+    ],
+    "rutas": "POST /api/laboratorio/madres/{id}/hematologia/; POST /api/laboratorio/madres/{id}/corregir-grupo/",
+    "precondicion": "Madre existente; análisis y grupo verificables.",
+    "flujo": [
+      "Registra ABO, Rh, Coombs y anticuerpos con dictamen.",
+      "Comprueba concordancia con madre.",
+      "Si se corrige grupo, BIOQ confirma análisis esperado y motivo.",
+      "Actualiza datos derivados permitidos, pone en cuarentena y cancela reservas incompatibles.",
+      "Exige nueva revisión y liberación explícita."
+    ],
+    "excepciones": [
+      "Grupo inesperado o cambio concurrente: rechaza.",
+      "Baja, despacho o referencias pretransfusionales incompatibles: impide corrección directa.",
+      "Autóloga con grupo receptor discordante: rechaza."
+    ],
+    "postcondicion": "Análisis o corrección auditada sin borrar historial.",
+    "reglas": "Confirmar ABO y Rh y controlar correcciones biológicas. No basta una pantalla ni editar un análisis para eludir el control de grupo. La liberación conjunta exige CU13 y CU14 aprobados.",
+    "eventos": [
+      [
+        "S",
+        "D",
+        "Consultar madre, análisis y restricciones de corrección"
+      ],
+      [
+        "S",
+        "S",
+        "Exigir BIOQ y motivo para corregir grupo"
+      ],
+      [
+        "S",
+        "D",
+        "Guardar corrección y auditar; invalidar liberación"
+      ],
+      [
+        "S",
+        "D",
+        "Poner en cuarentena y cancelar reservas incompatibles"
+      ],
+      [
+        "S",
+        "U",
+        "Corrección trazada; exige revisión y liberación explícita"
+      ]
+    ]
+  },
+  {
+    "id": 15,
+    "ciclo": 3,
+    "titulo": "Fraccionar conservar y controlar custodia",
+    "modulo": "clinica",
+    "actores": [
+      "TEC_LOGISTICA",
+      "ADMIN",
+      "Operador de fraccionamiento"
+    ],
+    "entidades": [
+      "unidadsangretotal",
+      "ejemplarbolsa",
+      "ubicacionalmacen",
+      "protocoloconservacion"
+    ],
+    "rutas": "POST /api/clinica/madres/{id}/fraccionar/; POST /api/clinica/componentes/{id}/custodiar/",
+    "precondicion": "Extracción válida, protocolo académico por componente y equipo compatible.",
+    "flujo": [
+      "Selecciona madre y registra componentes y capacidades.",
+      "Valida volumen total y ventana de fraccionamiento.",
+      "Calcula fecha local de extracción y caducidad.",
+      "Registra custodia verificando temperatura, agitación y capacidad.",
+      "Controla cuarentena, baja y liberación según el circuito."
+    ],
+    "excepciones": [
+      "Extracción futura o mayor de 8 horas para fraccionamiento: rechaza.",
+      "Sin protocolo, capacidad o conservación compatible: no registra custodia válida.",
+      "No convierte unidades autólogas a stock general."
+    ],
+    "postcondicion": "Componentes y movimientos persistidos con trazabilidad.",
+    "reglas": "Registrar componentes coherentes con volumen, caducidad y ubicación. Rojos/sangre total: 2–6 °C, 35 días, sin agitación. Plaquetas: 20–24 °C, 5 días, con agitación. PFC/crio: −30 a −18 °C, 365 días. Parámetros académicos; liberación a cargo de BIOQ.",
+    "eventos": [
+      [
+        "S",
+        "D",
+        "Consultar extracción, protocolos y ubicación"
+      ],
+      [
+        "S",
+        "S",
+        "Validar ventana, volumen total y capacidad"
+      ],
+      [
+        "S",
+        "D",
+        "Registrar componentes y caducidad"
+      ],
+      [
+        "S",
+        "S",
+        "Validar temperatura, agitación y exclusividad"
+      ],
+      [
+        "S",
+        "D",
+        "Guardar custodia y trazabilidad"
+      ],
+      [
+        "S",
+        "U",
+        "Componentes conservados; liberación independiente"
+      ]
+    ]
+  },
+  {
+    "id": 21,
+    "ciclo": 2,
+    "titulo": "Gestionar programación autóloga y revisión biológica",
+    "modulo": "agenda",
+    "actores": [
+      "MED_SOLICITANTE",
+      "DOC_TRIAJE",
+      "BIOQ_INTEGRAL",
+      "RECEPTOR"
+    ],
+    "entidades": [
+      "programacionautologa",
+      "programacionautologahistorial",
+      "receptor",
+      "colectaautologa"
+    ],
+    "rutas": "POST /api/agenda/programas/crear/; POST /api/agenda/programas/{id}/revision/",
+    "precondicion": "Receptor identificado; profesional vinculado; cirugía futura.",
+    "flujo": [
+      "Registra indicación, referencia y fecha de cirugía.",
+      "Guarda programa PendienteRevision e historial.",
+      "BIOQ revisa y aprueba o requiere correcciones.",
+      "Agenda y colecta verifican programa aprobado y concordancia.",
+      "Cambios médicos crean nueva versión y exigen revisión; cierre y cancelación conservan historial."
+    ],
+    "excepciones": [
+      "Otro programa activo: rechaza.",
+      "Cambio con unidades entregadas: exige circuito de revisión.",
+      "Al modificar cirugía, cuarentena y cancelación de reservas/citas incompatibles."
+    ],
+    "postcondicion": "Programa y versiones persistidos; exclusividad preservada.",
+    "reglas": "Vincular cirugía receptor y colecta exclusiva en un programa versionado. No hay aprobación automática ni reasignación a terceros. La reactivación de unidades y liberación son acciones explícitas separadas.",
+    "eventos": [
+      [
+        "S",
+        "S",
+        "Exigir profesional para indicación y BIOQ para revisión"
+      ],
+      [
+        "S",
+        "D",
+        "Guardar programa pendiente y versión histórica"
+      ],
+      [
+        "S",
+        "U",
+        "Programa pendiente de revisión biológica"
+      ],
+      [
+        "U",
+        "S",
+        "BIOQ aprueba o solicita corrección"
+      ],
+      [
+        "S",
+        "D",
+        "Actualizar estado e historial del programa"
+      ],
+      [
+        "S",
+        "U",
+        "Agenda autóloga habilitada solo si está aprobado"
+      ]
+    ]
+  },
+  {
+    "id": 22,
+    "ciclo": 3,
+    "titulo": "Gestionar obligaciones cobros y Stripe",
+    "modulo": "finanzas",
+    "actores": [
+      "ADMIN",
+      "Stripe"
+    ],
+    "entidades": [
+      "deudafinanciera",
+      "pagofinanciero",
+      "checkoutstripe",
+      "eventostripe",
+      "comprobantepago"
+    ],
+    "rutas": "POST /api/finanzas/deudas/{id}/checkout/; POST /api/finanzas/stripe/webhook/",
+    "precondicion": "Solicitud y deuda existentes; claves del mismo entorno; webhook público configurado.",
+    "flujo": [
+      "Consulta saldo y tratamiento financiero.",
+      "Registra abono permitido o solicita Checkout.",
+      "Guarda intento e idempotencia antes de confirmar resultado.",
+      "El webhook valida firma y consulta la sesión real.",
+      "Comprueba importe, moneda, referencia y modo; confirma pago y comprobante una sola vez."
+    ],
+    "excepciones": [
+      "Evento duplicado: responde sin duplicar abono.",
+      "Red incierta: reintenta el mismo intento de forma idempotente.",
+      "Importe superior al saldo: requiere conciliación.",
+      "Sesión vencida o pago diferido fallido: anula o rechaza si corresponde."
+    ],
+    "postcondicion": "Saldo actualizado únicamente por pagos confirmados.",
+    "reglas": "Registrar deuda y conciliar pagos verificables en bolivianos. Finanzas exclusivamente ADMIN; moneda BOB. No confiar en retorno del navegador. Mantener test hasta aprobación de operación real. Secretos solo en backend.",
+    "eventos": [
+      [
+        "S",
+        "D",
+        "Bloquear deuda; validar BOB y saldo; guardar intento"
+      ],
+      [
+        "S",
+        "X",
+        "Crear Checkout con idempotencia"
+      ],
+      [
+        "X",
+        "S",
+        "Sesión y URL de Checkout"
+      ],
+      [
+        "S",
+        "D",
+        "Vincular intento y sesión"
+      ],
+      [
+        "S",
+        "U",
+        "URL para pagar; todavía sin confirmar cobro"
+      ],
+      [
+        "X",
+        "S",
+        "Webhook Stripe con firma"
+      ],
+      [
+        "S",
+        "S",
+        "Verificar firma y consultar sesión real en Stripe"
+      ],
+      [
+        "S",
+        "D",
+        "Deduplicar evento; validar importe y confirmar una vez"
+      ],
+      [
+        "S",
+        "D",
+        "Actualizar saldo y comprobante según condiciones"
+      ],
+      [
+        "S",
+        "X",
+        "Acuse de recibo del webhook"
+      ]
+    ]
+  },
+  {
+    "id": 23,
+    "ciclo": 2,
+    "titulo": "Consultar reportes estáticos autorizados",
+    "modulo": "reportes",
+    "actores": [
+      "ADMIN",
+      "DOC_TRIAJE",
+      "BIOQ_INTEGRAL",
+      "TEC_LOGISTICA"
+    ],
+    "entidades": [
+      "triajeclinico",
+      "citadonacion",
+      "ejemplarbolsa",
+      "deudafinanciera"
+    ],
+    "rutas": "GET /api/reportes/estaticos/informe/",
+    "precondicion": "Rol activo autorizado y plantilla disponible para ese rol.",
+    "flujo": [
+      "Selecciona plantilla y período cuando corresponde.",
+      "Valida parámetros permitidos.",
+      "Ejecuta consulta PostgreSQL compartida con CU24.",
+      "Presenta filas y totales.",
+      "Exporta CSV o PDF con criterios y encabezados."
+    ],
+    "excepciones": [
+      "Plantilla o filtro extra: rechaza.",
+      "Fuente financiera sin ADMIN: deniega.",
+      "Sin datos: devuelve resultado vacío, sin inventar valores."
+    ],
+    "postcondicion": "Resultado y exportación concordantes y evento de consulta registrado.",
+    "reglas": "Obtener reportes de plantillas fijas y exportaciones reales. Ocho plantillas fijas. No admitir SQL enviado por el usuario. CSV protege celdas interpretables como fórmulas.",
+    "eventos": [
+      [
+        "S",
+        "S",
+        "Validar plantilla fija, rol y parámetros"
+      ],
+      [
+        "S",
+        "D",
+        "Consultar fuente permitida mediante motor compartido"
+      ],
+      [
+        "D",
+        "S",
+        "Filas y totales reales"
+      ],
+      [
+        "S",
+        "U",
+        "Informe y exportación CSV/PDF"
+      ]
+    ]
+  },
+  {
+    "id": 24,
+    "ciclo": 3,
+    "titulo": "Construir consultas dinámicas y exportar resultados",
+    "modulo": "reportes",
+    "actores": [
+      "ADMIN",
+      "DOC_TRIAJE",
+      "BIOQ_INTEGRAL",
+      "TEC_LOGISTICA"
+    ],
+    "entidades": [
+      "extracciondonacion",
+      "triajeclinico",
+      "ejemplarbolsa",
+      "pagofinanciero"
+    ],
+    "rutas": "GET /api/reportes/consulta/",
+    "precondicion": "Usuario autenticado con rol activo; catálogo de fuentes autorizado.",
+    "flujo": [
+      "Consulta catálogo de campos y métricas del rol.",
+      "Selecciona fuente, dimensiones, métricas y filtros.",
+      "Valida combinaciones y límites en servidor.",
+      "Ejecuta SQL construido desde listas permitidas.",
+      "Presenta datos y exporta con el mismo control de acceso."
+    ],
+    "excepciones": [
+      "Fuente o columna no autorizada: deniega antes de consultar.",
+      "Intervalo mayor de 3660 días o más de 5000 grupos: rechaza o limita según contrato.",
+      "Stock y cartera no admiten una historia temporal inexistente."
+    ],
+    "postcondicion": "Resultado calculado y auditado para el rol activo.",
+    "reglas": "Combinar dimensiones métricas y filtros de fuentes permitidas. No aceptar SQL arbitrario. Finanzas solo ADMIN y pagos confirmados BOB. Tasas ponderadas; denominador vacío produce nulo. Stock exige aprobación biológica. Fechas de Bolivia.",
+    "eventos": [
+      [
+        "S",
+        "S",
+        "Validar fuente, dimensiones, métricas y rol"
+      ],
+      [
+        "S",
+        "S",
+        "Construir SQL parametrizado desde listas permitidas"
+      ],
+      [
+        "S",
+        "D",
+        "Consultar datos con límites de período y grupos"
+      ],
+      [
+        "D",
+        "S",
+        "Resultado agregado; sin historial inventado"
+      ],
+      [
+        "S",
+        "U",
+        "Tabla y exportación con el mismo permiso"
+      ]
+    ]
+  }
+]

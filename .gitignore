@@ -29,3 +29,6 @@ Thumbs.db
 
 # Cloudflare local state
 .wrangler/
+
+# Imagenes UML regenerables (se entregan localmente)
+/output/diagramas_hemovida/
