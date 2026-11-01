@@ -1,31 +1,104 @@
-# Población propuesta para revisión
+# Población académica de los ciclos 2 y 3
 
-Preparación solicitada: solo SQL para revisar, sin aplicarlo. No se conectó a Supabase ni se ejecutó esta población. No es una migración 08.
+Estado al 1 de noviembre de 2026: SQL adaptado a las migraciones 06–10 y
+probado en PostgreSQL local. La consulta de solo lectura a Supabase encontró
+0 personas y 0 citas DEMO-C3, además de 6 requisitos activos. Esta versión
+no se aplicó en Supabase. La instrucción vigente es preparar para revisión.
 
-1. `01_revisar_usuarios.sql`: consultas de solo lectura, roles, vínculo con personal, auditoría y claves foráneas. No devuelve contraseñas ni datos de contacto.
-2. `02_poblacion_demo_revision.sql`: propuesta aditiva para 6 personas sintéticas, 6 candidatos, 4 citas pendientes de asistencia, 3 receptores, una institución, 3 solicitudes, 2 obligaciones pendientes (100/200 BOB) y un equipo vacío. Los códigos DEMO permiten identificar los registros; una segunda ejecución no vuelve a insertar los escenarios existentes ni reinicia sus estados. No crea cuentas ni cambia roles/contraseñas. No restaura el dump sobre la BD existente.
-3. `03_desactivar_usuarios_opcional.sql`: selección inicialmente vacía; exige ID y username exactos, protege ADMIN y conserva identidad/auditoría. Desactiva solo si se seleccionan explícitamente cuentas; no contiene DELETE. No se ejecutó.
+## Archivos
 
-02 y 03 terminan con ROLLBACK para revisión. Incluso con ROLLBACK las secuencias pueden avanzar si se ejecutan inserciones; no se promete ausencia total de efectos por ejecutar una previsualización. Los scripts NO fueron ejecutados sobre ninguna base. No cambiar ROLLBACK por COMMIT sin revisar resultados y destino.
+1. `01_revisar_usuarios.sql`: revisión de usuarios, roles, personal, auditoría y
+   relaciones, sin contraseñas ni datos de contacto.
+2. `02_poblacion_demo_revision.sql`: población aditiva descrita abajo.
+3. `03_desactivar_usuarios_opcional.sql`: selección inicialmente vacía;
+   requiere ID y username exactos, protege ADMIN y conserva auditoría.
+   No contiene DELETE y no se ejecutó.
 
-Las citas DEMO incluyen un prefiltro favorable sintético para poder ensayar admisión; no contienen dictámenes ni resultados médicos reales. Se requiere un operador existente con rol y vínculo a PersonalSalud. Los protocolos de conservación deben ser aprobados por el responsable desde la aplicación. No se crean análisis aptos, bolsas disponibles, pagos confirmados ni comprobantes ficticios. Stripe sigue en modo test para cualquier prueba posterior; una carga en Supabase crearía registros persistentes de demostración.
+## Registros preparados
 
-El informe individual del archivo y el CSV de 23 usuarios se guardaron junto al archivo proporcionado, en `C:/Users/Sebas/Desktop/pg/revision_hemovida`, fuera del repositorio. Los nombres no demuestran que una cuenta sea descartable. La propuesta no elimina ni desactiva cuentas automáticamente.
+| Registro | Cantidad | Estado inicial |
+| --- | ---: | --- |
+| Personas sintéticas y candidaturas | 6 | En Evaluacion; sin análisis |
+| Citas, turnos y snapshots de prefiltro | 4 de cada uno* | Evaluacion, Programada, sin asistencia |
+| Respuestas de requisitos | Una por requisito activo y cita | P02/P03 tienen un requisito pendiente |
+| Receptores | 3 | Grupo O Positivo |
+| Programación autóloga e historial | 1 de cada uno | PendienteRevision, versión 1 |
+| Institución | 1 | Identificada como DEMO |
+| Solicitudes y detalles de componente | 3 de cada uno | Registrada, una unidad por solicitud |
+| Obligaciones financieras | 2 | Pendiente, 100 y 200 BOB, sin abonos |
+| Equipo de almacenamiento | 1 | DEMO vacío; no acredita medición física |
 
-Validación: sintaxis SQL y bloques PL/pgSQL analizados offline con pglast. No se probó la ejecución, constraints ni triggers: eso requiere un ensayo en una base de pruebas después de revisar el SQL. Mantener actualizado el esquema de referencia; requiere 06/07 y catálogo O Positivo existente. Se usan identificadores generados por PostgreSQL; no se reinician secuencias ni se asumen IDs del dump.
+*Se reutilizan turnos compatibles libres si existen. No se reserva más de un
+cupo por intervalo. Se buscan fechas futuras dentro de 14 días, lunes a viernes,
+08:00–12:00 y 13:00–17:00 de Bolivia, con duración de 15 minutos y cupo 1.
+No se reabre un día cerrado ni se ocupa un turno reservado.
 
-## Corrección de secuencias tras importar datos
+Los códigos `DEMO-C3-*` permiten identificar los escenarios. P01 prepara
+triaje/colecta; P02/P03 preparan evaluación de requisitos pendientes; P04
+prepara revisión autóloga; P05 finanzas/Stripe y P06 posible tratamiento de
+exoneración/convenio. Son puntos de partida, no resultados clínicos dictados.
+La cirugía sintética se fecha a 30 días de la carga inicial. Repetir el archivo
+no reinicia estados, fechas, pagos o revisiones ya realizados.
 
-El archivo 02 comprueba las secuencias de las tablas que inserta, incluida la
-bitácora. Si quedaron por debajo de los IDs existentes, las adelanta sin reducir
-una secuencia que ya esté más avanzada. Mantiene bloqueos de escritura hasta
-finalizar la transacción para evitar colisiones con inserciones normales.
-Los cambios de secuencia persisten incluso con ROLLBACK; los registros DEMO no.
-Ejecutar en un momento sin actividad y con el propietario de las tablas.
-Si una ejecución anterior dejó una transacción fallida, ejecutar ROLLBACK primero
-y después el archivo 02 completo actualizado. No basta con repetir el INSERT.
+El prefiltro conserva el catálogo vigente, su SHA256 compatible con Django y
+las respuestas de detalle. No se convierten requisitos pendientes en aptitud
+ni diferimiento automáticamente. El programa autólogo no habilita colecta
+hasta que el flujo de la aplicación lo revise y apruebe.
 
-Esta corrección no adapta las citas antiguas del escenario DEMO al circuito
-actual de turnos y prefiltros versionados. No usar sus citas como evidencia de
-que CU06/CU07/CU08 están completos. La carga sigue siendo una propuesta para
-revisión y termina con ROLLBACK.
+## Responsabilidad y límites
+
+Requiere un ADMIN activo y un médico activo vinculado a PersonalSalud.
+El ADMIN de menor ID queda como responsable técnico de snapshots/turnos y el
+médico de menor ID como referencia de asignación del programa sintético.
+La carga directa no representa que hayan iniciado sesión, firmado ni aprobado
+un acto: la bitácora la distingue con rol `BD directa`, usuario de sesión nulo
+y origen `poblacion_demo_revision`. Las respuestas e indicación están rotuladas
+como sintéticas. No se crean cuentas ni se modifican contraseñas o roles.
+No se sobrescriben protocolos, preguntas ni personas anteriores.
+
+No se crean triajes aptos, consentimientos firmados, extracciones, bolsas
+liberadas, pagos confirmados, comprobantes ni entregas. Esas operaciones deben
+recorrerse desde la aplicación; para Stripe se usa modo test. Los datos DEMO
+persistidos serían visibles también en reportes de la base compartida.
+
+## Ejecución y confirmación
+
+El archivo termina con `ROLLBACK`: muestra resultados y revierte los registros.
+Para una carga persistente, después de revisar y autorizar el destino:
+
+1. Guardar un respaldo privado de esquema y datos antes de insertar.
+2. Si quedó una transacción fallida en SQL Editor, ejecutar `ROLLBACK;`.
+3. Ejecutar el archivo completo actualizado. Revisar personas, cartera, citas
+   y programa que devuelven los SELECT finales.
+4. Para guardar, reemplazar únicamente el ROLLBACK final por COMMIT en la copia
+   de ejecución autorizada. No mezclar archivos de versiones anteriores.
+5. Consultar nuevamente desde una conexión distinta y revisar las pantallas
+   de Agenda, Programación autóloga y Finanzas usando los roles autorizados.
+
+## Secuencias y compatibilidad histórica
+
+El script comprueba las secuencias de todas las tablas que inserta, incluida
+la bitácora, y adelanta únicamente las que no superan el máximo ID existente.
+No reduce secuencias adelantadas. Mantiene bloqueos de escritura hasta terminar
+la transacción, con espera máxima de bloqueo de 5 segundos. Ejecutar sin
+actividad concurrente, con el propietario de tablas y secuencias.
+
+**Las secuencias pueden avanzar incluso con ROLLBACK.** La revisión no confirma
+registros, pero no promete ausencia total de efectos sobre contadores.
+Una cita DEMO de la versión anterior sin turno o snapshot provoca un error
+explícito: requiere revisión y no se modifica silenciosamente.
+
+## Validación realizada
+
+`backend/tests_poblacion_postgres.py`: dos pruebas integradas, exclusivamente
+en PostgreSQL local `hemo_liberacion_test:55439`, con rollback de la población.
+Verifican secuencia desfasada y adelantada, repetición sin duplicados, horarios,
+días cerrados, catálogo/hash/respuestas, programa e historial pendientes,
+detalles de solicitudes, 300 BOB de saldo y ausencia de cuentas/pagos nuevos.
+También comprueban las API reales de agenda, programas y finanzas; el acceso
+financiero de logística devuelve 403. No se llamó a Stripe ni Brevo.
+No se declara una comprobación visual manual del navegador ni una carga remota.
+
+El informe individual de usuarios y el CSV original permanecen fuera de Git en
+`C:/Users/Sebas/Desktop/pg/revision_hemovida`. No se desactivaron usuarios por
+su nombre ni se restauró el dump original sobre Supabase.
