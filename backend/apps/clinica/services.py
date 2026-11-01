@@ -498,10 +498,21 @@ def admit(request, d):
         a = one(
             c, "SELECT * FROM citadonacion WHERE idcita=%s FOR UPDATE", [d["idcita"]]
         )
+        c.execute("SELECT ((%s::timestamp AT TIME ZONE 'UTC') AT TIME ZONE 'America/La_Paz')::date = (CURRENT_TIMESTAMP AT TIME ZONE 'America/La_Paz')::date", [a['fechahoraprogramada']])
+        if not c.fetchone()[0]:
+            raise ValidationError('La asistencia solo se confirma el día de la cita, en hora de Bolivia.')
+        if a.get('idturno'):
+            from apps.agenda.services import requirements
+            c.execute('LOCK TABLE requisitodonacion IN SHARE MODE')
+            _, version = requirements(c)
+            c.execute('SELECT (aprobado OR %s) AND versioncatalogo=%s FROM prefiltrocita WHERE idcita=%s', [a.get('tipoatencion') == 'Evaluacion', version, d['idcita']])
+            snapshot = c.fetchone()
+            if not snapshot or not snapshot[0]:
+                raise ValidationError('El prefiltro cambió o está pendiente; requiere revisión antes de admitir.')
         if (
             a["idpersona"] != d["idpersona"]
             or a["estadocita"] != "Programada"
-            or not a["prefiltroaprobado"]
+            or (not a["prefiltroaprobado"] and not (a.get('idturno') and a.get('tipoatencion') == 'Evaluacion'))
         ):
             raise ValidationError(
                 "Verifique identidad, prefiltro aprobado y cita programada."

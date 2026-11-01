@@ -16,6 +16,8 @@ import {
   CalendarDays,
 } from "lucide-react";
 import { FinancePage } from "./components/FinancePage";
+import { AgendaPage } from "./components/AgendaPage";
+import { IncentivesPage } from "./components/IncentivesPage";
 import { ReportsPage } from "./components/ReportsPage";
 import React, { useState } from "react";
 import { Navbar } from "./components/Navbar";
@@ -135,6 +137,8 @@ export default function App() {
             >
               {[
                 ["inicio", "Mi espacio"],
+                ...(["ADMIN", "PERS_COLECTA"].includes(session.activeRole)
+                  ? [["citas", "Citas y recepción"], ["incentivos", "Refrigerio e incentivos"]] : []),
                 ...(clinical
                   ? [
                       ["clinica", "Atención clínica"],
@@ -215,6 +219,9 @@ export default function App() {
               {tab === "finanzas" && session.activeRole === "ADMIN" && (
                 <FinancePage token={session.token!} />
               )}
+              {tab === "incentivos" && ["ADMIN", "PERS_COLECTA"].includes(session.activeRole) && (
+                <IncentivesPage key={session.activeRole} token={session.token!} />
+              )}
               {tab === "reportes" &&
                 [
                   "ADMIN",
@@ -254,7 +261,10 @@ export default function App() {
                   token={session.token!}
                 />
               )}
-              {["citas", "autoevaluacion", "mapa"].includes(tab) && (
+              {["citas", "autoevaluacion"].includes(tab) && ["ADMIN", "PERS_COLECTA", "DONANTE", "POSIBLE_DONADOR"].includes(session.activeRole) && (
+                <AgendaPage key={session.activeRole} token={session.token!} role={session.activeRole} />
+              )}
+              {tab === "mapa" && (
                 <section className="bg-white border rounded-3xl p-8">
                   <h2 className="text-xl font-bold">
                     {tab === "mapa"

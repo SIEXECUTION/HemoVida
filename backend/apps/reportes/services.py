@@ -143,6 +143,7 @@ METRICS = {
     "citas": [
         "cantidad",
         "canceladas",
+        "pendientes",
         "programadas",
         "asistencias",
         "porcentaje_asistencia",
@@ -224,7 +225,7 @@ def query(params):
         metrics = "count(*) AS cantidad,count(*) FILTER(WHERE resultadoaptitud='Apto') AS aptos,count(*) FILTER(WHERE resultadoaptitud='Rechazado') AS rechazados"
     elif kind == "citas":
         base = "SELECT * FROM citadonacion"
-        metrics = "count(*) AS cantidad,count(*) FILTER(WHERE estadocita='Cancelada') AS canceladas,count(*) FILTER(WHERE estadocita<>'Cancelada') AS programadas,count(*) FILTER(WHERE asistenciaconfirmada AND estadocita<>'Cancelada') AS asistencias"
+        metrics = "count(*) AS cantidad,count(*) FILTER(WHERE estadocita='Cancelada') AS canceladas,count(*) FILTER(WHERE estadocita='Pendiente') AS pendientes,count(*) FILTER(WHERE estadocita IN ('Programada','Atendida','Inasistencia')) AS programadas,count(*) FILTER(WHERE asistenciaconfirmada AND estadocita IN ('Programada','Atendida','Inasistencia')) AS asistencias"
     elif kind == "serologia":
         # Un lote cuenta una sola vez: último análisis hasta la fecha de corte.
         base = f"SELECT DISTINCT ON(idunidadmadre) * FROM analisisinmunoserologico WHERE {config['date']}::date<=%s ORDER BY idunidadmadre,fechaanalisis DESC,idanalisis DESC"
@@ -314,7 +315,7 @@ def query(params):
         "criterios": {
             "zona_horaria": "Fechas y agrupaciones en America/La_Paz; columnas heredadas sin zona interpretadas como UTC, igual que las nuevas escrituras del backend.",
             "diferimiento": "Evaluaciones con dictamen Rechazado / evaluaciones del mismo período y filtros; no cuenta filas de diferimiento. El total se calcula con los conteos, sin promediar porcentajes de grupos.",
-            "canceladas": "Excluidas del denominador de asistencia",
+            "canceladas": "Canceladas y solicitudes pendientes excluidas del denominador de asistencia; pendientes no reservan cupo.",
             "stock": "Actual, disponible, no caducado y no autólogo",
             "serologia": "Último análisis por madre hasta la fecha final; indeterminados separados",
             "finanzas": "Solo BOB; pagos confirmados, sin sumar comprobantes",

@@ -15,6 +15,7 @@ def health_check(request):
     })
 
 urlpatterns = [
+    path('api/agenda/', include('apps.agenda.urls')),
     path('api/reportes/', include('apps.reportes.urls')),
     path('api/finanzas/', include('apps.finanzas.urls')),
     path('api/clinica/', include('apps.clinica.urls')),

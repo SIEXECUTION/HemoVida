@@ -52,7 +52,7 @@ class Catalogo(APIView):
             )
         states = {
             "triajes": ["Apto", "Rechazado"],
-            "citas": ["Programada", "Atendida", "Cancelada", "Inasistencia"],
+            "citas": ["Programada", "Atendida", "Cancelada", "Inasistencia", "Pendiente"],
             "serologia": ["Apto", "No Apto"],
             "cartera": ["Pendiente", "Parcial", "Liquidada", "Vencida"],
         }

@@ -10,7 +10,7 @@
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
     "test": "node --test tests/*.test.cjs",
-    "test:browser": "node --test tests/ciclo3.browser.cjs"
+    "test:browser": "node --test tests/*.browser.cjs"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
