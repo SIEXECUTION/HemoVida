@@ -13,3 +13,19 @@ Las citas DEMO incluyen un prefiltro favorable sintético para poder ensayar adm
 El informe individual del archivo y el CSV de 23 usuarios se guardaron junto al archivo proporcionado, en `C:/Users/Sebas/Desktop/pg/revision_hemovida`, fuera del repositorio. Los nombres no demuestran que una cuenta sea descartable. La propuesta no elimina ni desactiva cuentas automáticamente.
 
 Validación: sintaxis SQL y bloques PL/pgSQL analizados offline con pglast. No se probó la ejecución, constraints ni triggers: eso requiere un ensayo en una base de pruebas después de revisar el SQL. Mantener actualizado el esquema de referencia; requiere 06/07 y catálogo O Positivo existente. Se usan identificadores generados por PostgreSQL; no se reinician secuencias ni se asumen IDs del dump.
+
+## Corrección de secuencias tras importar datos
+
+El archivo 02 comprueba las secuencias de las tablas que inserta, incluida la
+bitácora. Si quedaron por debajo de los IDs existentes, las adelanta sin reducir
+una secuencia que ya esté más avanzada. Mantiene bloqueos de escritura hasta
+finalizar la transacción para evitar colisiones con inserciones normales.
+Los cambios de secuencia persisten incluso con ROLLBACK; los registros DEMO no.
+Ejecutar en un momento sin actividad y con el propietario de las tablas.
+Si una ejecución anterior dejó una transacción fallida, ejecutar ROLLBACK primero
+y después el archivo 02 completo actualizado. No basta con repetir el INSERT.
+
+Esta corrección no adapta las citas antiguas del escenario DEMO al circuito
+actual de turnos y prefiltros versionados. No usar sus citas como evidencia de
+que CU06/CU07/CU08 están completos. La carga sigue siendo una propuesta para
+revisión y termina con ROLLBACK.

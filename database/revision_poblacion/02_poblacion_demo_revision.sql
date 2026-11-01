@@ -3,10 +3,43 @@
 -- Por defecto termina con ROLLBACK. Las secuencias PostgreSQL pueden avanzar
 -- aunque se haga ROLLBACK; revisar en base de pruebas antes de cualquier carga.
 BEGIN;
+SET LOCAL lock_timeout = '5s';
 SELECT pg_advisory_xact_lock(hashtext('hemovida_demo_c3_v1'));
 SELECT set_config('hemovida.usuario_id','',true);
 SELECT set_config('hemovida.rol_activo','BD directa',true);
 SELECT set_config('hemovida.origen','poblacion_demo_revision',true);
+
+-- Un dump puede incluir IDs explícitos sin adelantar sus secuencias.
+-- Bloquear escrituras mientras se comprueban y se insertan los datos DEMO.
+-- También revisar la bitácora, que recibe inserciones desde los triggers.
+LOCK TABLE public.persona, public.citadonacion, public.institucionsalud,
+ public.solicitudhospitalaria, public.deudafinanciera,
+ public.ubicacionalmacen, public.bitacoraauditoria IN SHARE ROW EXCLUSIVE MODE;
+DO $secuencias$
+DECLARE
+ tabla text; columna text; secuencia text;
+ maximo bigint; ultimo bigint;
+BEGIN
+ FOR tabla IN SELECT unnest(ARRAY['persona','citadonacion','institucionsalud',
+     'solicitudhospitalaria','deudafinanciera','ubicacionalmacen','bitacoraauditoria'])
+ LOOP
+   -- Descubrir la columna serial/identity, sin asumir nombres de secuencias.
+   FOR columna, secuencia IN
+     SELECT a.attname, pg_get_serial_sequence('public.' || tabla, a.attname)
+     FROM pg_attribute a
+     WHERE a.attrelid=('public.' || tabla)::regclass
+       AND a.attnum>0 AND NOT a.attisdropped
+       AND pg_get_serial_sequence('public.' || tabla, a.attname) IS NOT NULL
+   LOOP
+     EXECUTE format('SELECT max(%I) FROM public.%I',columna,tabla) INTO maximo;
+     EXECUTE format('SELECT last_value FROM %s',secuencia) INTO ultimo;
+     IF maximo IS NOT NULL AND maximo>=ultimo THEN
+       PERFORM setval(secuencia::regclass,maximo,true);
+     END IF;
+   END LOOP;
+ END LOOP;
+END;
+$secuencias$;
 DO $demo$
 DECLARE
  n integer; p integer; g integer; inst integer; sol integer; loc integer;
