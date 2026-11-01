@@ -82,6 +82,7 @@ class Usuario(models.Model):
         db_column='estado'
     )
     intentosFallidos = models.IntegerField(default=0, db_column='intentosfallidos')
+    fechaIntentosDia = models.DateField(null=True, blank=True, db_column='fechaintentosdia')
     fechaBloqueoHasta = models.DateTimeField(null=True, blank=True, db_column='fechabloqueohasta')
     totalBloqueosRecibidos = models.IntegerField(default=0, db_column='totalbloqueosrecibidos')
     fechaCreacion = models.DateTimeField(auto_now_add=True, db_column='fechacreacion')
