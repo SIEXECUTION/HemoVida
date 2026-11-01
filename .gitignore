@@ -26,3 +26,6 @@ Thumbs.db
 .venv/
 .pg-clinica/
 *.sqlite3
+
+# Cloudflare local state
+.wrangler/
