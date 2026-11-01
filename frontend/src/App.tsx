@@ -152,8 +152,15 @@ export default function App() {
                       ["personal", "Personal"],
                       ["auditoria", "Auditoría"],
                       ["finanzas", "Finanzas"],
-                      ["reportes", "Consultas y KPIs"],
                     ]
+                  : []),
+                ...([
+                  "ADMIN",
+                  "DOC_TRIAJE",
+                  "BIOQ_INTEGRAL",
+                  "TEC_LOGISTICA",
+                ].includes(session.activeRole)
+                  ? [["reportes", "Consultas y KPIs"]]
                   : []),
               ].map(([id, label]) => (
                 <button
@@ -207,9 +214,18 @@ export default function App() {
               {tab === "finanzas" && session.activeRole === "ADMIN" && (
                 <FinancePage token={session.token!} />
               )}
-              {tab === "reportes" && session.activeRole === "ADMIN" && (
-                <ReportsPage token={session.token!} />
-              )}
+              {tab === "reportes" &&
+                [
+                  "ADMIN",
+                  "DOC_TRIAJE",
+                  "BIOQ_INTEGRAL",
+                  "TEC_LOGISTICA",
+                ].includes(session.activeRole) && (
+                  <ReportsPage
+                    key={session.activeRole}
+                    token={session.token!}
+                  />
+                )}
               {tab === "stock" && clinical && (
                 <ApiRecords
                   key="stock"

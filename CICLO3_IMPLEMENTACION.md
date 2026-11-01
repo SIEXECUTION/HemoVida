@@ -22,7 +22,7 @@ El usuario aplicó 06 y 07 en Supabase. En esta continuación no se ejecutaron m
 
 Las pantallas de administración incluyen Finanzas y Consultas y KPIs. Se mantiene el tema visual HEMOVIDAX y los módulos útiles conectados a la API. Los formularios muestran éxito después de la respuesta del backend; los fallos conservan los datos para corregirlos. No se importan registros clínicos de localStorage.
 
-Finanzas, consultas y aprobación de protocolos requieren ADMIN. Los roles clínicos mantienen sus permisos específicos, verificados contra el rol activo del JWT y los roles realmente asignados. No se cambió el mecanismo de contraseñas ni el envío de Brevo.
+Finanzas y aprobación de protocolos requieren ADMIN. CU24 utiliza la matriz de reportes aprobada: ADMIN accede a todas las fuentes; DOC_TRIAJE a extracciones, triajes y citas; BIOQ_INTEGRAL añade serología, stock y bajas; TEC_LOGISTICA accede a stock y bajas. Las consultas y exportaciones verifican el perfil activo y la asignación real del rol en el servidor. Esta matriz de CU24 no modifica los permisos de los otros módulos. Los roles clínicos mantienen sus permisos específicos, verificados contra el rol activo del JWT y los roles realmente asignados. No se cambió el mecanismo de contraseñas ni el envío de Brevo.
 
 ## Conservación y comunicación
 
@@ -132,3 +132,16 @@ Las pruebas de navegador usan Edge instalado en Windows; en Linux requieren Chro
 ## Estado de entrega
 
 Código disponible localmente en la rama secundaria. Base remota verificada sin modificar sus datos. Checkout y webhook externo quedaron validados en modo test contra PostgreSQL local. Falta publicar backend/frontend y registrar el endpoint webhook público para probar el flujo desplegado en Render/Cloudflare. La activación y las claves live son un paso diferente; no se realizaron cobros reales. No se hizo push ni despliegue. Los protocolos de conservación de producción deben ser aprobados por el responsable institucional; no se crearon por las pruebas locales.
+
+
+## Primer bloque de cierre del ciclo 3
+
+Se añadió el KPI tasa de diferimiento: evaluaciones con resultado Rechazado entre evaluaciones del mismo período y filtros. No cuenta filas de diferimiento ni promedia porcentajes de grupos; el total se obtiene de los conteos globales filtrados. Sin denominador devuelve No aplica. El catálogo, las tarjetas, el gráfico y las exportaciones incluyen el indicador.
+
+Se implementó la matriz de reportes confirmada por el usuario, manteniendo finanzas en ADMIN. Los perfiles solo reciben fuentes autorizadas en el catálogo y la API rechaza accesos directos y exportaciones de otras áreas. El frontend inicia cada perfil con una fuente autorizada, incluyendo logística, y descarta resultados al cambiar de perfil.
+
+Pruebas de este bloque: 41 pruebas PostgreSQL (incluyen indicadores ponderados, filtros, casos vacíos y la matriz de acceso de consulta/exportación), 5 de navegador y compilación TypeScript/Vite. No requiere migración ni se aplicaron los SQL de población. Las pruebas de escritura utilizaron únicamente PostgreSQL local aislado.
+
+Pendiente: confirmar quién autoriza la corrección ABO/Rh antes de habilitar ese circuito. El cierre completo del ciclo 3 sigue pendiente de las revisiones clínicas y de coherencia con procedimientos heredados del plan.
+
+Se corrigió además el corte de fechas de CU24: filtros, agrupaciones diarias/mensuales y vencimiento de stock usan America/La_Paz. Las columnas heredadas sin zona se interpretan como UTC, igual que las escrituras nuevas con la conexión UTC de Django; las financieras mantienen su timestamptz. Un ensayo de cambio de día/mes verifica que 02:00 UTC del 1 de noviembre pertenezca al 31 de octubre local y 05:00 UTC al 1 de noviembre local. No se modificaron timestamps históricos. La interpretación de fechas heredadas introducidas por otros sistemas debe revisarse si no siguen esa convención.

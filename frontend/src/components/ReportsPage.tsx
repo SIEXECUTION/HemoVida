@@ -36,6 +36,8 @@ const labels: Record<string, string> = {
   importe: "Importe (BOB)",
   aptos: "Evaluaciones aptas",
   porcentaje_aptitud: "Aptitud (%)",
+  rechazados: "Evaluaciones rechazadas",
+  porcentaje_diferimiento: "Tasa de diferimiento (%)",
   programadas: "Citas no canceladas",
   canceladas: "Citas canceladas",
   asistencias: "Asistencias",
@@ -87,13 +89,27 @@ export function ReportsPage({ token }: { token: string }) {
     [busy, setBusy] = useState(false);
   useEffect(() => {
     const c = new AbortController();
+    setCatalog({});
+    setResult(null);
+    setApplied("");
+    setError("");
     liveRequest<Record<string, CatalogItem>>(
       "reportes/catalogo/",
       token,
       undefined,
       c.signal,
     )
-      .then(setCatalog)
+      .then((d) => {
+        if (c.signal.aborted) return;
+        setCatalog(d);
+        const first = Object.keys(d)[0];
+        if (first) {
+          setSource(first);
+          setDimension(d[first].dimensiones[0]);
+          setMetric(d[first].metricas[0]);
+          setFilters({});
+        } else setError("No hay consultas habilitadas para este perfil.");
+      })
       .catch((e) => {
         if (!c.signal.aborted) setError(e.message);
       });

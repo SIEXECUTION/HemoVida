@@ -1,5 +1,6 @@
 from datetime import date, timedelta
 from decimal import Decimal
+from zoneinfo import ZoneInfo
 from django.db import connection
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
@@ -109,9 +110,36 @@ CATALOG["intentos"] = {
     "filters": {"metodo": "metodopago", "proveedor": "proveedorpasarela"},
     "unit": "intentos",
 }
+# Las columnas heredadas sin zona se escriben con CURRENT_TIMESTAMP en la
+# conexión UTC de Django; las financieras usan timestamptz. Normalizar ambas
+# antes de filtrar o agrupar por el día institucional.
+REPORT_TIME_ZONE = "America/La_Paz"
+TODAY_SQL = "(CURRENT_TIMESTAMP AT TIME ZONE 'America/La_Paz')::date"
+for source, config in CATALOG.items():
+    column = config["date"]
+    if not column:
+        continue
+    utc = (
+        column
+        if source in ["recaudacion", "intentos"]
+        else f"({column} AT TIME ZONE 'UTC')"
+    )
+    local = f"({utc} AT TIME ZONE 'America/La_Paz')"
+    config["date"] = local
+    if "dia" in config["dims"]:
+        config["dims"]["dia"] = f"{local}::date::text"
+    if "mes" in config["dims"]:
+        config["dims"]["mes"] = f"to_char({local},'YYYY-MM')"
+
 METRICS = {
     "extracciones": ["cantidad", "volumen"],
-    "triajes": ["cantidad", "aptos", "porcentaje_aptitud"],
+    "triajes": [
+        "cantidad",
+        "aptos",
+        "rechazados",
+        "porcentaje_aptitud",
+        "porcentaje_diferimiento",
+    ],
     "citas": [
         "cantidad",
         "canceladas",
@@ -153,13 +181,14 @@ def query(params):
     dim = params.get("dimension") or next(iter(config["dims"]))
     if dim not in config["dims"]:
         raise ValidationError("Dimensión no permitida.")
+    today = timezone.localdate(timezone=ZoneInfo(REPORT_TIME_ZONE))
     try:
         start = date.fromisoformat(
             params.get("desde")
-            or (timezone.localdate() - timedelta(days=30)).isoformat()
+            or (today - timedelta(days=30)).isoformat()
         )
         end = date.fromisoformat(
-            params.get("hasta") or timezone.localdate().isoformat()
+            params.get("hasta") or today.isoformat()
         )
         horizon = int(params.get("horizonte", 7))
     except (ValueError, TypeError):
@@ -192,19 +221,19 @@ def query(params):
         metrics = "count(*) AS cantidad,coalesce(sum(volumenextraidoml),0) AS volumen"
     elif kind == "triajes":
         base = "SELECT * FROM triajeclinico"
-        metrics = "count(*) AS cantidad,count(*) FILTER(WHERE resultadoaptitud='Apto') AS aptos"
+        metrics = "count(*) AS cantidad,count(*) FILTER(WHERE resultadoaptitud='Apto') AS aptos,count(*) FILTER(WHERE resultadoaptitud='Rechazado') AS rechazados"
     elif kind == "citas":
         base = "SELECT * FROM citadonacion"
         metrics = "count(*) AS cantidad,count(*) FILTER(WHERE estadocita='Cancelada') AS canceladas,count(*) FILTER(WHERE estadocita<>'Cancelada') AS programadas,count(*) FILTER(WHERE asistenciaconfirmada AND estadocita<>'Cancelada') AS asistencias"
     elif kind == "serologia":
         # Un lote cuenta una sola vez: último análisis hasta la fecha de corte.
-        base = "SELECT DISTINCT ON(idunidadmadre) * FROM analisisinmunoserologico WHERE fechaanalisis::date<=%s ORDER BY idunidadmadre,fechaanalisis DESC,idanalisis DESC"
+        base = f"SELECT DISTINCT ON(idunidadmadre) * FROM analisisinmunoserologico WHERE {config['date']}::date<=%s ORDER BY idunidadmadre,fechaanalisis DESC,idanalisis DESC"
         markers = "ARRAY[resultadovih,resultadochagas,resultadohepatitisb,resultadohepatitisc,resultadosifilis,resultadohtlv]"
         metrics = f"count(*) AS cantidad,count(*) FILTER(WHERE 'Reactivo'=ANY({markers}) AND NOT ('Indeterminado'=ANY({markers}))) AS reactivas,count(*) FILTER(WHERE 'Indeterminado'=ANY({markers})) AS indeterminadas,count(*) FILTER(WHERE NOT ('Indeterminado'=ANY({markers}))) AS concluidas"
         values.insert(0, end)
     elif kind == "stock":
-        base = "SELECT e.*,g.grupoabo,g.factorrh FROM ejemplarbolsa e JOIN gruposanguineo g USING(idgrupo) WHERE estadobolsak='Disponible' AND fechacaducidad>=CURRENT_DATE AND NOT esexclusivoautologo"
-        metrics = "count(*) AS cantidad,coalesce(sum(volumenml),0) AS volumen,count(*) FILTER(WHERE fechacaducidad<=CURRENT_DATE+%s) AS vencimiento_proximo"
+        base = f"SELECT e.*,g.grupoabo,g.factorrh FROM ejemplarbolsa e JOIN gruposanguineo g USING(idgrupo) WHERE estadobolsak='Disponible' AND fechacaducidad>={TODAY_SQL} AND NOT esexclusivoautologo"
+        metrics = f"count(*) AS cantidad,coalesce(sum(volumenml),0) AS volumen,count(*) FILTER(WHERE fechacaducidad<={TODAY_SQL}+%s) AS vencimiento_proximo"
         # Horizonte es parte de la selección agregada, después de parámetros de base.
         values.insert(0, horizon)
     elif kind == "bajas":
@@ -230,6 +259,9 @@ def query(params):
         for row in data:
             if kind == "triajes":
                 row["porcentaje_aptitud"] = ratio(row["aptos"], row["cantidad"])
+                row["porcentaje_diferimiento"] = ratio(
+                    row["rechazados"], row["cantidad"]
+                )
             elif kind == "citas":
                 row["porcentaje_asistencia"] = ratio(
                     row["asistencias"], row["programadas"]
@@ -250,6 +282,9 @@ def query(params):
         if kind == "triajes":
             totals["porcentaje_aptitud"] = ratio(
                 totals.get("aptos", 0), totals["cantidad"]
+            )
+            totals["porcentaje_diferimiento"] = ratio(
+                totals["rechazados"], totals["cantidad"]
             )
         elif kind == "citas":
             totals["porcentaje_asistencia"] = ratio(
@@ -277,6 +312,8 @@ def query(params):
         "totales": totals,
         "filas": data,
         "criterios": {
+            "zona_horaria": "Fechas y agrupaciones en America/La_Paz; columnas heredadas sin zona interpretadas como UTC, igual que las nuevas escrituras del backend.",
+            "diferimiento": "Evaluaciones con dictamen Rechazado / evaluaciones del mismo período y filtros; no cuenta filas de diferimiento. El total se calcula con los conteos, sin promediar porcentajes de grupos.",
             "canceladas": "Excluidas del denominador de asistencia",
             "stock": "Actual, disponible, no caducado y no autólogo",
             "serologia": "Último análisis por madre hasta la fecha final; indeterminados separados",

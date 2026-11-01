@@ -39,15 +39,23 @@ const clinical = {
   grupos: [],
   ubicaciones: [],
 };
-async function open(handler, width = 1280) {
+async function open(handler, width = 1280, role = "ADMIN") {
   const context = await browser.newContext({
     viewport: { width, height: 900 },
     acceptDownloads: true,
   });
-  await context.addInitScript((s) => {
-    sessionStorage.setItem("hemovida_live_session", JSON.stringify(s));
-    sessionStorage.setItem("hemovida_jwt_token", s.token);
-  }, session);
+  await context.addInitScript(
+    (s) => {
+      sessionStorage.setItem("hemovida_live_session", JSON.stringify(s));
+      sessionStorage.setItem("hemovida_jwt_token", s.token);
+    },
+    {
+      ...session,
+      role,
+      activeRole: role,
+      rolesDisponibles: [{ id: 1, codigo: role, nombre: role }],
+    },
+  );
   const page = await context.newPage();
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
@@ -314,6 +322,58 @@ test("El protocolo sin agitación se envía como false y requiere confirmación 
       .getByText("Operación guardada en la base de datos.", { exact: true })
       .waitFor();
     assert.equal(received.requiereagitacion, false);
+    assert.deepEqual(ui.errors, []);
+  } finally {
+    await ui.close();
+  }
+});
+
+test("Logística inicia CU24 con stock y no ofrece finanzas", async () => {
+  let queried;
+  const ui = await open(
+    async (url) => {
+      if (url.pathname === "/api/reportes/catalogo/")
+        return { body: { stock: catalog.stock } };
+      if (url.pathname === "/api/reportes/consulta/") {
+        queried = url.searchParams.get("fuente");
+        return {
+          body: {
+            fuente: "stock",
+            dimension: "componente",
+            unidad: "ml",
+            desde: null,
+            hasta: null,
+            actualizado: new Date().toISOString(),
+            totales: { cantidad: 0 },
+            filas: [],
+            criterios: { stock: "Stock actual" },
+          },
+        };
+      }
+    },
+    390,
+    "TEC_LOGISTICA",
+  );
+  try {
+    const p = ui.page;
+    assert.equal(
+      await p.getByRole("button", { name: "Finanzas", exact: true }).count(),
+      0,
+    );
+    await p
+      .getByRole("button", { name: "Consultas y KPIs", exact: true })
+      .click();
+    await p.getByRole("button", { name: "Consultar indicadores" }).waitFor();
+    assert.deepEqual(
+      await p
+        .getByLabel("Fuente", { exact: true })
+        .locator("option")
+        .evaluateAll((xs) => xs.map((x) => x.value)),
+      ["stock"],
+    );
+    await p.getByRole("button", { name: "Consultar indicadores" }).click();
+    await p.getByRole("button", { name: "Exportar CSV" }).waitFor();
+    assert.equal(queried, "stock");
     assert.deepEqual(ui.errors, []);
   } finally {
     await ui.close();

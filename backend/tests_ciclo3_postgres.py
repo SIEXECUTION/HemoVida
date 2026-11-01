@@ -562,7 +562,7 @@ class Cycle3Tests(ClinicalTests):
                 ).status_code,
                 503,
             )
-        req = APIRequestFactory().get("/")
+        req = APIRequestFactory().get("/", {"fuente": "recaudacion"})
         force_authenticate(req, user=self.user, token={"rolActivo": "DOC_TRIAJE"})
         self.assertEqual(Consulta.as_view()(req).status_code, 403)
 
@@ -725,6 +725,106 @@ class Cycle3Tests(ClinicalTests):
         self.assertEqual(
             query({"fuente": "serologia"})["totales"]["porcentaje_reactividad"], 100
         )
+
+    def test_triage_deferral_rate_weighted_filters_empty_and_export(self):
+        from apps.reportes.services import query
+
+        self.assertIsNone(
+            query({"fuente": "triajes"})["totales"]["porcentaje_diferimiento"]
+        )
+        with connection.cursor() as c:
+            for days, status in [
+                (2, "Rechazado"),
+                (1, "Apto"),
+                (1, "Apto"),
+                (1, "Apto"),
+            ]:
+                c.execute(
+                    "INSERT INTO triajeclinico(idposibledonador,idpersonalsalud,fechahora,pesokg,presionsistolicammhg,presiondiastolicammhg,nivelhemoglobina,temperatura,resultadoaptitud) VALUES(%s,%s,CURRENT_TIMESTAMP-%s*interval '1 day',70,120,80,14,36.5,%s)",
+                    [self.pid, self.person, days, status],
+                )
+        result = query({"fuente": "triajes", "dimension": "dia"})
+        self.assertEqual(result["totales"]["rechazados"], 1)
+        self.assertEqual(result["totales"]["cantidad"], 4)
+        self.assertEqual(result["totales"]["porcentaje_diferimiento"], 25)
+        self.assertEqual(
+            sorted(r["porcentaje_diferimiento"] for r in result["filas"]), [0, 100]
+        )
+        filtered = query({"fuente": "triajes", "estado": "Rechazado"})
+        self.assertEqual(filtered["totales"]["porcentaje_diferimiento"], 100)
+        csv = self.get(Consulta, {"fuente": "triajes", "formato": "csv"})
+        self.assertEqual(csv.status_code, 200)
+        self.assertIn(b"porcentaje_diferimiento", csv.content)
+
+    def test_report_area_permissions_cover_catalog_query_and_exports(self):
+        from apps.reportes.access import SOURCES_BY_ROLE
+        from apps.reportes.views import Catalogo as ReportCatalog
+        from apps.reportes.services import CATALOG
+
+        def get_as(view, params, role):
+            req = APIRequestFactory().get("/", params)
+            force_authenticate(req, user=self.user, token={"rolActivo": role})
+            return view.as_view()(req)
+
+        for role, allowed in SOURCES_BY_ROLE.items():
+            catalog = get_as(ReportCatalog, {}, role)
+            self.assertEqual(catalog.status_code, 200, catalog.data)
+            self.assertEqual(set(catalog.data), set(allowed))
+            for source in CATALOG:
+                r = get_as(Consulta, {"fuente": source}, role)
+                self.assertEqual(
+                    r.status_code,
+                    200 if source in allowed else 403,
+                    (role, source, r.data),
+                )
+            for fmt in ["csv", "pdf"]:
+                r = get_as(Consulta, {"fuente": allowed[0], "formato": fmt}, role)
+                self.assertEqual(r.status_code, 200, (role, fmt))
+                if role != "ADMIN":
+                    r = get_as(
+                        Consulta, {"fuente": "recaudacion", "formato": fmt}, role
+                    )
+                    self.assertEqual(r.status_code, 403)
+        self.assertEqual(get_as(ReportCatalog, {}, "PERS_COLECTA").status_code, 403)
+        with connection.cursor() as c:
+            c.execute(
+                "DELETE FROM usuariorol WHERE idusuario=%s AND idrol=(SELECT idrol FROM rol WHERE codigorol='DOC_TRIAJE')",
+                [self.uid],
+            )
+        self.assertEqual(
+            get_as(Consulta, {"fuente": "triajes"}, "DOC_TRIAJE").status_code, 403
+        )
+
+    def test_report_dates_use_bolivian_day_for_legacy_and_financial_timestamps(self):
+        from apps.reportes.services import query
+
+        debt = self.debt()
+        with connection.cursor() as c:
+            for stamp, status in [
+                ("2026-11-01 02:00:00", "Rechazado"),
+                ("2026-11-01 05:00:00", "Apto"),
+            ]:
+                c.execute(
+                    "INSERT INTO triajeclinico(idposibledonador,idpersonalsalud,fechahora,pesokg,presionsistolicammhg,presiondiastolicammhg,nivelhemoglobina,temperatura,resultadoaptitud) VALUES(%s,%s,%s,70,120,80,14,36.5,%s)",
+                    [self.pid, self.person, stamp, status],
+                )
+                c.execute(
+                    "INSERT INTO pagofinanciero(iddeuda,montopagado,metodopago,estadotransaccion,fechahorapago,proveedorpasarela) VALUES(%s,50,'Efectivo','Confirmada',%s::timestamp AT TIME ZONE 'UTC','Manual')",
+                    [debt, stamp],
+                )
+        params = {"desde": "2026-10-31", "hasta": "2026-10-31"}
+        triage = query(dict(params, fuente="triajes"))
+        self.assertEqual(triage["totales"]["cantidad"], 1)
+        self.assertEqual(triage["totales"]["porcentaje_diferimiento"], 100)
+        self.assertEqual(triage["filas"][0]["dimension"], "2026-10-31")
+        revenue = query(dict(params, fuente="recaudacion", dimension="mes"))
+        self.assertEqual(revenue["totales"]["importe"], 50)
+        self.assertEqual(revenue["filas"][0]["dimension"], "2026-10")
+        next_day = query(
+            {"fuente": "triajes", "desde": "2026-11-01", "hasta": "2026-11-01"}
+        )
+        self.assertEqual(next_day["totales"]["cantidad"], 1)
+        self.assertEqual(next_day["totales"]["porcentaje_diferimiento"], 0)
 
     def test_partial_migration07_prevents_financial_write(self):
         with connection.cursor() as c:

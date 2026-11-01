@@ -42,6 +42,8 @@ const names: Record<string, string> = {
   fecharecepcion: "Recibida",
   dimension: "Agrupación",
   cantidad: "Cantidad",
+  rechazados: "Evaluaciones rechazadas",
+  porcentaje_diferimiento: "Tasa de diferimiento (%)",
   importe: "Importe (BOB)",
   volumen: "Volumen (ml)",
 };

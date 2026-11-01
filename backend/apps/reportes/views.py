@@ -8,14 +8,17 @@ from apps.clinica.services import revision07
 from apps.seguridad.utils import registrar_auditoria, get_client_ip
 from apps.laboratorio.views import ConflictoLaboratorio
 from .services import CATALOG, METRICS, query
+from .access import SOURCES_BY_ROLE
 
 
 class Catalogo(APIView):
     permission_classes = [ClinicalRole]
-    roles = ["ADMIN"]
+    roles = list(SOURCES_BY_ROLE)
 
     def get(self, request):
         from apps.clinica.services import rows
+
+        allowed = SOURCES_BY_ROLE[request.auth["rolActivo"]]
 
         with connection.cursor() as c:
             revision07(c)
@@ -23,9 +26,13 @@ class Catalogo(APIView):
                 c,
                 "SELECT idgrupo::text AS valor,grupoabo||' '||factorrh AS etiqueta FROM gruposanguineo ORDER BY idgrupo",
             )
-            institutions = rows(
-                c,
-                "SELECT idinstitucion::text AS valor,nombreinstitucion AS etiqueta FROM institucionsalud ORDER BY nombreinstitucion",
+            institutions = (
+                rows(
+                    c,
+                    "SELECT idinstitucion::text AS valor,nombreinstitucion AS etiqueta FROM institucionsalud ORDER BY nombreinstitucion",
+                )
+                if "cartera" in allowed
+                else []
             )
             categories = rows(
                 c,
@@ -35,9 +42,13 @@ class Catalogo(APIView):
                 c,
                 "SELECT DISTINCT tipocomponente AS valor,tipocomponente AS etiqueta FROM ejemplarbolsa ORDER BY tipocomponente",
             )
-            priorities = rows(
-                c,
-                "SELECT DISTINCT prioridadsolicitud AS valor,prioridadsolicitud AS etiqueta FROM solicitudhospitalaria ORDER BY prioridadsolicitud",
+            priorities = (
+                rows(
+                    c,
+                    "SELECT DISTINCT prioridadsolicitud AS valor,prioridadsolicitud AS etiqueta FROM solicitudhospitalaria ORDER BY prioridadsolicitud",
+                )
+                if "cartera" in allowed
+                else []
             )
         states = {
             "triajes": ["Apto", "Rechazado"],
@@ -81,15 +92,26 @@ class Catalogo(APIView):
                     },
                 }
                 for k, v in CATALOG.items()
+                if k in allowed
             }
         )
 
 
 class Consulta(APIView):
     permission_classes = [ClinicalRole]
-    roles = ["ADMIN"]
+    roles = list(SOURCES_BY_ROLE)
 
     def get(self, request):
+        from rest_framework.exceptions import PermissionDenied
+
+        allowed = SOURCES_BY_ROLE[request.auth["rolActivo"]]
+        params = request.query_params.copy()
+        source = params.get("fuente", allowed[0])
+        if source in CATALOG and source not in allowed:
+            raise PermissionDenied(
+                "El perfil activo no tiene acceso a esta área de reportes."
+            )
+        params["fuente"] = source
         format = request.query_params.get("formato", "json")
         if format not in ["json", "csv", "pdf"]:
             from rest_framework.exceptions import ValidationError
@@ -98,7 +120,7 @@ class Consulta(APIView):
         try:
             with connection.cursor() as c:
                 revision07(c)
-            result = query(request.query_params)
+            result = query(params)
             registrar_auditoria(
                 request.user,
                 "CU24 consulta "
