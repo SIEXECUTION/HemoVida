@@ -1,14 +1,14 @@
 import React from 'react';
-import { 
-  Droplet, 
-  Calendar, 
-  History, 
-  MapPin, 
-  Heart, 
-  CheckCircle2, 
-  Clock, 
-  AlertCircle, 
-  ShieldCheck, 
+import {
+  Droplet,
+  Calendar,
+  History,
+  MapPin,
+  Heart,
+  CheckCircle2,
+  Clock,
+  AlertCircle,
+  ShieldCheck,
   ArrowRight,
   Sparkles,
   Award,
@@ -176,7 +176,7 @@ export const DashboardSummary: React.FC<DashboardSummaryProps> = ({
                   </div>
                   {/* Progress Bar */}
                   <div className="w-full bg-slate-700/60 rounded-full h-2 overflow-hidden mb-2">
-                    <div 
+                    <div
                       className="bg-gradient-to-r from-amber-400 to-rose-500 h-full rounded-full transition-all duration-500"
                       style={{ width: `${progressPercent}%` }}
                     />
@@ -202,7 +202,7 @@ export const DashboardSummary: React.FC<DashboardSummaryProps> = ({
       {/* 4 Metric Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Metric 1 */}
-        <div 
+        <div
           onClick={() => onNavigate('historial')}
           className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs hover:border-rose-300 hover:shadow-md transition-all cursor-pointer group"
           id="stat-card-donaciones"
@@ -224,7 +224,7 @@ export const DashboardSummary: React.FC<DashboardSummaryProps> = ({
         </div>
 
         {/* Metric 2 */}
-        <div 
+        <div
           onClick={() => onNavigate('historial')}
           className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs hover:border-rose-300 hover:shadow-md transition-all cursor-pointer group"
           id="stat-card-volumen"
@@ -246,7 +246,7 @@ export const DashboardSummary: React.FC<DashboardSummaryProps> = ({
         </div>
 
         {/* Metric 3 */}
-        <div 
+        <div
           className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs hover:border-rose-300 hover:shadow-md transition-all group"
           id="stat-card-vidas"
         >
@@ -267,7 +267,7 @@ export const DashboardSummary: React.FC<DashboardSummaryProps> = ({
         </div>
 
         {/* Metric 4 */}
-        <div 
+        <div
           onClick={onOpenDigitalCard}
           className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs hover:border-rose-300 hover:shadow-md transition-all cursor-pointer group"
           id="stat-card-grupo"
@@ -297,7 +297,7 @@ export const DashboardSummary: React.FC<DashboardSummaryProps> = ({
               <div className="flex items-center gap-2">
                 <span className="bg-purple-600 text-white font-bold text-[11px] px-2.5 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1">
                   <Sparkles className="w-3 h-3" />
-                  CU21 Donación Autóloga Programada
+                  Donación Autóloga Programada
                 </span>
                 <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[11px] px-2 py-0.5 rounded-full font-bold">
                   En Custodia Fría
@@ -336,7 +336,7 @@ export const DashboardSummary: React.FC<DashboardSummaryProps> = ({
               <Sparkles className="w-4 h-4" />
             </div>
             <div>
-              <strong className="block text-purple-950 font-bold">¿Tienes una intervención quirúrgica electiva programada? (CU21)</strong>
+              <strong className="block text-purple-950 font-bold">¿Tienes una intervención quirúrgica electiva programada? </strong>
               <span className="text-purple-700 text-[11px]">
                 Coordina con tu cirujano para donar tu propia sangre de forma anticipada. Quedará en custodia exclusiva con bloqueo a terceros.
               </span>
@@ -451,7 +451,7 @@ export const DashboardSummary: React.FC<DashboardSummaryProps> = ({
             </p>
 
             <div className="space-y-2">
-              <div 
+              <div
                 onClick={() => onNavigate('mapa')}
                 className="bg-white p-3 rounded-xl border border-slate-200 hover:border-rose-400 flex items-center justify-between cursor-pointer transition-colors"
               >
@@ -468,7 +468,7 @@ export const DashboardSummary: React.FC<DashboardSummaryProps> = ({
                 </span>
               </div>
 
-              <div 
+              <div
                 onClick={() => onNavigate('mapa')}
                 className="bg-white p-3 rounded-xl border border-slate-200 hover:border-rose-400 flex items-center justify-between cursor-pointer transition-colors"
               >

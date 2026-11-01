@@ -287,7 +287,7 @@ export function ClinicalCircuit({
       )}
       {["ADMIN", "DOC_TRIAJE"].includes(role) && (
         <Form
-          title="CU10 · Evaluación y dictamen"
+          title="Evaluación y dictamen"
           fields={[
             person,
             appointment,
@@ -328,7 +328,7 @@ export function ClinicalCircuit({
       )}
       {["ADMIN", "DOC_TRIAJE", "BIOQ_INTEGRAL"].includes(role) && (
         <Form
-          title="CU11 · Diferimiento"
+          title="Diferimiento"
           fields={[
             person,
             triage,
@@ -352,12 +352,12 @@ export function ClinicalCircuit({
       )}
       {collect && (
         <Form
-          title="CU15 · Consentimiento y colecta"
+          title="Consentimiento y colecta"
           fields={[
             triage,
             {
               name: "idgrupo",
-              label: "Grupo de la madre (debe ser confirmado en CU14)",
+              label: "Grupo de la madre (debe ser confirmado en inmunohematología)",
               options: opts(
                 "grupos",
                 "idgrupo",
@@ -393,7 +393,7 @@ export function ClinicalCircuit({
       {lab && (
         <>
           <div className="border rounded-3xl p-6 space-y-4 bg-white">
-            <h2 className="text-xl font-bold">CU15 · Fraccionamiento</h2>
+            <h2 className="text-xl font-bold">Fraccionamiento</h2>
             <p>
               Comprueba la conservación y registra los componentes realmente
               obtenidos antes de confirmar el lote.
@@ -460,14 +460,14 @@ export function ClinicalCircuit({
             </button>
           </div>
           <Form
-            title="CU15 · Traslado de custodia"
+            title="Traslado de custodia"
             fields={[bag, location]}
             submit={({ bolsa, ...d }) =>
               save(`componentes/${bolsa}/custodiar/`, d)
             }
           />
           <Form
-            title="CU15 · Baja autorizada"
+            title="Baja autorizada"
             fields={[
               bag,
               { name: "motivobaja", label: "Motivo (máximo 100 caracteres)" },
@@ -484,7 +484,7 @@ export function ClinicalCircuit({
       {collect && (
         <>
           <Form
-            title="CU15 · Colecta autóloga para el propio paciente"
+            title="Colecta autóloga para el propio paciente"
             fields={[
               triage,
               {
@@ -534,7 +534,7 @@ export function ClinicalCircuit({
             submit={(d) => save("colectas/", { ...d, autologa: true })}
           />
           <Form
-            title="CU15 · Colecta interrumpida"
+            title="Colecta interrumpida"
             fields={[
               triage,
               {
@@ -555,15 +555,15 @@ export function ClinicalCircuit({
       {["ADMIN", "DOC_TRIAJE", "BIOQ_INTEGRAL"].includes(role) && (
         <>
           <Form
-            title="CU11 · Diferimiento por hallazgo de laboratorio"
+            title="Diferimiento por hallazgo de laboratorio"
             fields={[
               person,
               {
                 name: "tipoanalisis",
                 label: "Origen",
                 options: [
-                  ["idserologia", "CU13 · Serología"],
-                  ["idhematologia", "CU14 · Inmunohematología"],
+                  ["idserologia", "Serología"],
+                  ["idhematologia", "Inmunohematología"],
                 ],
               },
               {
@@ -595,7 +595,7 @@ export function ClinicalCircuit({
             }
           />
           <Form
-            title="CU11 · Confirmar comunicación al candidato"
+            title="Confirmar comunicación al candidato"
             fields={[
               {
                 name: "diferimiento",
@@ -630,7 +630,7 @@ export function ClinicalCircuit({
       {lab && (
         <>
           <Form
-            title="CU15 · Registrar condiciones verificadas del equipo"
+            title="Registrar condiciones verificadas del equipo"
             fields={[
               location,
               {
@@ -656,7 +656,7 @@ export function ClinicalCircuit({
             }
           />
           <Form
-            title="CU15 · Traslado de custodia autóloga exclusiva"
+            title="Traslado de custodia autóloga exclusiva"
             fields={[
               {
                 name: "bolsa",
@@ -676,7 +676,7 @@ export function ClinicalCircuit({
           />
           {["ADMIN", "BIOQ_INTEGRAL"].includes(role) && (
             <Form
-              title="CU15 · Revisar reserva autóloga después de corrección"
+              title="Revisar reserva autóloga después de corrección"
               fields={[
                 {
                   name: "madre",
@@ -701,7 +701,7 @@ export function ClinicalCircuit({
             />
           )}
           <Form
-            title="CU15 · Baja del lote completo"
+            title="Baja del lote completo"
             fields={[
               {
                 name: "madre",
@@ -720,7 +720,7 @@ export function ClinicalCircuit({
       )}
       {["ADMIN", "TEC_LOGISTICA"].includes(role) && (
         <Form
-          title="CU15 · Configurar conservación académica"
+          title="Configurar conservación académica"
           fields={[
             {
               name: "tipocomponente",

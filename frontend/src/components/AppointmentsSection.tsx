@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
-import { 
+import {
   Sparkles,
-  Calendar, 
-  Clock, 
-  MapPin, 
-  CheckCircle2, 
-  AlertCircle, 
-  X, 
-  Plus, 
-  FileText, 
+  Calendar,
+  Clock,
+  MapPin,
+  CheckCircle2,
+  AlertCircle,
+  X,
+  Plus,
+  FileText,
   ShieldCheck,
   UserCheck,
   Trash2,
@@ -51,13 +51,13 @@ export const AppointmentsSection: React.FC<AppointmentsSectionProps> = ({
   const [autologoMedico, setAutologoMedico] = useState('Dr. Roberto Salinas (MP-7712)');
   const [autologoOrden, setAutologoOrden] = useState('ORD-QX-2026-1102');
   const [autologoHospital, setAutologoHospital] = useState('Hospital Universitario Japonés');
-  
+
   // Prefiltro Checklist
   const [checkEdad, setCheckEdad] = useState(true);
   const [checkPeso, setCheckPeso] = useState(true);
   const [checkTatuaje, setCheckTatuaje] = useState(true);
   const [checkSintomas, setCheckSintomas] = useState(true);
-  
+
   const [voucherModal, setVoucherModal] = useState<Appointment | null>(null);
 
   const activeAppointments = appointments.filter(a => a.estadoCita === 'Programada');
@@ -426,7 +426,7 @@ export const AppointmentsSection: React.FC<AppointmentsSectionProps> = ({
                         : 'border-purple-200 bg-purple-50/50 hover:bg-purple-100 text-purple-800'
                     }`}
                   >
-                    ✨ Autóloga (CU21)
+                    ✨ Autóloga
                   </button>
                 </div>
               </div>
@@ -465,7 +465,7 @@ export const AppointmentsSection: React.FC<AppointmentsSectionProps> = ({
                 <div className="p-4 bg-purple-50 rounded-2xl border-2 border-purple-300 space-y-3 text-xs">
                   <div className="flex items-center gap-2 text-purple-900 font-bold">
                     <Sparkles className="w-4 h-4 text-purple-600" />
-                    <span>Protocolo de Autotransfusión Preoperatoria (CU21)</span>
+                    <span>Protocolo de Autotransfusión Preoperatoria </span>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -533,7 +533,7 @@ export const AppointmentsSection: React.FC<AppointmentsSectionProps> = ({
                   </div>
 
                   <p className="text-[11px] text-purple-800 bg-white/80 p-2.5 rounded-xl border border-purple-200 leading-tight">
-                    🔒 <strong>Custodia Estricta:</strong> La bolsa recolectada se etiquetará como <code className="text-purple-900 font-mono">esExclusivoAutologo = TRUE</code> y quedará en reserva en frío para tu cirugía. Si la cirugía se suspende, se somete a baja sanitaria biológica (CU15), jamás a terceros.
+                    🔒 <strong>Custodia Estricta:</strong> La bolsa recolectada se etiquetará como <code className="text-purple-900 font-mono">esExclusivoAutologo = TRUE</code> y quedará en reserva en frío para tu cirugía. Si la cirugía se suspende, se somete a baja sanitaria biológica , jamás a terceros.
                   </p>
                 </div>
               )}

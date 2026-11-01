@@ -1,27 +1,27 @@
 import React, { useState } from 'react';
 import { JointReleasePanel } from './JointReleasePanel';
-import { 
-  FlaskConical, 
-  Droplet, 
-  CheckCircle2, 
-  AlertTriangle, 
-  Layers, 
-  Thermometer, 
-  Clock, 
-  ShieldCheck, 
-  Trash2, 
-  Sparkles, 
+import {
+  FlaskConical,
+  Droplet,
+  CheckCircle2,
+  AlertTriangle,
+  Layers,
+  Thermometer,
+  Clock,
+  ShieldCheck,
+  Trash2,
+  Sparkles,
   ArrowRight,
   RefreshCw,
   Flame,
   FileText,
   KeyRound
 } from 'lucide-react';
-import { 
-  BloodInventoryItem, 
-  DonationRecord, 
-  LaboratoryAnalysisRecord, 
-  BajaInventarioRecord, 
+import {
+  BloodInventoryItem,
+  DonationRecord,
+  LaboratoryAnalysisRecord,
+  BajaInventarioRecord,
   StaffAccount,
   SerologyResult,
   ImmunohematologyResult,
@@ -100,10 +100,10 @@ const LegacyLabProcessingView: React.FC<LabProcessingViewProps> = ({
     e.preventDefault();
     if (!selectedDonation) return;
 
-    const isSerologyClean = vih === 'No Reactivo' && chagas === 'No Reactivo' && 
-      hepatitisB === 'No Reactivo' && hepatitisC === 'No Reactivo' && 
+    const isSerologyClean = vih === 'No Reactivo' && chagas === 'No Reactivo' &&
+      hepatitisB === 'No Reactivo' && hepatitisC === 'No Reactivo' &&
       sifilis === 'No Reactivo' && htlv === 'No Reactivo';
-    
+
     const isImmunoConcordant = tipDirecta === tipInversa && coombs === 'Negativo';
     const finalDictamen = isSerologyClean && isImmunoConcordant ? 'Apto' : 'No Apto';
 
@@ -138,8 +138,8 @@ const LegacyLabProcessingView: React.FC<LabProcessingViewProps> = ({
       inmunohematologia: immunoObj,
       estadoLiberacion: finalDictamen === 'Apto' ? 'Apto' : 'Reactivo Descarte',
       fechaLiberacion: new Date().toISOString(),
-      observacionesTecnicas: finalDictamen === 'Apto' 
-        ? 'Serología 6 marcadores no reactivos. Concordancia ABO 100%. Lote liberado a DISPONIBLE.' 
+      observacionesTecnicas: finalDictamen === 'Apto'
+        ? 'Serología 6 marcadores no reactivos. Concordancia ABO 100%. Lote liberado a DISPONIBLE.'
         : `Lote RECHAZADO por reactividad o discrepancia inmunológica (${vih === 'Reactivo' ? 'VIH ' : ''}${chagas === 'Reactivo' ? 'Chagas ' : ''}${hepatitisB === 'Reactivo' ? 'VHB ' : ''}${hepatitisC === 'Reactivo' ? 'VHC ' : ''}${sifilis === 'Reactivo' ? 'Sífilis ' : ''}${htlv === 'Reactivo' ? 'HTLV' : ''}). Enviado a Baja.`
     };
 
@@ -424,7 +424,7 @@ const LegacyLabProcessingView: React.FC<LabProcessingViewProps> = ({
         </div>
       )}
 
-      {/* TAB 2: LABORATORIO PARALELO & BARRERA DE LIBERACIÓN (CU13/14) */}
+      {/* TAB 2: LABORATORIO PARALELO & BARRERA DE LIBERACIÓN () */}
       {activeTab === 'serologia' && (
         <form onSubmit={handleReleaseBarrierSubmit} className="bg-white rounded-3xl border border-slate-200 shadow-xs p-6 space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -654,7 +654,7 @@ const LegacyLabProcessingView: React.FC<LabProcessingViewProps> = ({
         </form>
       )}
 
-      {/* TAB 3: REGISTRO DE BAJAS Y DESCARTES (CU14) */}
+      {/* TAB 3: REGISTRO DE BAJAS Y DESCARTES  */}
       {activeTab === 'bajas' && (
         <div className="bg-white rounded-3xl border border-slate-200 shadow-xs p-6 space-y-5">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

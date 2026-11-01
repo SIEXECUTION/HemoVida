@@ -11,6 +11,8 @@
 
 > Población académica aplicada en Supabase con respaldo previo: [registros y verificación](informes/POBLACION_DEMO_2026-11-01.md). Seis personas DEMO, cuatro citas para el 02/11/2026, programa autólogo pendiente y dos deudas por 300 BOB; usuarios existentes conservados.
 
+> Demostración por perfiles: [recorrido de los ciclos 2 y 3](informes/RECORRIDO_CICLOS_2_Y_3.md). Doce cuentas sintéticas y escenarios DEMO aplicados en Supabase. Credenciales privadas fuera de Git; guía también integrada en el frontend.
+
 ---
 
 ## 🏛️ Arquitectura del Sistema

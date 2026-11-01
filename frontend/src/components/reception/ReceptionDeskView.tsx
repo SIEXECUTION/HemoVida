@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
-import { 
-  Layers, 
-  Truck, 
-  UserCheck, 
-  BarChart3, 
-  Heart, 
-  UserPlus, 
-  Calendar, 
-  Clock, 
-  ShieldCheck, 
+import {
+  Layers,
+  Truck,
+  UserCheck,
+  BarChart3,
+  Heart,
+  UserPlus,
+  Calendar,
+  Clock,
+  ShieldCheck,
   Search,
   Droplet,
   Sparkles,
@@ -19,11 +19,11 @@ import {
   Stethoscope,
   KeyRound
 } from 'lucide-react';
-import { 
-  BloodInventoryItem, 
-  BloodDispatchRecord, 
-  PatientReplacementRecord, 
-  UserDonor, 
+import {
+  BloodInventoryItem,
+  BloodDispatchRecord,
+  PatientReplacementRecord,
+  UserDonor,
   DonationRecord,
   StaffAccount,
   Appointment,
@@ -266,13 +266,13 @@ export const ReceptionDeskView: React.FC<ReceptionDeskViewProps> = ({
             <span className="text-slate-400 text-[11px] block">Incentivos Post-Extracción:</span>
             <strong className="text-lg font-mono font-bold text-rose-300">{voluntaryIncentivesCount} entregados</strong>
           </div>
-          <div 
+          <div
             onClick={() => setActiveTab('autologas')}
             className="cursor-pointer hover:bg-white/10 p-1.5 rounded-xl transition-all border border-purple-500/30 bg-purple-950/40"
-            title="Ir a gestión de Donación Autóloga (CU21)"
+            title="Ir a gestión de Donación Autóloga "
           >
             <span className="text-purple-300 text-[11px] block font-bold flex items-center gap-1">
-              <Sparkles className="w-3.5 h-3.5 text-purple-400" /> Autóloga (CU21):
+              <Sparkles className="w-3.5 h-3.5 text-purple-400" /> Autóloga :
             </span>
             <strong className="text-lg font-mono font-bold text-purple-200">
               {autologousCount} pacientes &rarr;
@@ -317,7 +317,7 @@ export const ReceptionDeskView: React.FC<ReceptionDeskViewProps> = ({
           }`}
         >
           <Sparkles className="w-4 h-4 text-purple-500" />
-          <span>Donación Autóloga (CU21)</span>
+          <span>Donación Autóloga </span>
           <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono ${
             activeTab === 'autologas' ? 'bg-purple-900 text-purple-100' : 'bg-purple-200 text-purple-800 font-bold'
           }`}>
@@ -410,11 +410,11 @@ export const ReceptionDeskView: React.FC<ReceptionDeskViewProps> = ({
               const donor = donors.find(d => d.id === app.idDonante);
 
               return (
-                <div 
+                <div
                   key={app.idCita}
                   className={`p-4 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
-                    app.asistenciaConfirmada 
-                      ? 'border-emerald-200 bg-emerald-50/30' 
+                    app.asistenciaConfirmada
+                      ? 'border-emerald-200 bg-emerald-50/30'
                       : 'border-slate-200 bg-white hover:border-slate-300'
                   }`}
                 >

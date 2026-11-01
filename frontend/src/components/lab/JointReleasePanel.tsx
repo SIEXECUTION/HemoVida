@@ -213,8 +213,8 @@ export function JointReleasePanel({
     <section className="max-w-6xl mx-auto p-6 space-y-5 text-slate-900">
       <h1 className="text-2xl font-bold">Laboratorio y liberación conjunta</h1>
       <p>
-        Selecciona una bolsa madre registrada para consultar o guardar CU13 y
-        CU14 y liberar sus componentes.
+        Selecciona una bolsa madre registrada para consultar o guardar serología e
+        inmunohematología y liberar sus componentes.
       </p>
       <label className="block">
         Bolsa madre
@@ -259,7 +259,7 @@ export function JointReleasePanel({
                 save("serologia", sero);
               }}
             >
-              <h2 className="font-bold">CU13 Inmunoserología</h2>
+              <h2 className="font-bold">Inmunoserología</h2>
               <label className="block">
                 Código del análisis
                 <input
@@ -292,7 +292,7 @@ export function JointReleasePanel({
                 className="bg-teal-800 text-white rounded p-2"
                 disabled={busy}
               >
-                Guardar CU13
+                Guardar serología
               </button>
             </form>
             <form
@@ -302,7 +302,7 @@ export function JointReleasePanel({
                 save("hematologia", hema);
               }}
             >
-              <h2 className="font-bold">CU14 Inmunohematología</h2>
+              <h2 className="font-bold">Inmunohematología</h2>
               {choice(
                 "grupoaboconfirmado",
                 "Grupo ABO",
@@ -393,7 +393,7 @@ export function JointReleasePanel({
                 className="bg-teal-800 text-white rounded p-2"
                 disabled={busy}
               >
-                Guardar CU14
+                Guardar inmunohematología
               </button>
             </form>
           </div>

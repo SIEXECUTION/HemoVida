@@ -15,6 +15,7 @@ import {
   CreditCard,
   CalendarDays,
 } from "lucide-react";
+import { WalkthroughPage } from "./components/WalkthroughPage";
 import { FinancePage } from "./components/FinancePage";
 import { AgendaPage } from "./components/AgendaPage";
 import { IncentivesPage } from "./components/IncentivesPage";
@@ -149,6 +150,7 @@ export default function App() {
             >
               {[
                 ["inicio", "Mi espacio"],
+                ["recorrido", "Guía de recorrido"],
                 ...(["ADMIN", "PERS_COLECTA"].includes(session.activeRole)
                   ? [
                       ["citas", "Citas y recepción"],
@@ -226,6 +228,7 @@ export default function App() {
                 </button>
               ))}
             </nav>
+            {tab === "recorrido" && <WalkthroughPage />}
             {tab === "inicio" && session.activeRole === "MED_SOLICITANTE" && (
               <AutologousPage
                 token={session.token!}

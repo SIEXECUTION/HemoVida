@@ -511,3 +511,14 @@ test("CU23 ofrece plantillas fijas autorizadas, descarga PDF y borra resultados 
     await ui.close();
   }
 });
+
+
+test("La guía muestra el recorrido de los dos ciclos sin ejecutar operaciones", async () => {
+ const ui=await open(async()=>({body:{}}),390,'ADMIN','Guía de recorrido');
+ try {
+  await ui.page.getByRole('heading',{name:'Guía de recorrido',exact:true}).waitFor();
+  await ui.page.getByRole('heading',{name:'Ciclo 2 desde la cita hasta la atención'}).waitFor();
+  await ui.page.getByRole('heading',{name:'Ciclo 3 desde el laboratorio hasta los informes'}).waitFor();
+  assert.deepEqual(ui.errors,[]);
+ } finally {await ui.close();}
+});

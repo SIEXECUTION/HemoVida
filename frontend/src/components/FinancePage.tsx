@@ -98,7 +98,7 @@ export function FinancePage({ token }: { token: string }) {
   return (
     <section className="space-y-6">
       <header className="p-6 bg-white rounded-3xl border">
-        <h1 className="text-2xl font-black">CU22 · Finanzas y pagos</h1>
+        <h1 className="text-2xl font-black">Finanzas y pagos</h1>
         <p>
           Importes en bolivianos (BOB). Los pagos no condicionan la atención de
           una emergencia.
