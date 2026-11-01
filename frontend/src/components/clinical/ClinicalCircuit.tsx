@@ -9,6 +9,7 @@ export type Field = {
   step?: string;
   maxLength?: number;
   minLength?: number;
+  defaultValue?: string | number;
   options?: [string, string][];
 };
 const input =
@@ -69,6 +70,7 @@ export function Form({
                 required={x.required !== false}
                 name={x.name}
                 className={input}
+                defaultValue={x.defaultValue ?? ""}
               >
                 <option value="">Seleccionar</option>
                 {x.options.map(([id, label]) => (
@@ -83,6 +85,7 @@ export function Form({
                 required={x.required !== false}
                 name={x.name}
                 type={x.type || "text"}
+                defaultValue={x.defaultValue}
                 step={x.step || (x.type === "number" ? "any" : undefined)}
                 maxLength={x.maxLength}
                 minLength={x.minLength}
@@ -510,6 +513,16 @@ export function ClinicalCircuit({
                 name: "fechacirugia",
                 label: "Fecha de cirugía del paciente",
                 type: "date",
+              },
+              {
+                name: "idprograma",
+                label: "Programación autóloga aprobada",
+                options: opts(
+                  "programas",
+                  "idprograma",
+                  (r) =>
+                    `#${r.idprograma} · Paciente ${r.idreceptor} · Cirugía ${r.fechacirugia}`,
+                ),
               },
               { name: "firmadigital", label: "Evidencia de firma previa" },
               {

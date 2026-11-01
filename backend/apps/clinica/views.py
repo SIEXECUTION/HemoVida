@@ -48,6 +48,8 @@ class Operations(APIView):
                 if extended
                 else {"protocolos": [], "incidencias": [], "autologas": []}
             )
+            c.execute("SELECT to_regclass('public.programacionautologa')")
+            extra['programas'] = ops.rows(c, "SELECT idprograma,idreceptor,fechacirugia FROM programacionautologa WHERE estado='Aprobada' AND fechacirugia>(now() AT TIME ZONE 'America/La_Paz')::date ORDER BY idprograma") if c.fetchone()[0] else []
             return Response(
                 {
                     **extra,

@@ -50,10 +50,15 @@ class Diferimiento(s.Serializer):
 class Colecta(s.Serializer):
     autologa = s.BooleanField(default=False)
     fechacirugia = s.DateField(required=False)
+    idprograma = s.IntegerField(min_value=1, required=False)
 
     def validate(self, d):
         if d["autologa"] and not d.get("fechacirugia"):
             raise s.ValidationError("La colecta autóloga exige fecha de cirugía.")
+        if d['autologa'] and not d.get('idprograma'):
+            raise s.ValidationError('La nueva colecta autóloga requiere programación CU21 aprobada.')
+        if not d['autologa'] and d.get('idprograma'):
+            raise s.ValidationError('La programación autóloga no se usa en una colecta ordinaria.')
         return d
 
     idtriaje = s.IntegerField(min_value=1)

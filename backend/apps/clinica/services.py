@@ -239,6 +239,10 @@ def collect(request, d):
         t = one(c, "SELECT * FROM triajeclinico WHERE idtriaje=%s", [d["idtriaje"]])
         p = patient(c, t["idposibledonador"])
         restrictions(c, p["idpersona"])
+        if d.get('autologa'):
+            from apps.agenda.autologous import ready09, validate_program
+            ready09(c)
+            validate_program(c, d['idprograma'], p['idpersona'], d['fechacirugia'])
         latest = one(
             c,
             "SELECT idtriaje,resultadoaptitud,fechahora::date=CURRENT_DATE AS hoy FROM triajeclinico WHERE idposibledonador=%s ORDER BY fechahora DESC,idtriaje DESC LIMIT 1 FOR UPDATE",
@@ -303,8 +307,8 @@ def collect(request, d):
             if not c.fetchone()[0]:
                 raise ValidationError("La cirugía debe ser futura.")
             c.execute(
-                "INSERT INTO colectaautologa(idunidadmadre,idreceptor,fechacirugia,idpersonalsalud) VALUES(%s,%s,%s,%s)",
-                [m["idunidadmadre"], p["idpersona"], d["fechacirugia"], staff],
+                "INSERT INTO colectaautologa(idunidadmadre,idreceptor,fechacirugia,idpersonalsalud,idprograma) VALUES(%s,%s,%s,%s,%s)",
+                [m["idunidadmadre"], p["idpersona"], d["fechacirugia"], staff, d['idprograma']],
             )
         c.execute(
             "UPDATE donante SET fechaultimadonacion=CURRENT_DATE WHERE idpersona=%s",
@@ -360,7 +364,11 @@ def fraction(request, madre, d):
         if c.fetchone():
             raise ValidationError("La madre ya fue fraccionada.")
         c.execute("SELECT * FROM colectaautologa WHERE idunidadmadre=%s", [madre])
-        autologa = c.fetchone()
+        autologa_row = c.fetchone()
+        autologa = dict(zip([x[0] for x in c.description], autologa_row)) if autologa_row else None
+        if autologa and autologa.get('idprograma'):
+            from apps.agenda.autologous import validate_program
+            validate_program(c, autologa['idprograma'], autologa['idreceptor'], autologa['fechacirugia'], lock=False, allow_today=True)
         c.execute(
             "SELECT 1 FROM donante WHERE idpersona=(SELECT idpersonadonante FROM extracciondonacion WHERE idextraccion=%s) AND tipodonante='Autologo'",
             [m["idextraccion"]],
@@ -406,7 +414,7 @@ def fraction(request, madre, d):
             )
             ids.append(r["idejemplarbolsa"])
             if autologa:
-                receptor, fecha = autologa[1], autologa[2]
+                receptor, fecha = autologa['idreceptor'], autologa['fechacirugia']
                 c.execute("SELECT %s::date<=%s::date+%s", [fecha, m["fechahora"], days])
                 if not c.fetchone()[0]:
                     raise ValidationError(
@@ -509,6 +517,9 @@ def admit(request, d):
             snapshot = c.fetchone()
             if not snapshot or not snapshot[0]:
                 raise ValidationError('El prefiltro cambió o está pendiente; requiere revisión antes de admitir.')
+        if a.get('idprograma'):
+            from apps.agenda.autologous import validate_program
+            validate_program(c, a['idprograma'], d['idpersona'], lock=False)
         if (
             a["idpersona"] != d["idpersona"]
             or a["estadocita"] != "Programada"
@@ -711,6 +722,9 @@ def reactivate_autologous(request, madre, d):
         professional(c, request)
         bloquear_madre(c, madre)
         owner = one(c, "SELECT * FROM colectaautologa WHERE idunidadmadre=%s", [madre])
+        if owner.get('idprograma'):
+            from apps.agenda.autologous import validate_program
+            validate_program(c, owner['idprograma'], owner['idreceptor'], owner['fechacirugia'], lock=False, allow_today=True)
         c.execute(
             "SELECT hemo_lote_aprobado(%s),%s::date>=CURRENT_DATE",
             [madre, owner["fechacirugia"]],

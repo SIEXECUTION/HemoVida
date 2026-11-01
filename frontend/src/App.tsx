@@ -18,6 +18,8 @@ import {
 import { FinancePage } from "./components/FinancePage";
 import { AgendaPage } from "./components/AgendaPage";
 import { IncentivesPage } from "./components/IncentivesPage";
+import { AutologousPage } from "./components/AutologousPage";
+import { StaticReportsPage } from "./components/StaticReportsPage";
 import { ReportsPage } from "./components/ReportsPage";
 import React, { useState } from "react";
 import { Navbar } from "./components/Navbar";
@@ -125,7 +127,7 @@ export default function App() {
           <PublicLanding onLogin={openLogin} onRegister={openRegister} />
         ) : (
           <>
-            {clinical && (
+            {(clinical || session.activeRole === "MED_SOLICITANTE") && (
               <LegacyRoleBanner
                 session={session}
                 onAccount={() => setPassword(true)}
@@ -138,16 +140,36 @@ export default function App() {
               {[
                 ["inicio", "Mi espacio"],
                 ...(["ADMIN", "PERS_COLECTA"].includes(session.activeRole)
-                  ? [["citas", "Citas y recepción"], ["incentivos", "Refrigerio e incentivos"]] : []),
+                  ? [
+                      ["citas", "Citas y recepción"],
+                      ["incentivos", "Refrigerio e incentivos"],
+                    ]
+                  : []),
                 ...(clinical
                   ? [
                       ["clinica", "Atención clínica"],
                       ["stock", "Inventario"],
                     ]
-                  : [
-                      ["carnet", "Carnet e historial"],
-                      ["citas", "Citas y prefiltro"],
-                    ]),
+                  : ["DONANTE", "POSIBLE_DONADOR", "RECEPTOR"].includes(
+                        session.activeRole,
+                      )
+                    ? [
+                        ["carnet", "Carnet e historial"],
+                        ["citas", "Citas y prefiltro"],
+                      ]
+                    : []),
+                ...([
+                  "ADMIN",
+                  "MED_SOLICITANTE",
+                  "DOC_TRIAJE",
+                  "BIOQ_INTEGRAL",
+                  "PERS_COLECTA",
+                  "DONANTE",
+                  "POSIBLE_DONADOR",
+                  "RECEPTOR",
+                ].includes(session.activeRole)
+                  ? [["autologa", "Programación autóloga"]]
+                  : []),
                 ...(["ADMIN", "BIOQ_INTEGRAL"].includes(session.activeRole)
                   ? [["laboratorio", "Laboratorio"]]
                   : []),
@@ -164,7 +186,10 @@ export default function App() {
                   "BIOQ_INTEGRAL",
                   "TEC_LOGISTICA",
                 ].includes(session.activeRole)
-                  ? [["reportes", "Consultas y KPIs"]]
+                  ? [
+                      ["estaticos", "Informes de gestión"],
+                      ["reportes", "Consultas y KPIs"],
+                    ]
                   : []),
               ].map(([id, label]) => (
                 <button
@@ -191,7 +216,14 @@ export default function App() {
                 </button>
               ))}
             </nav>
-            {tab === "inicio" && (
+            {tab === "inicio" && session.activeRole === "MED_SOLICITANTE" && (
+              <AutologousPage
+                token={session.token!}
+                role={session.activeRole}
+                onAgenda={() => setTab("citas")}
+              />
+            )}
+            {tab === "inicio" && session.activeRole !== "MED_SOLICITANTE" && (
               <ReferenceOverview
                 session={session}
                 clinical={clinical}
@@ -201,6 +233,36 @@ export default function App() {
             <div
               className={`reference-screen legacy-role-${session.activeRole}`}
             >
+              {tab === "autologa" &&
+                [
+                  "ADMIN",
+                  "MED_SOLICITANTE",
+                  "DOC_TRIAJE",
+                  "BIOQ_INTEGRAL",
+                  "PERS_COLECTA",
+                  "DONANTE",
+                  "POSIBLE_DONADOR",
+                  "RECEPTOR",
+                ].includes(session.activeRole) && (
+                  <AutologousPage
+                    key={session.activeRole}
+                    token={session.token!}
+                    role={session.activeRole}
+                    onAgenda={() => setTab("citas")}
+                  />
+                )}
+              {tab === "estaticos" &&
+                [
+                  "ADMIN",
+                  "DOC_TRIAJE",
+                  "BIOQ_INTEGRAL",
+                  "TEC_LOGISTICA",
+                ].includes(session.activeRole) && (
+                  <StaticReportsPage
+                    key={session.activeRole}
+                    token={session.token!}
+                  />
+                )}
               {tab === "clinica" && clinical && (
                 <ClinicalCircuit
                   key={session.activeRole}
@@ -219,9 +281,13 @@ export default function App() {
               {tab === "finanzas" && session.activeRole === "ADMIN" && (
                 <FinancePage token={session.token!} />
               )}
-              {tab === "incentivos" && ["ADMIN", "PERS_COLECTA"].includes(session.activeRole) && (
-                <IncentivesPage key={session.activeRole} token={session.token!} />
-              )}
+              {tab === "incentivos" &&
+                ["ADMIN", "PERS_COLECTA"].includes(session.activeRole) && (
+                  <IncentivesPage
+                    key={session.activeRole}
+                    token={session.token!}
+                  />
+                )}
               {tab === "reportes" &&
                 [
                   "ADMIN",
@@ -261,9 +327,20 @@ export default function App() {
                   token={session.token!}
                 />
               )}
-              {["citas", "autoevaluacion"].includes(tab) && ["ADMIN", "PERS_COLECTA", "DONANTE", "POSIBLE_DONADOR"].includes(session.activeRole) && (
-                <AgendaPage key={session.activeRole} token={session.token!} role={session.activeRole} />
-              )}
+              {["citas", "autoevaluacion"].includes(tab) &&
+                [
+                  "ADMIN",
+                  "PERS_COLECTA",
+                  "DONANTE",
+                  "POSIBLE_DONADOR",
+                  "RECEPTOR",
+                ].includes(session.activeRole) && (
+                  <AgendaPage
+                    key={session.activeRole}
+                    token={session.token!}
+                    role={session.activeRole}
+                  />
+                )}
               {tab === "mapa" && (
                 <section className="bg-white border rounded-3xl p-8">
                   <h2 className="text-xl font-bold">

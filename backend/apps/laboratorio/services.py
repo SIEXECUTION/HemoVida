@@ -89,6 +89,13 @@ def guardar_analisis(request, madre, tipo, datos, analisis_id=None):
 def liberar_lote(request, madre):
     with operacion_auditada(request), connection.cursor() as cursor:
         bloquear_madre(cursor, madre)
+        cursor.execute("SELECT to_regclass('public.programacionautologa')")
+        if cursor.fetchone()[0]:
+            cursor.execute('SELECT idprograma,idreceptor,fechacirugia FROM colectaautologa WHERE idunidadmadre=%s AND idprograma IS NOT NULL', [madre])
+            program = cursor.fetchone()
+            if program:
+                from apps.agenda.autologous import validate_program
+                validate_program(cursor, program[0], program[1], program[2], lock=False, allow_today=True)
         cursor.execute('SELECT public.hemo_lote_aprobado(%s)', [madre])
         if not cursor.fetchone()[0]:
             raise ValidationError('Liberación pendiente: CU13 y CU14 deben estar aprobados y concordar con el grupo de la madre.')

@@ -100,8 +100,9 @@ class Catalogo(APIView):
 class Consulta(APIView):
     permission_classes = [ClinicalRole]
     roles = list(SOURCES_BY_ROLE)
+    case = 'CU24'
 
-    def get(self, request):
+    def parameters(self, request):
         from rest_framework.exceptions import PermissionDenied
 
         allowed = SOURCES_BY_ROLE[request.auth["rolActivo"]]
@@ -112,7 +113,14 @@ class Consulta(APIView):
                 "El perfil activo no tiene acceso a esta área de reportes."
             )
         params["fuente"] = source
-        format = request.query_params.get("formato", "json")
+        return params
+
+    def decorate(self, result, request):
+        return result
+
+    def get(self, request):
+        params = self.parameters(request)
+        format = params.get("formato", "json")
         if format not in ["json", "csv", "pdf"]:
             from rest_framework.exceptions import ValidationError
 
@@ -120,11 +128,11 @@ class Consulta(APIView):
         try:
             with connection.cursor() as c:
                 revision07(c)
-            result = query(params)
+            result = self.decorate(query(params), request)
             registrar_auditoria(
                 request.user,
-                "CU24 consulta "
-                + result["fuente"]
+                self.case + " consulta "
+                + result.get("plantilla", result["fuente"])
                 + " formato="
                 + request.query_params.get("formato", "json"),
                 "reporte",
@@ -135,13 +143,15 @@ class Consulta(APIView):
             raise ConflictoLaboratorio() from exc
         if format == "json":
             return Response(result)
+        if format == 'pdf' and hasattr(self,'fixed_pdf'):
+            return self.fixed_pdf(result)
         if format == "csv":
             out = io.StringIO()
             writer = csv.writer(out)
             writer.writerow(
                 [
-                    "HemoVida CU24",
-                    result["fuente"],
+                    "HemoVida " + self.case,
+                    result.get("titulo", result["fuente"]),
                     "Unidad",
                     result["unidad"],
                     "Desde",
@@ -160,7 +170,7 @@ class Consulta(APIView):
                 if result["filas"]
                 else ["dimension", *METRICS[result["fuente"]]]
             )
-            writer.writerow(cols)
+            writer.writerow([result.get('etiquetas',{}).get(k,k) for k in cols])
             for row in result["filas"]:
                 writer.writerow([safe(row.get(k)) for k in cols])
             response = HttpResponse(
@@ -186,17 +196,17 @@ class Consulta(APIView):
                     y -= 16
 
             pdf.setFont("Helvetica", 10)
-            line("HemoVida CU24 - " + result["fuente"] + " - " + result["unidad"])
+            line("HemoVida " + self.case + " - " + result.get("titulo", result["fuente"]) + " - " + result["unidad"])
             line("Actualizado: " + str(result["actualizado"]))
             line("Periodo: " + str(result["desde"]) + " a " + str(result["hasta"]))
             line("Filtros: " + json.dumps(result["filtros"], ensure_ascii=False))
-            line("Totales: " + str(result["totales"]))
+            line("Totales: " + str({result.get('etiquetas',{}).get(k,k):v for k,v in result['totales'].items()}))
             cols = (
                 list(result["filas"][0])
                 if result["filas"]
                 else ["dimension", *METRICS[result["fuente"]]]
             )
-            line(" | ".join(cols))
+            line(" | ".join(result.get('etiquetas',{}).get(k,k) for k in cols))
             for row in result["filas"]:
                 line(
                     " | ".join(
@@ -207,7 +217,7 @@ class Consulta(APIView):
             pdf.save()
             response = HttpResponse(out.getvalue(), content_type="application/pdf")
         response["Content-Disposition"] = (
-            'attachment; filename="hemovida-' + result["fuente"] + "." + format + '"'
+            'attachment; filename="hemovida-' + result.get("plantilla", result["fuente"]) + "." + format + '"'
         )
         return response
 
@@ -215,6 +225,6 @@ class Consulta(APIView):
 def safe(value):
     if value is None:
         return "No aplica"
-    if isinstance(value, str) and value[:1] in ["=", "+", "-", "@"]:
+    if isinstance(value, str) and value.lstrip(' \t\r\n')[:1] in ["=", "+", "-", "@"]:
         return "'" + value
     return value

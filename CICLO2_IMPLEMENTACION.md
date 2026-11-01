@@ -1,5 +1,7 @@
 # Ciclo 2: primer bloque conectado y probado
 
+Actualización posterior: [CICLO2_CU21_CU23_Y_AJUSTES.md](CICLO2_CU21_CU23_Y_AJUSTES.md) documenta la implementación local de CU21/CU23 y la resolución de los pendientes funcionales de este primer bloque. El resto de este archivo conserva el estado histórico del primer bloque.
+
 Estado al 31 de octubre de 2026. Rama `codex/ciclo3-desarrollo-local`.
 Se mantiene el diseño HEMOVIDAX y la conexión privada del backend a Supabase por `DATABASE_URL`, puerto 6543. Los cambios no se desplegaron ni se hizo push.
 

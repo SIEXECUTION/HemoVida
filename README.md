@@ -5,7 +5,7 @@
 
 > Estado actual del ciclo 3: consultar [CICLO3_IMPLEMENTACION.md](CICLO3_IMPLEMENTACION.md). Incluye validación 06/07, clínica, finanzas, Stripe, CU24 y límites de las pruebas locales.
 
-> Continuación del ciclo 2: [CICLO2_IMPLEMENTACION.md](CICLO2_IMPLEMENTACION.md) documenta agenda, prefiltro, admisión, entregas y los pendientes de CU21/CU23. La migración `database/08_ciclo2_agenda_prefiltro.sql` está preparada y probada localmente; no se aplicó a Supabase en esta entrega.
+> Estado actual del ciclo 2: [CICLO2_CU21_CU23_Y_AJUSTES.md](CICLO2_CU21_CU23_Y_AJUSTES.md). CU21/CU23, borradores, cierres, búsqueda y admisión presencial están implementados y probados localmente. Se detectó 08 en Supabase; falta aplicar `database/09_ciclo2_programacion_y_ajustes.sql` y realizar aceptación operativa/despliegue.
 
 ---
 

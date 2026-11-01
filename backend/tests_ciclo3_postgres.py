@@ -64,6 +64,12 @@ class Cycle3Tests(ClinicalTests):
         self.assertEqual(r.status_code, 201, r.data)
         return r.data["iddeuda"]
 
+    def approved_autologous_program(self, surgery):
+        # Fixture clínica explícita para conservar los ensayos originales CU15.
+        with connection.cursor() as c:
+            c.execute("INSERT INTO programacionautologa(idreceptor,fechacirugia,indicacion,referenciamedica,idmedico,estado) VALUES(%s,%s,'Indicación sintética de prueba','LOCAL',%s,'Aprobada') RETURNING idprograma", [self.pid,surgery,self.person])
+            return c.fetchone()[0]
+
     def get(self, view, params):
         req = APIRequestFactory().get("/", params)
         force_authenticate(req, user=self.user, token={"rolActivo": "ADMIN"})
@@ -174,6 +180,7 @@ class Cycle3Tests(ClinicalTests):
         from datetime import date, timedelta
 
         d["fechacirugia"] = (date.today() + timedelta(days=10)).isoformat()
+        d['idprograma'] = self.approved_autologous_program(d['fechacirugia'])
         from apps.clinica.views import ColectaView
 
         r = self.call(ColectaView, d)
@@ -340,6 +347,7 @@ class Cycle3Tests(ClinicalTests):
             autologa=True,
             fechacirugia=(date.today() + timedelta(days=10)).isoformat(),
         )
+        d['idprograma'] = self.approved_autologous_program(d['fechacirugia'])
         r = self.call(ColectaView, d)
         self.assertEqual(r.status_code, 201, r.data)
         m = r.data["idunidadmadre"]

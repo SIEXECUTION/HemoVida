@@ -143,90 +143,15 @@ class AutoRegistroPosibleDonadorSerializer(serializers.Serializer):
             raise serializers.ValidationError("El correo electrónico ya se encuentra registrado.")
         return value
 
+    def validate_fechaNacimiento(self, value):
+        from django.utils import timezone
+        if value > timezone.localdate():
+            raise serializers.ValidationError("La fecha de nacimiento no puede ser futura.")
+        return value
+
     def create(self, validated_data):
-        from apps.donantes.models import PosibleDonador
-        
-        ci = validated_data['ci']
-        nombres = validated_data['nombres']
-        apellidos = validated_data['apellidos']
-        sexo = validated_data['sexo']
-        fecha_nac = validated_data['fechaNacimiento']
-        direccion = validated_data.get('direccion', '')
-        celular = validated_data.get('celular', '')
-        ocupacion = validated_data.get('ocupacion', '')
-        username = validated_data['username']
-        email = validated_data['email']
-        password = validated_data['password']
-
-        # Sincronización preventiva de secuencias de clave primaria (evita duplicate key por datos semilla)
-        sincronizar_secuencias_seguridad()
-
-        # Intentar llamada directa al Stored Procedure en PostgreSQL/Supabase
-        try:
-            with connection.cursor() as cursor:
-                cursor.execute(
-                    """
-                    CALL sp_autoregistro_posible_donador(
-                        %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
-                    );
-                    """,
-                    [ci, nombres, apellidos, sexo, fecha_nac, direccion, celular, ocupacion, username, email, password]
-                )
-            usuario = Usuario.objects.select_related('persona').prefetch_related('roles').get(username=username)
-            if not usuario.passwordHash.startswith(('pbkdf2_', 'argon2', 'bcrypt')):
-                usuario.set_password(password)
-                usuario.save(update_fields=['passwordHash'])
-            return usuario
-        except Exception as e:
-            # En caso de error, limpiar estado de transacción abortada en PostgreSQL
-            if connection.vendor == 'postgresql':
-                try:
-                    connection.rollback()
-                except Exception:
-                    pass
-            sincronizar_secuencias_seguridad()
-
-            # Fallback ORM equivalente en caso de entornos de desarrollo/test
-            with transaction.atomic():
-                persona = Persona.objects.create(
-                    ci=ci,
-                    nombres=nombres,
-                    apellidos=apellidos,
-                    sexo=sexo,
-                    fechaNacimiento=fecha_nac,
-                    direccion=direccion,
-                    celular=celular,
-                    ocupacion=ocupacion,
-                    nacionalidad='Boliviana'
-                )
-                usuario = Usuario(
-                    persona=persona,
-                    username=username,
-                    email=email,
-                    estado='Activo'
-                )
-                usuario.set_password(password)
-                usuario.save()
-
-                PosibleDonador.objects.create(
-                    persona=persona,
-                    estadoAptitud='No Apto',
-                    tieneAnalisis=False
-                )
-
-                rol_posible = Rol.objects.filter(codigoRol='POSIBLE_DONADOR').first()
-                if rol_posible:
-                    UsuarioRol.objects.create(usuario=usuario, rol=rol_posible)
-
-                registrar_auditoria(
-                    usuario=usuario,
-                    accion='Auto-registro de postulante web',
-                    tabla='Usuario',
-                    id_registro=usuario.idUsuario,
-                    ip_origen='0.0.0.0',
-                    rol_activo='Posible Donador'
-                )
-                return usuario
+        from .registration import register_candidate
+        return register_candidate(validated_data)
 
 
 class CrearPersonalSaludSerializer(serializers.Serializer):

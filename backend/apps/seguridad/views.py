@@ -101,9 +101,9 @@ class AutoRegistroPosibleDonadorView(APIView):
                     "codigoRol": "POSIBLE_DONADOR"
                 }
             }, status=status.HTTP_201_CREATED)
-        except Exception as e:
+        except Exception:
             return Response(
-                {"detail": f"Error al procesar el auto-registro: {str(e)}"},
+                {"detail": "No se pudo completar el registro. Revisa los datos, recupera tu cuenta si ya existe o contacta al administrador."},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
