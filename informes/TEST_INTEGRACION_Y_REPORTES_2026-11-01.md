@@ -2,6 +2,8 @@
 
 Fecha de la revisión: 2026-11-01. Entorno: frontend local 3000, backend local 8000, PostgreSQL de Supabase por TLS / 6543.
 
+Actualización posterior: el recorrido externo pendiente se completó con Stripe test y una BD local aislada. Véase [WEBHOOK_STRIPE_VALIDADO_LOCAL_2026-11-01.md](WEBHOOK_STRIPE_VALIDADO_LOCAL_2026-11-01.md). Los resultados siguientes conservan el diagnóstico de la primera revisión.
+
 ## Resultados comprobados
 
 | Área | Evidencia | Resultado |
