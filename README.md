@@ -1,3 +1,7 @@
+# Despliegue vigente
+
+Cloudflare Workers + Render + Supabase. Consulta [DESPLIEGUE.md](DESPLIEGUE.md) para las ramas, variables y verificaciones. Los entregables generados se conservan localmente en `output/`, fuera de Git.
+
 # 🩸 HemoVida - Sistema de Gestión para Banco de Sangre
 
 > Plataforma modular integral para la gestión de donantes, hemocomponentes, auditoría forense y trazabilidad transfusional.

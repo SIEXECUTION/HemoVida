@@ -39,3 +39,11 @@ Thumbs.db
 
 # Diagramas complementarios regenerables
 /output/diagramas_complementarios/
+
+# Generados locales y temporales de Office
+/output/
+~$*
+.env.*
+!.env.example
+
+/backend/staticfiles/
