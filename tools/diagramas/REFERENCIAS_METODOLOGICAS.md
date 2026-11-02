@@ -2,6 +2,8 @@
 
 Esta edición sustituye los diagramas del generador anterior. Se preparó con las ocho guías de `C:\Users\Sebas\Desktop\DIAGRAMAS`, manteniendo los casos y las reglas de HemoVida hasta el ciclo 3.
 
+Desde la ampliación solicitada, la ejecución completa agrega 31 diagramas de las ocho categorías descritas en `DIAGRAMAS_COMPLEMENTARIOS.md`: **135 en total**. La tabla siguiente corresponde a los **104 diagramas base**.
+
 ## Categorías
 
 | Categoría | Cantidad | Ubicación |
@@ -49,7 +51,7 @@ La liberación es expresa y exclusiva del bioquímico, con ambas evaluaciones ap
 
 Stripe confirma mediante notificación posterior e independiente del navegador: firma válida, sesión real, datos concordantes e idempotencia. Los reportes respetan permisos por dominio; finanzas es exclusiva de ADMIN. Los valores clínicos y de conservación siguen siendo los acordados para el proyecto académico.
 
-Los modelos no acreditan pruebas ni despliegue. La matriz `matriz_casos.csv` relaciona código, ciclo, actores, precondiciones, tablas y rutas de referencia. Los informes y pruebas del proyecto determinan el estado real de implementación.
+La ampliación incluye clases de diseño, esquema relacional y componentes separados de este modelo de análisis. Los modelos no acreditan pruebas ni despliegue. La matriz `matriz_casos.csv` relaciona código, ciclo, actores, precondiciones, tablas y rutas de referencia. Los informes y pruebas del proyecto determinan el estado real de implementación.
 
 ## Inserción y regeneración
 

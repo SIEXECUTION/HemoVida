@@ -36,3 +36,6 @@ Thumbs.db
 # Capturas reales para el documento (archivos locales)
 /output/capturas_frontend_*/
 /output/capturas_frontend_*.zip
+
+# Diagramas complementarios regenerables
+/output/diagramas_complementarios/
