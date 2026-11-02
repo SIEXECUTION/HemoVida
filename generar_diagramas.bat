@@ -9,5 +9,7 @@ if errorlevel 1 (
  exit /b 1
 )
 echo.
-echo Diagramas guardados en output\diagramas_hemovida
+echo Abre output\diagramas_hemovida\galeria.html para revisar las imagenes.
+echo PNG para Word, SVG y fuentes PlantUML editables.
+echo Categorias y referencias en output\diagramas_hemovida\LEEME.md
 pause

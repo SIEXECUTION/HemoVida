@@ -29,34 +29,7 @@
       "Cuenta inactiva o bloqueada manualmente: requiere administración."
     ],
     "postcondicion": "Sesión autenticada o rechazo; los fallos persisten aunque la validación devuelva error.",
-    "reglas": "Validar credenciales y habilitar los perfiles asignados con control de fallos diarios. 3 fallos: 15 min; 6: 30 min; 9: 60 min; continúa duplicándose. Reinicio diario en America/La_Paz al siguiente intento. Un acceso correcto conserva los fallos del día. El bloqueo manual no expira. El contador histórico de bloqueos se conserva.",
-    "eventos": [
-      [
-        "S",
-        "D",
-        "Bloquear cuenta; consultar día, estado y plazo"
-      ],
-      [
-        "S",
-        "S",
-        "Reiniciar contador al cambiar el día de Bolivia"
-      ],
-      [
-        "S",
-        "S",
-        "Verificar hash Django y credenciales"
-      ],
-      [
-        "S",
-        "D",
-        "Guardar fallos y plazo, o registrar acceso válido"
-      ],
-      [
-        "S",
-        "U",
-        "Rechazo, o JWT y roles asignados"
-      ]
-    ]
+    "reglas": "Validar credenciales y habilitar los perfiles asignados con control de fallos diarios. 3 fallos: 15 min; 6: 30 min; 9: 60 min; continúa duplicándose. Reinicio diario en America/La_Paz al siguiente intento. Un acceso correcto conserva los fallos del día. El bloqueo manual no expira. El contador histórico de bloqueos se conserva."
   },
   {
     "id": 2,
@@ -88,29 +61,7 @@
       "Al rehabilitar, reinicia fallos y elimina plazo temporal."
     ],
     "postcondicion": "Cuenta y roles persistidos o solicitud rechazada.",
-    "reglas": "Administrar usuarios y habilitar perfiles de personal acreditado. Las contraseñas utilizan el mecanismo Django existente. No se crean roles profesionales mediante autorregistro público. La rehabilitación y el login protegen la fila del usuario.",
-    "eventos": [
-      [
-        "S",
-        "S",
-        "Distinguir autorregistro público y alta administrativa"
-      ],
-      [
-        "S",
-        "D",
-        "Validar identidad y cuenta duplicada"
-      ],
-      [
-        "S",
-        "D",
-        "Guardar cuenta y rol permitido; auditar"
-      ],
-      [
-        "S",
-        "U",
-        "Cuenta creada o estado actualizado"
-      ]
-    ]
+    "reglas": "Administrar usuarios y habilitar perfiles de personal acreditado. Las contraseñas utilizan el mecanismo Django existente. No se crean roles profesionales mediante autorregistro público. La rehabilitación y el login protegen la fila del usuario."
   },
   {
     "id": 3,
@@ -138,29 +89,7 @@
       "Carga directa: identifica origen técnico y no inventa una sesión personal."
     ],
     "postcondicion": "Registro consultable del cambio confirmado.",
-    "reglas": "Conservar trazabilidad de operaciones y permitir su consulta autorizada. No registrar contraseñas ni secretos. Preservar identidad y trazabilidad; las correcciones no borran el historial.",
-    "eventos": [
-      [
-        "S",
-        "S",
-        "Exigir ADMIN para consultar auditoría"
-      ],
-      [
-        "S",
-        "D",
-        "Consultar eventos con filtros"
-      ],
-      [
-        "D",
-        "S",
-        "Eventos persistidos, sin contraseñas"
-      ],
-      [
-        "S",
-        "U",
-        "Listado de auditoría"
-      ]
-    ]
+    "reglas": "Conservar trazabilidad de operaciones y permitir su consulta autorizada. No registrar contraseñas ni secretos. Preservar identidad y trazabilidad; las correcciones no borran el historial."
   },
   {
     "id": 4,
@@ -190,29 +119,7 @@
       "Falta de permisos: deniega."
     ],
     "postcondicion": "Información calculada desde PostgreSQL.",
-    "reglas": "Consultar inventario utilizable y alertas con filtros biológicos concordantes. Una bolsa marcada Disponible no basta para contabilizar stock. Conservar los circuitos de baja y trazabilidad.",
-    "eventos": [
-      [
-        "S",
-        "D",
-        "Consultar stock, madre, análisis y caducidad"
-      ],
-      [
-        "S",
-        "S",
-        "Excluir cuarentena, caducados y autólogos del stock general"
-      ],
-      [
-        "S",
-        "S",
-        "Comparar stock utilizable con mínimos"
-      ],
-      [
-        "S",
-        "U",
-        "Alertas y cantidades verificables"
-      ]
-    ]
+    "reglas": "Consultar inventario utilizable y alertas con filtros biológicos concordantes. Una bolsa marcada Disponible no basta para contabilizar stock. Conservar los circuitos de baja y trazabilidad."
   },
   {
     "id": 5,
@@ -241,34 +148,7 @@
       "Identidad ajena sin permiso: rechaza."
     ],
     "postcondicion": "Carnet generado con datos persistidos.",
-    "reglas": "Presentar la credencial e historial autorizado del donante. No inventar donaciones ni aptitud; el carnet no sustituye la evaluación clínica.",
-    "eventos": [
-      [
-        "S",
-        "D",
-        "Resolver identificador completo y persona"
-      ],
-      [
-        "S",
-        "D",
-        "Consultar historial de extracciones"
-      ],
-      [
-        "S",
-        "S",
-        "Calcular descanso y fecha habilitada"
-      ],
-      [
-        "S",
-        "U",
-        "Carnet con datos persistidos"
-      ],
-      [
-        "U",
-        "U",
-        "Generar QR hacia verificación del carnet"
-      ]
-    ]
+    "reglas": "Presentar la credencial e historial autorizado del donante. No inventar donaciones ni aptitud; el carnet no sustituye la evaluación clínica."
   },
   {
     "id": 6,
@@ -303,39 +183,7 @@
       "Borrador parcial: no confirma cita."
     ],
     "postcondicion": "Borrador guardado o prefiltro asociado a una cita.",
-    "reglas": "Registrar respuestas declarativas que orientan la atención. Una respuesta por requisito. No interpretar preguntas ambiguas ni convertir respuestas en un diagnóstico. El paciente gestiona sus propios datos.",
-    "eventos": [
-      [
-        "S",
-        "D",
-        "Consultar catálogo activo y versión"
-      ],
-      [
-        "S",
-        "U",
-        "Requisitos y versión del catálogo"
-      ],
-      [
-        "U",
-        "S",
-        "Guardar respuestas y versión"
-      ],
-      [
-        "S",
-        "S",
-        "Validar tipos, integridad y versión"
-      ],
-      [
-        "S",
-        "D",
-        "Guardar borrador sin reservar turno"
-      ],
-      [
-        "S",
-        "U",
-        "Prefiltro persistido"
-      ]
-    ]
+    "reglas": "Registrar respuestas declarativas que orientan la atención. Una respuesta por requisito. No interpretar preguntas ambiguas ni convertir respuestas en un diagnóstico. El paciente gestiona sus propios datos."
   },
   {
     "id": 7,
@@ -368,29 +216,7 @@
       "Autóloga: exige programa aprobado y cirugía concordante."
     ],
     "postcondicion": "Cita y ocupación consistentes.",
-    "reglas": "Reservar reprogramar y cancelar citas con disponibilidad real. Lunes a viernes, 08:00–12:00 y 13:00–17:00; turnos de 15 min, un cupo. Reabrir un día no reactiva citas canceladas. Zona America/La_Paz.",
-    "eventos": [
-      [
-        "S",
-        "D",
-        "Bloquear agenda y comprobar turno y cierres"
-      ],
-      [
-        "S",
-        "D",
-        "Validar prefiltro, cupo y programa si es autóloga"
-      ],
-      [
-        "S",
-        "D",
-        "Confirmar cita y prefiltro en transacción"
-      ],
-      [
-        "S",
-        "U",
-        "Cita y disponibilidad actualizada"
-      ]
-    ]
+    "reglas": "Reservar reprogramar y cancelar citas con disponibilidad real. Lunes a viernes, 08:00–12:00 y 13:00–17:00; turnos de 15 min, un cupo. Reabrir un día no reactiva citas canceladas. Zona America/La_Paz."
   },
   {
     "id": 8,
@@ -421,29 +247,7 @@
       "Sin cupo presencial: no crea una admisión parcial."
     ],
     "postcondicion": "Asistencia persistida y atención habilitada para evaluación.",
-    "reglas": "Confirmar identidad y asistencia antes del circuito clínico. La admisión no exige un triaje previo ni autoriza por sí misma extracción.",
-    "eventos": [
-      [
-        "S",
-        "D",
-        "Buscar persona y cita del día local"
-      ],
-      [
-        "S",
-        "S",
-        "Validar identidad, prefiltro y autorización presencial"
-      ],
-      [
-        "S",
-        "D",
-        "Registrar asistencia y admisión conjuntamente"
-      ],
-      [
-        "S",
-        "U",
-        "Candidato admitido; sin colecta automática"
-      ]
-    ]
+    "reglas": "Confirmar identidad y asistencia antes del circuito clínico. La admisión no exige un triaje previo ni autoriza por sí misma extracción."
   },
   {
     "id": 9,
@@ -472,24 +276,7 @@
       "Paciente sin rol operativo: deniega."
     ],
     "postcondicion": "Entrega o pendiente persistido con trazabilidad.",
-    "reglas": "Controlar entrega de refrigerio e incentivo asociada a una extracción real. No dar por entregado un refrigerio pendiente. Un registro por extracción; confirmación idempotente.",
-    "eventos": [
-      [
-        "S",
-        "D",
-        "Comprobar extracción e incentivo existente"
-      ],
-      [
-        "S",
-        "D",
-        "Crear o confirmar entrega idempotente"
-      ],
-      [
-        "S",
-        "U",
-        "Estado real: pendiente o entregado"
-      ]
-    ]
+    "reglas": "Controlar entrega de refrigerio e incentivo asociada a una extracción real. No dar por entregado un refrigerio pendiente. Un registro por extracción; confirmación idempotente."
   },
   {
     "id": 10,
@@ -520,29 +307,7 @@
       "Menor de edad: no acepta Apto."
     ],
     "postcondicion": "Evaluación registrada con el dictamen válido, o rechazo sin escritura parcial.",
-    "reglas": "Evaluar al candidato admitido y registrar el dictamen. Referencia académica: edad mínima 18, peso mayor de 50 kg, Hb mínima 12,5 y temperatura máxima 37,5; presión coherente. No sustituye un protocolo clínico institucional.",
-    "eventos": [
-      [
-        "S",
-        "D",
-        "Consultar candidato, cita admitida y restricciones"
-      ],
-      [
-        "S",
-        "S",
-        "Validar fecha y parámetros del dictamen"
-      ],
-      [
-        "S",
-        "D",
-        "Registrar triaje válido y auditoría"
-      ],
-      [
-        "S",
-        "U",
-        "Apto o Rechazado; diferimiento como acción expresa"
-      ]
-    ]
+    "reglas": "Evaluar al candidato admitido y registrar el dictamen. Referencia académica: edad mínima 18, peso mayor de 50 kg, Hb mínima 12,5 y temperatura máxima 37,5; presión coherente. No sustituye un protocolo clínico institucional."
   },
   {
     "id": 11,
@@ -575,29 +340,7 @@
       "Comunicación no confirmada: no la registra como efectuada."
     ],
     "postcondicion": "Diferimiento persistido con trazabilidad y fechas concordantes.",
-    "reglas": "Registrar restricción clínica y comunicar su alcance. El definitivo se selecciona expresamente; no se infiere de superar 365 días. El diferimiento no bloquea la cuenta de acceso.",
-    "eventos": [
-      [
-        "S",
-        "D",
-        "Validar persona y exactamente un origen clínico"
-      ],
-      [
-        "S",
-        "S",
-        "Validar tipo, motivo y duración"
-      ],
-      [
-        "S",
-        "D",
-        "Guardar diferimiento y cancelar citas incompatibles"
-      ],
-      [
-        "S",
-        "U",
-        "Restricción registrada; comunicación pendiente o confirmada"
-      ]
-    ]
+    "reglas": "Registrar restricción clínica y comunicar su alcance. El definitivo se selecciona expresamente; no se infiere de superar 365 días. El diferimiento no bloquea la cuenta de acceso."
   },
   {
     "id": 12,
@@ -630,29 +373,7 @@
       "Colecta interrumpida: registra incidencia; no simula extracción normal."
     ],
     "postcondicion": "Extracción y consentimiento vinculados a madre en cuarentena, o rechazo sin registros parciales.",
-    "reglas": "Documentar una colecta vinculada a identidad, evaluación y consentimiento. La colecta no libera componentes. No se ejecuta el SP clínico heredado restringido. Las firmas académicas se identifican como sintéticas.",
-    "eventos": [
-      [
-        "S",
-        "D",
-        "Bloquear persona; validar triaje, descanso y programa"
-      ],
-      [
-        "S",
-        "S",
-        "Exigir consentimiento y volumen válido"
-      ],
-      [
-        "S",
-        "D",
-        "Guardar consentimiento, extracción y madre en transacción"
-      ],
-      [
-        "S",
-        "U",
-        "Colecta registrada y madre en cuarentena"
-      ]
-    ]
+    "reglas": "Documentar una colecta vinculada a identidad, evaluación y consentimiento. La colecta no libera componentes. No se ejecuta el SP clínico heredado restringido. Las firmas académicas se identifican como sintéticas."
   },
   {
     "id": 13,
@@ -683,39 +404,7 @@
       "Unidad entregada: conserva historial y emite advertencia para revisión."
     ],
     "postcondicion": "Resultados persistidos y estado biológico concordante.",
-    "reglas": "Conservar resultados serológicos y bloquear unidades sin aprobación completa. Se requiere panel íntegramente no reactivo y dictamen Apto, junto con CU14. Solo BIOQ_INTEGRAL ejecuta liberación.",
-    "eventos": [
-      [
-        "S",
-        "D",
-        "Bloquear madre; guardar serología y auditoría"
-      ],
-      [
-        "S",
-        "U",
-        "Resultado guardado; sin liberar automáticamente"
-      ],
-      [
-        "U",
-        "S",
-        "BIOQ solicita liberación conjunta"
-      ],
-      [
-        "S",
-        "D",
-        "Comprobar ambos análisis y concordancia de grupo"
-      ],
-      [
-        "S",
-        "D",
-        "Actualizar madre y componentes en transacción"
-      ],
-      [
-        "S",
-        "U",
-        "Liberación, o rechazo conservando cuarentena"
-      ]
-    ]
+    "reglas": "Conservar resultados serológicos y bloquear unidades sin aprobación completa. Se requiere panel íntegramente no reactivo y dictamen Apto, junto con CU14. Solo BIOQ_INTEGRAL ejecuta liberación."
   },
   {
     "id": 14,
@@ -747,34 +436,7 @@
       "Autóloga con grupo receptor discordante: rechaza."
     ],
     "postcondicion": "Análisis o corrección auditada sin borrar historial.",
-    "reglas": "Confirmar ABO y Rh y controlar correcciones biológicas. No basta una pantalla ni editar un análisis para eludir el control de grupo. La liberación conjunta exige CU13 y CU14 aprobados.",
-    "eventos": [
-      [
-        "S",
-        "D",
-        "Consultar madre, análisis y restricciones de corrección"
-      ],
-      [
-        "S",
-        "S",
-        "Exigir BIOQ y motivo para corregir grupo"
-      ],
-      [
-        "S",
-        "D",
-        "Guardar corrección y auditar; invalidar liberación"
-      ],
-      [
-        "S",
-        "D",
-        "Poner en cuarentena y cancelar reservas incompatibles"
-      ],
-      [
-        "S",
-        "U",
-        "Corrección trazada; exige revisión y liberación explícita"
-      ]
-    ]
+    "reglas": "Confirmar ABO y Rh y controlar correcciones biológicas. No basta una pantalla ni editar un análisis para eludir el control de grupo. La liberación conjunta exige CU13 y CU14 aprobados."
   },
   {
     "id": 15,
@@ -807,39 +469,7 @@
       "No convierte unidades autólogas a stock general."
     ],
     "postcondicion": "Componentes y movimientos persistidos con trazabilidad.",
-    "reglas": "Registrar componentes coherentes con volumen, caducidad y ubicación. Rojos/sangre total: 2–6 °C, 35 días, sin agitación. Plaquetas: 20–24 °C, 5 días, con agitación. PFC/crio: −30 a −18 °C, 365 días. Parámetros académicos; liberación a cargo de BIOQ.",
-    "eventos": [
-      [
-        "S",
-        "D",
-        "Consultar extracción, protocolos y ubicación"
-      ],
-      [
-        "S",
-        "S",
-        "Validar ventana, volumen total y capacidad"
-      ],
-      [
-        "S",
-        "D",
-        "Registrar componentes y caducidad"
-      ],
-      [
-        "S",
-        "S",
-        "Validar temperatura, agitación y exclusividad"
-      ],
-      [
-        "S",
-        "D",
-        "Guardar custodia y trazabilidad"
-      ],
-      [
-        "S",
-        "U",
-        "Componentes conservados; liberación independiente"
-      ]
-    ]
+    "reglas": "Registrar componentes coherentes con volumen, caducidad y ubicación. Rojos/sangre total: 2–6 °C, 35 días, sin agitación. Plaquetas: 20–24 °C, 5 días, con agitación. PFC/crio: −30 a −18 °C, 365 días. Parámetros académicos; liberación a cargo de BIOQ."
   },
   {
     "id": 21,
@@ -873,39 +503,7 @@
       "Al modificar cirugía, cuarentena y cancelación de reservas/citas incompatibles."
     ],
     "postcondicion": "Programa y versiones persistidos; exclusividad preservada.",
-    "reglas": "Vincular cirugía receptor y colecta exclusiva en un programa versionado. No hay aprobación automática ni reasignación a terceros. La reactivación de unidades y liberación son acciones explícitas separadas.",
-    "eventos": [
-      [
-        "S",
-        "S",
-        "Exigir profesional para indicación y BIOQ para revisión"
-      ],
-      [
-        "S",
-        "D",
-        "Guardar programa pendiente y versión histórica"
-      ],
-      [
-        "S",
-        "U",
-        "Programa pendiente de revisión biológica"
-      ],
-      [
-        "U",
-        "S",
-        "BIOQ aprueba o solicita corrección"
-      ],
-      [
-        "S",
-        "D",
-        "Actualizar estado e historial del programa"
-      ],
-      [
-        "S",
-        "U",
-        "Agenda autóloga habilitada solo si está aprobado"
-      ]
-    ]
+    "reglas": "Vincular cirugía receptor y colecta exclusiva en un programa versionado. No hay aprobación automática ni reasignación a terceros. La reactivación de unidades y liberación son acciones explícitas separadas."
   },
   {
     "id": 22,
@@ -939,59 +537,7 @@
       "Sesión vencida o pago diferido fallido: anula o rechaza si corresponde."
     ],
     "postcondicion": "Saldo actualizado únicamente por pagos confirmados.",
-    "reglas": "Registrar deuda y conciliar pagos verificables en bolivianos. Finanzas exclusivamente ADMIN; moneda BOB. No confiar en retorno del navegador. Mantener test hasta aprobación de operación real. Secretos solo en backend.",
-    "eventos": [
-      [
-        "S",
-        "D",
-        "Bloquear deuda; validar BOB y saldo; guardar intento"
-      ],
-      [
-        "S",
-        "X",
-        "Crear Checkout con idempotencia"
-      ],
-      [
-        "X",
-        "S",
-        "Sesión y URL de Checkout"
-      ],
-      [
-        "S",
-        "D",
-        "Vincular intento y sesión"
-      ],
-      [
-        "S",
-        "U",
-        "URL para pagar; todavía sin confirmar cobro"
-      ],
-      [
-        "X",
-        "S",
-        "Webhook Stripe con firma"
-      ],
-      [
-        "S",
-        "S",
-        "Verificar firma y consultar sesión real en Stripe"
-      ],
-      [
-        "S",
-        "D",
-        "Deduplicar evento; validar importe y confirmar una vez"
-      ],
-      [
-        "S",
-        "D",
-        "Actualizar saldo y comprobante según condiciones"
-      ],
-      [
-        "S",
-        "X",
-        "Acuse de recibo del webhook"
-      ]
-    ]
+    "reglas": "Registrar deuda y conciliar pagos verificables en bolivianos. Finanzas exclusivamente ADMIN; moneda BOB. No confiar en retorno del navegador. Mantener test hasta aprobación de operación real. Secretos solo en backend."
   },
   {
     "id": 23,
@@ -1025,29 +571,7 @@
       "Sin datos: devuelve resultado vacío, sin inventar valores."
     ],
     "postcondicion": "Resultado y exportación concordantes y evento de consulta registrado.",
-    "reglas": "Obtener reportes de plantillas fijas y exportaciones reales. Ocho plantillas fijas. No admitir SQL enviado por el usuario. CSV protege celdas interpretables como fórmulas.",
-    "eventos": [
-      [
-        "S",
-        "S",
-        "Validar plantilla fija, rol y parámetros"
-      ],
-      [
-        "S",
-        "D",
-        "Consultar fuente permitida mediante motor compartido"
-      ],
-      [
-        "D",
-        "S",
-        "Filas y totales reales"
-      ],
-      [
-        "S",
-        "U",
-        "Informe y exportación CSV/PDF"
-      ]
-    ]
+    "reglas": "Obtener reportes de plantillas fijas y exportaciones reales. Ocho plantillas fijas. No admitir SQL enviado por el usuario. CSV protege celdas interpretables como fórmulas."
   },
   {
     "id": 24,
@@ -1081,33 +605,6 @@
       "Stock y cartera no admiten una historia temporal inexistente."
     ],
     "postcondicion": "Resultado calculado y auditado para el rol activo.",
-    "reglas": "Combinar dimensiones métricas y filtros de fuentes permitidas. No aceptar SQL arbitrario. Finanzas solo ADMIN y pagos confirmados BOB. Tasas ponderadas; denominador vacío produce nulo. Stock exige aprobación biológica. Fechas de Bolivia.",
-    "eventos": [
-      [
-        "S",
-        "S",
-        "Validar fuente, dimensiones, métricas y rol"
-      ],
-      [
-        "S",
-        "S",
-        "Construir SQL parametrizado desde listas permitidas"
-      ],
-      [
-        "S",
-        "D",
-        "Consultar datos con límites de período y grupos"
-      ],
-      [
-        "D",
-        "S",
-        "Resultado agregado; sin historial inventado"
-      ],
-      [
-        "S",
-        "U",
-        "Tabla y exportación con el mismo permiso"
-      ]
-    ]
+    "reglas": "Combinar dimensiones métricas y filtros de fuentes permitidas. No aceptar SQL arbitrario. Finanzas solo ADMIN y pagos confirmados BOB. Tasas ponderadas; denominador vacío produce nulo. Stock exige aprobación biológica. Fechas de Bolivia."
   }
 ]
