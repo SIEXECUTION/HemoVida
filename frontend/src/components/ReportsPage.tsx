@@ -184,7 +184,7 @@ export function ReportsPage({ token }: { token: string }) {
     <section className="space-y-6">
       <header className="p-6 bg-white rounded-3xl border">
         <h1 className="text-2xl font-black">
-          CU24 · Consultas dinámicas e indicadores
+          Consultas dinámicas e indicadores
         </h1>
         <p>
           Selecciona una fuente, filtros y agrupación. Stock y cartera

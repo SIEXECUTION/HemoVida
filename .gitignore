@@ -26,3 +26,24 @@ Thumbs.db
 .venv/
 .pg-clinica/
 *.sqlite3
+
+# Cloudflare local state
+.wrangler/
+
+# Imagenes UML regenerables (se entregan localmente)
+/output/diagramas_hemovida/
+
+# Capturas reales para el documento (archivos locales)
+/output/capturas_frontend_*/
+/output/capturas_frontend_*.zip
+
+# Diagramas complementarios regenerables
+/output/diagramas_complementarios/
+
+# Generados locales y temporales de Office
+/output/
+~$*
+.env.*
+!.env.example
+
+/backend/staticfiles/

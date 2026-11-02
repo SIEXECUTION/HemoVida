@@ -1,21 +1,21 @@
 import React, { useState } from 'react';
-import { 
-  Heart, 
-  X, 
-  CheckCircle2, 
-  Gift, 
-  UserCheck, 
-  Building2, 
+import {
+  Heart,
+  X,
+  CheckCircle2,
+  Gift,
+  UserCheck,
+  Building2,
   AlertCircle,
   Printer,
   Sparkles,
   Droplet
 } from 'lucide-react';
-import { 
-  UserDonor, 
-  DonationRecord, 
-  PatientReplacementRecord, 
-  BloodInventoryItem 
+import {
+  UserDonor,
+  DonationRecord,
+  PatientReplacementRecord,
+  BloodInventoryItem
 } from '../../types';
 
 interface ReceptionDonationModalProps {
@@ -327,7 +327,7 @@ export const ReceptionDonationModal: React.FC<ReceptionDonationModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
       <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full overflow-hidden border border-slate-200 animate-in fade-in zoom-in-95 duration-150">
-        
+
         {/* Modal Header */}
         <div className="bg-gradient-to-r from-rose-800 via-rose-700 to-red-700 text-white p-5 sm:p-6 flex items-start justify-between">
           <div className="flex items-center gap-3">
@@ -346,7 +346,7 @@ export const ReceptionDonationModal: React.FC<ReceptionDonationModalProps> = ({
               </p>
             </div>
           </div>
-          <button 
+          <button
             onClick={resetAndClose}
             className="text-white/80 hover:text-white bg-white/10 hover:bg-white/20 p-2 rounded-lg transition-colors cursor-pointer"
           >
@@ -440,7 +440,7 @@ export const ReceptionDonationModal: React.FC<ReceptionDonationModalProps> = ({
         ) : (
           /* Donation Form */
           <form onSubmit={handleSubmit} className="p-5 sm:p-6 space-y-5 max-h-[78vh] overflow-y-auto">
-            
+
             {/* 1. Seleccionar Donante */}
             <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
               <label className="block text-slate-700 font-bold text-xs">
@@ -566,7 +566,7 @@ export const ReceptionDonationModal: React.FC<ReceptionDonationModalProps> = ({
                           Autóloga Programada
                         </h4>
                         <span className="text-[9px] text-purple-700 font-bold uppercase tracking-wider">
-                          Cirugía Electiva (CU21)
+                          Cirugía Electiva
                         </span>
                       </div>
                     </div>
@@ -590,7 +590,7 @@ export const ReceptionDonationModal: React.FC<ReceptionDonationModalProps> = ({
               <div className="bg-purple-50/80 border border-purple-200 p-4 rounded-xl space-y-3">
                 <div className="flex items-center gap-2 text-purple-950 font-bold text-xs">
                   <Heart className="w-4 h-4 text-purple-700" />
-                  <span>Protocolo CU21: Custodia Exclusiva para Cirugía Electiva</span>
+                  <span>Protocolo: Custodia Exclusiva para Cirugía Electiva</span>
                 </div>
                 <p className="text-[11px] text-purple-900">
                   Las unidades extraídas quedarán etiquetadas con <strong>esExclusivoAutologo = TRUE</strong> y estado <strong>Reservada</strong> bajo custodia térmica hasta el día de la intervención del paciente titular <strong>{currentDonor?.nombres} {currentDonor?.apellidos} (C.I. {currentDonor?.ci})</strong>.

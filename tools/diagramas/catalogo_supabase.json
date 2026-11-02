@@ -1,0 +1,6295 @@
+{
+  "origin": "Metadatos public de Supabase; transaccion de solo lectura; sin filas de usuarios ni credenciales",
+  "captured_at": "2026-11-01",
+  "tables": {
+    "agendaturno": {
+      "columns": [
+        {
+          "name": "idturno",
+          "type": "integer",
+          "not_null": true,
+          "position": 1
+        },
+        {
+          "name": "inicio",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "position": 2
+        },
+        {
+          "name": "fin",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "position": 3
+        },
+        {
+          "name": "cupo",
+          "type": "integer",
+          "not_null": true,
+          "position": 4
+        },
+        {
+          "name": "habilitado",
+          "type": "boolean",
+          "not_null": true,
+          "position": 5
+        },
+        {
+          "name": "creadopor",
+          "type": "integer",
+          "not_null": true,
+          "position": 6
+        }
+      ],
+      "constraints": [
+        {
+          "name": "agendaturno_check",
+          "kind": "c",
+          "columns": [
+            "fin",
+            "inicio"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "CHECK (((fin > inicio) AND (fin <= (inicio + '24:00:00'::interval))))"
+        },
+        {
+          "name": "agendaturno_creadopor_fkey",
+          "kind": "f",
+          "columns": [
+            "creadopor"
+          ],
+          "references": "usuario",
+          "reference_columns": [
+            "idusuario"
+          ],
+          "definition": "FOREIGN KEY (creadopor) REFERENCES usuario(idusuario)"
+        },
+        {
+          "name": "agendaturno_cupo_check",
+          "kind": "c",
+          "columns": [
+            "cupo"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "CHECK (((cupo >= 1) AND (cupo <= 500)))"
+        },
+        {
+          "name": "agendaturno_inicio_key",
+          "kind": "u",
+          "columns": [
+            "inicio"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "UNIQUE (inicio)"
+        },
+        {
+          "name": "agendaturno_pkey",
+          "kind": "p",
+          "columns": [
+            "idturno"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "PRIMARY KEY (idturno)"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "agendaturno_inicio_key",
+          "unique": true,
+          "primary": false,
+          "columns": [
+            "inicio"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX agendaturno_inicio_key ON public.agendaturno USING btree (inicio)",
+          "valid": true,
+          "expression": false
+        },
+        {
+          "name": "agendaturno_pkey",
+          "unique": true,
+          "primary": true,
+          "columns": [
+            "idturno"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX agendaturno_pkey ON public.agendaturno USING btree (idturno)",
+          "valid": true,
+          "expression": false
+        }
+      ]
+    },
+    "analisisinmunohematologico": {
+      "columns": [
+        {
+          "name": "idanalisishematologico",
+          "type": "integer",
+          "not_null": true,
+          "position": 1
+        },
+        {
+          "name": "idpersonalsalud",
+          "type": "integer",
+          "not_null": true,
+          "position": 2
+        },
+        {
+          "name": "idposibledonador",
+          "type": "integer",
+          "not_null": false,
+          "position": 3
+        },
+        {
+          "name": "idreceptor",
+          "type": "integer",
+          "not_null": false,
+          "position": 4
+        },
+        {
+          "name": "idunidadmadre",
+          "type": "integer",
+          "not_null": false,
+          "position": 5
+        },
+        {
+          "name": "idcitalab",
+          "type": "integer",
+          "not_null": false,
+          "position": 6
+        },
+        {
+          "name": "etapaanalisis",
+          "type": "character varying(50)",
+          "not_null": true,
+          "position": 7
+        },
+        {
+          "name": "fechaanalisis",
+          "type": "timestamp without time zone",
+          "not_null": true,
+          "position": 8
+        },
+        {
+          "name": "grupoaboconfirmado",
+          "type": "character varying(5)",
+          "not_null": true,
+          "position": 9
+        },
+        {
+          "name": "factorrhconfirmado",
+          "type": "character varying(10)",
+          "not_null": true,
+          "position": 10
+        },
+        {
+          "name": "pruebacoombsdirecta",
+          "type": "character varying(30)",
+          "not_null": true,
+          "position": 11
+        },
+        {
+          "name": "pruebacoombsindirecta",
+          "type": "character varying(30)",
+          "not_null": true,
+          "position": 12
+        },
+        {
+          "name": "rastreoanticuerposirregulares",
+          "type": "character varying(100)",
+          "not_null": true,
+          "position": 13
+        },
+        {
+          "name": "observaciones",
+          "type": "text",
+          "not_null": false,
+          "position": 14
+        },
+        {
+          "name": "fasesalina",
+          "type": "character varying(30)",
+          "not_null": false,
+          "position": 15
+        },
+        {
+          "name": "fasetermica",
+          "type": "character varying(30)",
+          "not_null": false,
+          "position": 16
+        },
+        {
+          "name": "dictameninmunohematologico",
+          "type": "character varying(100)",
+          "not_null": false,
+          "position": 17
+        }
+      ],
+      "constraints": [
+        {
+          "name": "analisisinmunohematologico_etapaanalisis_check",
+          "kind": "c",
+          "columns": [
+            "etapaanalisis"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "CHECK (((etapaanalisis)::text = ANY ((ARRAY['Pre-Extraccion'::character varying, 'Post-Extraccion'::character varying, 'Pre-Transfusional'::character varying])::text[])))"
+        },
+        {
+          "name": "analisisinmunohematologico_factorrhconfirmado_check",
+          "kind": "c",
+          "columns": [
+            "factorrhconfirmado"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "CHECK (((factorrhconfirmado)::text = ANY ((ARRAY['Positivo'::character varying, 'Negativo'::character varying])::text[])))"
+        },
+        {
+          "name": "analisisinmunohematologico_grupoaboconfirmado_check",
+          "kind": "c",
+          "columns": [
+            "grupoaboconfirmado"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "CHECK (((grupoaboconfirmado)::text = ANY ((ARRAY['A'::character varying, 'B'::character varying, 'AB'::character varying, 'O'::character varying])::text[])))"
+        },
+        {
+          "name": "analisisinmunohematologico_pkey",
+          "kind": "p",
+          "columns": [
+            "idanalisishematologico"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "PRIMARY KEY (idanalisishematologico)"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "analisisinmunohematologico_pkey",
+          "unique": true,
+          "primary": true,
+          "columns": [
+            "idanalisishematologico"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX analisisinmunohematologico_pkey ON public.analisisinmunohematologico USING btree (idanalisishematologico)",
+          "valid": true,
+          "expression": false
+        }
+      ]
+    },
+    "analisisinmunoserologico": {
+      "columns": [
+        {
+          "name": "idanalisis",
+          "type": "integer",
+          "not_null": true,
+          "position": 1
+        },
+        {
+          "name": "idunidadmadre",
+          "type": "integer",
+          "not_null": true,
+          "position": 2
+        },
+        {
+          "name": "idpersonalsalud",
+          "type": "integer",
+          "not_null": true,
+          "position": 3
+        },
+        {
+          "name": "codigoanalisis",
+          "type": "character varying(30)",
+          "not_null": true,
+          "position": 4
+        },
+        {
+          "name": "fechaanalisis",
+          "type": "timestamp without time zone",
+          "not_null": true,
+          "position": 5
+        },
+        {
+          "name": "resultadovih",
+          "type": "character varying(20)",
+          "not_null": true,
+          "position": 6
+        },
+        {
+          "name": "resultadochagas",
+          "type": "character varying(20)",
+          "not_null": true,
+          "position": 7
+        },
+        {
+          "name": "resultadohepatitisb",
+          "type": "character varying(20)",
+          "not_null": true,
+          "position": 8
+        },
+        {
+          "name": "resultadohepatitisc",
+          "type": "character varying(20)",
+          "not_null": true,
+          "position": 9
+        },
+        {
+          "name": "resultadosifilis",
+          "type": "character varying(20)",
+          "not_null": true,
+          "position": 10
+        },
+        {
+          "name": "resultadohtlv",
+          "type": "character varying(20)",
+          "not_null": true,
+          "position": 11
+        },
+        {
+          "name": "dictamenfinal",
+          "type": "character varying(20)",
+          "not_null": true,
+          "position": 12
+        },
+        {
+          "name": "habilitaextraccion",
+          "type": "boolean",
+          "not_null": true,
+          "position": 13
+        }
+      ],
+      "constraints": [
+        {
+          "name": "analisisinmunoserologico_codigoanalisis_key",
+          "kind": "u",
+          "columns": [
+            "codigoanalisis"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "UNIQUE (codigoanalisis)"
+        },
+        {
+          "name": "analisisinmunoserologico_dictamenfinal_check",
+          "kind": "c",
+          "columns": [
+            "dictamenfinal"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "CHECK (((dictamenfinal)::text = ANY ((ARRAY['Apto'::character varying, 'No Apto'::character varying])::text[])))"
+        },
+        {
+          "name": "analisisinmunoserologico_idunidadmadre_key",
+          "kind": "u",
+          "columns": [
+            "idunidadmadre"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "UNIQUE (idunidadmadre)"
+        },
+        {
+          "name": "analisisinmunoserologico_pkey",
+          "kind": "p",
+          "columns": [
+            "idanalisis"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "PRIMARY KEY (idanalisis)"
+        },
+        {
+          "name": "analisisinmunoserologico_resultadochagas_check",
+          "kind": "c",
+          "columns": [
+            "resultadochagas"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "CHECK (((resultadochagas)::text = ANY ((ARRAY['No Reactivo'::character varying, 'Reactivo'::character varying, 'Indeterminado'::character varying])::text[])))"
+        },
+        {
+          "name": "analisisinmunoserologico_resultadohepatitisb_check",
+          "kind": "c",
+          "columns": [
+            "resultadohepatitisb"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "CHECK (((resultadohepatitisb)::text = ANY ((ARRAY['No Reactivo'::character varying, 'Reactivo'::character varying, 'Indeterminado'::character varying])::text[])))"
+        },
+        {
+          "name": "analisisinmunoserologico_resultadohepatitisc_check",
+          "kind": "c",
+          "columns": [
+            "resultadohepatitisc"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "CHECK (((resultadohepatitisc)::text = ANY ((ARRAY['No Reactivo'::character varying, 'Reactivo'::character varying, 'Indeterminado'::character varying])::text[])))"
+        },
+        {
+          "name": "analisisinmunoserologico_resultadohtlv_check",
+          "kind": "c",
+          "columns": [
+            "resultadohtlv"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "CHECK (((resultadohtlv)::text = ANY ((ARRAY['No Reactivo'::character varying, 'Reactivo'::character varying, 'Indeterminado'::character varying])::text[])))"
+        },
+        {
+          "name": "analisisinmunoserologico_resultadosifilis_check",
+          "kind": "c",
+          "columns": [
+            "resultadosifilis"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "CHECK (((resultadosifilis)::text = ANY ((ARRAY['No Reactivo'::character varying, 'Reactivo'::character varying, 'Indeterminado'::character varying])::text[])))"
+        },
+        {
+          "name": "analisisinmunoserologico_resultadovih_check",
+          "kind": "c",
+          "columns": [
+            "resultadovih"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "CHECK (((resultadovih)::text = ANY ((ARRAY['No Reactivo'::character varying, 'Reactivo'::character varying, 'Indeterminado'::character varying])::text[])))"
+        },
+        {
+          "name": "fk_serologia_bioquimico",
+          "kind": "f",
+          "columns": [
+            "idpersonalsalud"
+          ],
+          "references": "personalsalud",
+          "reference_columns": [
+            "idpersona"
+          ],
+          "definition": "FOREIGN KEY (idpersonalsalud) REFERENCES personalsalud(idpersona)"
+        },
+        {
+          "name": "fk_serologia_madre",
+          "kind": "f",
+          "columns": [
+            "idunidadmadre"
+          ],
+          "references": "unidadsangretotal",
+          "reference_columns": [
+            "idunidadmadre"
+          ],
+          "definition": "FOREIGN KEY (idunidadmadre) REFERENCES unidadsangretotal(idunidadmadre) ON DELETE CASCADE"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "analisisinmunoserologico_codigoanalisis_key",
+          "unique": true,
+          "primary": false,
+          "columns": [
+            "codigoanalisis"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX analisisinmunoserologico_codigoanalisis_key ON public.analisisinmunoserologico USING btree (codigoanalisis)",
+          "valid": true,
+          "expression": false
+        },
+        {
+          "name": "analisisinmunoserologico_idunidadmadre_key",
+          "unique": true,
+          "primary": false,
+          "columns": [
+            "idunidadmadre"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX analisisinmunoserologico_idunidadmadre_key ON public.analisisinmunoserologico USING btree (idunidadmadre)",
+          "valid": true,
+          "expression": false
+        },
+        {
+          "name": "analisisinmunoserologico_pkey",
+          "unique": true,
+          "primary": true,
+          "columns": [
+            "idanalisis"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX analisisinmunoserologico_pkey ON public.analisisinmunoserologico USING btree (idanalisis)",
+          "valid": true,
+          "expression": false
+        }
+      ]
+    },
+    "bajainventario": {
+      "columns": [
+        {
+          "name": "idbaja",
+          "type": "integer",
+          "not_null": true,
+          "position": 1
+        },
+        {
+          "name": "idunidadmadre",
+          "type": "integer",
+          "not_null": false,
+          "position": 2
+        },
+        {
+          "name": "idejemplarbolsa",
+          "type": "integer",
+          "not_null": false,
+          "position": 3
+        },
+        {
+          "name": "idpersonalsalud",
+          "type": "integer",
+          "not_null": true,
+          "position": 4
+        },
+        {
+          "name": "fechahorabaja",
+          "type": "timestamp without time zone",
+          "not_null": true,
+          "position": 5
+        },
+        {
+          "name": "motivobaja",
+          "type": "character varying(100)",
+          "not_null": true,
+          "position": 6
+        },
+        {
+          "name": "observaciones",
+          "type": "text",
+          "not_null": false,
+          "position": 7
+        }
+      ],
+      "constraints": [
+        {
+          "name": "bajainventario_pkey",
+          "kind": "p",
+          "columns": [
+            "idbaja"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "PRIMARY KEY (idbaja)"
+        },
+        {
+          "name": "chk_baja_origen_xor",
+          "kind": "c",
+          "columns": [
+            "idunidadmadre",
+            "idejemplarbolsa"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "CHECK ((((idunidadmadre IS NOT NULL) AND (idejemplarbolsa IS NULL)) OR ((idunidadmadre IS NULL) AND (idejemplarbolsa IS NOT NULL))))"
+        },
+        {
+          "name": "fk_baja_ejemplar",
+          "kind": "f",
+          "columns": [
+            "idejemplarbolsa"
+          ],
+          "references": "ejemplarbolsa",
+          "reference_columns": [
+            "idejemplarbolsa"
+          ],
+          "definition": "FOREIGN KEY (idejemplarbolsa) REFERENCES ejemplarbolsa(idejemplarbolsa) ON DELETE SET NULL"
+        },
+        {
+          "name": "fk_baja_madre",
+          "kind": "f",
+          "columns": [
+            "idunidadmadre"
+          ],
+          "references": "unidadsangretotal",
+          "reference_columns": [
+            "idunidadmadre"
+          ],
+          "definition": "FOREIGN KEY (idunidadmadre) REFERENCES unidadsangretotal(idunidadmadre) ON DELETE SET NULL"
+        },
+        {
+          "name": "fk_baja_responsable",
+          "kind": "f",
+          "columns": [
+            "idpersonalsalud"
+          ],
+          "references": "personalsalud",
+          "reference_columns": [
+            "idpersona"
+          ],
+          "definition": "FOREIGN KEY (idpersonalsalud) REFERENCES personalsalud(idpersona)"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "bajainventario_pkey",
+          "unique": true,
+          "primary": true,
+          "columns": [
+            "idbaja"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX bajainventario_pkey ON public.bajainventario USING btree (idbaja)",
+          "valid": true,
+          "expression": false
+        }
+      ]
+    },
+    "bitacoraauditoria": {
+      "columns": [
+        {
+          "name": "idauditoria",
+          "type": "integer",
+          "not_null": true,
+          "position": 1
+        },
+        {
+          "name": "idusuario",
+          "type": "integer",
+          "not_null": false,
+          "position": 2
+        },
+        {
+          "name": "rolactivo",
+          "type": "character varying(60)",
+          "not_null": false,
+          "position": 3
+        },
+        {
+          "name": "accionrealizada",
+          "type": "character varying(255)",
+          "not_null": true,
+          "position": 4
+        },
+        {
+          "name": "tablaafectada",
+          "type": "character varying(60)",
+          "not_null": true,
+          "position": 5
+        },
+        {
+          "name": "idregistroafectado",
+          "type": "integer",
+          "not_null": false,
+          "position": 6
+        },
+        {
+          "name": "fechahora",
+          "type": "timestamp without time zone",
+          "not_null": true,
+          "position": 7
+        },
+        {
+          "name": "iporigen",
+          "type": "character varying(45)",
+          "not_null": false,
+          "position": 8
+        }
+      ],
+      "constraints": [
+        {
+          "name": "bitacoraauditoria_pkey",
+          "kind": "p",
+          "columns": [
+            "idauditoria"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "PRIMARY KEY (idauditoria)"
+        },
+        {
+          "name": "fk_bitacora_usuario",
+          "kind": "f",
+          "columns": [
+            "idusuario"
+          ],
+          "references": "usuario",
+          "reference_columns": [
+            "idusuario"
+          ],
+          "definition": "FOREIGN KEY (idusuario) REFERENCES usuario(idusuario) ON DELETE SET NULL"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "bitacoraauditoria_pkey",
+          "unique": true,
+          "primary": true,
+          "columns": [
+            "idauditoria"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX bitacoraauditoria_pkey ON public.bitacoraauditoria USING btree (idauditoria)",
+          "valid": true,
+          "expression": false
+        }
+      ]
+    },
+    "checkoutstripe": {
+      "columns": [
+        {
+          "name": "idpago",
+          "type": "bigint",
+          "not_null": true,
+          "position": 1
+        },
+        {
+          "name": "idempotencia",
+          "type": "uuid",
+          "not_null": true,
+          "position": 2
+        },
+        {
+          "name": "sesionid",
+          "type": "character varying(150)",
+          "not_null": false,
+          "position": 3
+        },
+        {
+          "name": "urlcheckout",
+          "type": "text",
+          "not_null": false,
+          "position": 4
+        },
+        {
+          "name": "moneda",
+          "type": "character varying(3)",
+          "not_null": true,
+          "position": 5
+        },
+        {
+          "name": "monto",
+          "type": "integer",
+          "not_null": true,
+          "position": 6
+        },
+        {
+          "name": "idusuario",
+          "type": "integer",
+          "not_null": true,
+          "position": 7
+        },
+        {
+          "name": "fechacreacion",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "position": 8
+        }
+      ],
+      "constraints": [
+        {
+          "name": "checkoutstripe_idempotencia_key",
+          "kind": "u",
+          "columns": [
+            "idempotencia"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "UNIQUE (idempotencia)"
+        },
+        {
+          "name": "checkoutstripe_idpago_fkey",
+          "kind": "f",
+          "columns": [
+            "idpago"
+          ],
+          "references": "pagofinanciero",
+          "reference_columns": [
+            "idpago"
+          ],
+          "definition": "FOREIGN KEY (idpago) REFERENCES pagofinanciero(idpago)"
+        },
+        {
+          "name": "checkoutstripe_idusuario_fkey",
+          "kind": "f",
+          "columns": [
+            "idusuario"
+          ],
+          "references": "usuario",
+          "reference_columns": [
+            "idusuario"
+          ],
+          "definition": "FOREIGN KEY (idusuario) REFERENCES usuario(idusuario)"
+        },
+        {
+          "name": "checkoutstripe_monto_check",
+          "kind": "c",
+          "columns": [
+            "monto"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "CHECK ((monto > 0))"
+        },
+        {
+          "name": "checkoutstripe_pkey",
+          "kind": "p",
+          "columns": [
+            "idpago"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "PRIMARY KEY (idpago)"
+        },
+        {
+          "name": "checkoutstripe_sesionid_key",
+          "kind": "u",
+          "columns": [
+            "sesionid"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "UNIQUE (sesionid)"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "checkoutstripe_idempotencia_key",
+          "unique": true,
+          "primary": false,
+          "columns": [
+            "idempotencia"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX checkoutstripe_idempotencia_key ON public.checkoutstripe USING btree (idempotencia)",
+          "valid": true,
+          "expression": false
+        },
+        {
+          "name": "checkoutstripe_pkey",
+          "unique": true,
+          "primary": true,
+          "columns": [
+            "idpago"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX checkoutstripe_pkey ON public.checkoutstripe USING btree (idpago)",
+          "valid": true,
+          "expression": false
+        },
+        {
+          "name": "checkoutstripe_sesionid_key",
+          "unique": true,
+          "primary": false,
+          "columns": [
+            "sesionid"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX checkoutstripe_sesionid_key ON public.checkoutstripe USING btree (sesionid)",
+          "valid": true,
+          "expression": false
+        }
+      ]
+    },
+    "cierreagenda": {
+      "columns": [
+        {
+          "name": "idcierre",
+          "type": "integer",
+          "not_null": true,
+          "position": 1
+        },
+        {
+          "name": "fecha",
+          "type": "date",
+          "not_null": true,
+          "position": 2
+        },
+        {
+          "name": "cerrado",
+          "type": "boolean",
+          "not_null": true,
+          "position": 3
+        },
+        {
+          "name": "motivo",
+          "type": "character varying(250)",
+          "not_null": true,
+          "position": 4
+        },
+        {
+          "name": "idusuario",
+          "type": "integer",
+          "not_null": true,
+          "position": 5
+        },
+        {
+          "name": "actualizado",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "position": 6
+        }
+      ],
+      "constraints": [
+        {
+          "name": "cierreagenda_fecha_key",
+          "kind": "u",
+          "columns": [
+            "fecha"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "UNIQUE (fecha)"
+        },
+        {
+          "name": "cierreagenda_idusuario_fkey",
+          "kind": "f",
+          "columns": [
+            "idusuario"
+          ],
+          "references": "usuario",
+          "reference_columns": [
+            "idusuario"
+          ],
+          "definition": "FOREIGN KEY (idusuario) REFERENCES usuario(idusuario)"
+        },
+        {
+          "name": "cierreagenda_pkey",
+          "kind": "p",
+          "columns": [
+            "idcierre"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "PRIMARY KEY (idcierre)"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "cierreagenda_fecha_key",
+          "unique": true,
+          "primary": false,
+          "columns": [
+            "fecha"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX cierreagenda_fecha_key ON public.cierreagenda USING btree (fecha)",
+          "valid": true,
+          "expression": false
+        },
+        {
+          "name": "cierreagenda_pkey",
+          "unique": true,
+          "primary": true,
+          "columns": [
+            "idcierre"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX cierreagenda_pkey ON public.cierreagenda USING btree (idcierre)",
+          "valid": true,
+          "expression": false
+        }
+      ]
+    },
+    "citadonacion": {
+      "columns": [
+        {
+          "name": "idcita",
+          "type": "integer",
+          "not_null": true,
+          "position": 1
+        },
+        {
+          "name": "idpersona",
+          "type": "integer",
+          "not_null": true,
+          "position": 2
+        },
+        {
+          "name": "fechahoraprogramada",
+          "type": "timestamp without time zone",
+          "not_null": true,
+          "position": 3
+        },
+        {
+          "name": "prefiltroaprobado",
+          "type": "boolean",
+          "not_null": true,
+          "position": 4
+        },
+        {
+          "name": "asistenciaconfirmada",
+          "type": "boolean",
+          "not_null": true,
+          "position": 5
+        },
+        {
+          "name": "estadocita",
+          "type": "character varying(25)",
+          "not_null": true,
+          "position": 6
+        },
+        {
+          "name": "idturno",
+          "type": "integer",
+          "not_null": false,
+          "position": 7
+        },
+        {
+          "name": "tipoatencion",
+          "type": "character varying(20)",
+          "not_null": false,
+          "position": 8
+        },
+        {
+          "name": "idprograma",
+          "type": "integer",
+          "not_null": false,
+          "position": 9
+        }
+      ],
+      "constraints": [
+        {
+          "name": "citadonacion_estadocita_check",
+          "kind": "c",
+          "columns": [
+            "estadocita"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "CHECK (((estadocita)::text = ANY ((ARRAY['Programada'::character varying, 'Atendida'::character varying, 'Cancelada'::character varying, 'Inasistencia'::character varying, 'Pendiente'::character varying])::text[])))"
+        },
+        {
+          "name": "citadonacion_idprograma_fkey",
+          "kind": "f",
+          "columns": [
+            "idprograma"
+          ],
+          "references": "programacionautologa",
+          "reference_columns": [
+            "idprograma"
+          ],
+          "definition": "FOREIGN KEY (idprograma) REFERENCES programacionautologa(idprograma)"
+        },
+        {
+          "name": "citadonacion_idturno_fkey",
+          "kind": "f",
+          "columns": [
+            "idturno"
+          ],
+          "references": "agendaturno",
+          "reference_columns": [
+            "idturno"
+          ],
+          "definition": "FOREIGN KEY (idturno) REFERENCES agendaturno(idturno)"
+        },
+        {
+          "name": "citadonacion_pkey",
+          "kind": "p",
+          "columns": [
+            "idcita"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "PRIMARY KEY (idcita)"
+        },
+        {
+          "name": "citadonacion_tipoatencion_check",
+          "kind": "c",
+          "columns": [
+            "tipoatencion"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "CHECK (((tipoatencion)::text = ANY ((ARRAY['Evaluacion'::character varying, 'Donacion'::character varying, 'Autologa'::character varying])::text[])))"
+        },
+        {
+          "name": "fk_cita_persona",
+          "kind": "f",
+          "columns": [
+            "idpersona"
+          ],
+          "references": "persona",
+          "reference_columns": [
+            "idpersona"
+          ],
+          "definition": "FOREIGN KEY (idpersona) REFERENCES persona(idpersona) ON DELETE CASCADE"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "citadonacion_pkey",
+          "unique": true,
+          "primary": true,
+          "columns": [
+            "idcita"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX citadonacion_pkey ON public.citadonacion USING btree (idcita)",
+          "valid": true,
+          "expression": false
+        },
+        {
+          "name": "ix_cita_programa",
+          "unique": false,
+          "primary": false,
+          "columns": [
+            "idprograma"
+          ],
+          "predicate": null,
+          "definition": "CREATE INDEX ix_cita_programa ON public.citadonacion USING btree (idprograma)",
+          "valid": true,
+          "expression": false
+        },
+        {
+          "name": "ix_cita_turno_ciclo2",
+          "unique": false,
+          "primary": false,
+          "columns": [
+            "idturno",
+            "estadocita"
+          ],
+          "predicate": null,
+          "definition": "CREATE INDEX ix_cita_turno_ciclo2 ON public.citadonacion USING btree (idturno, estadocita)",
+          "valid": true,
+          "expression": false
+        }
+      ]
+    },
+    "citalaboratorio": {
+      "columns": [
+        {
+          "name": "idcitalab",
+          "type": "integer",
+          "not_null": true,
+          "position": 1
+        },
+        {
+          "name": "idreceptor",
+          "type": "integer",
+          "not_null": true,
+          "position": 2
+        },
+        {
+          "name": "idinstitucion",
+          "type": "integer",
+          "not_null": false,
+          "position": 3
+        },
+        {
+          "name": "fechahoracita",
+          "type": "timestamp without time zone",
+          "not_null": true,
+          "position": 4
+        },
+        {
+          "name": "fechacirugiaprogramada",
+          "type": "date",
+          "not_null": true,
+          "position": 5
+        },
+        {
+          "name": "tipoanalisisrequerido",
+          "type": "character varying(100)",
+          "not_null": true,
+          "position": 6
+        },
+        {
+          "name": "muestrarecolectada",
+          "type": "boolean",
+          "not_null": true,
+          "position": 7
+        },
+        {
+          "name": "estadocita",
+          "type": "character varying(25)",
+          "not_null": true,
+          "position": 8
+        }
+      ],
+      "constraints": [
+        {
+          "name": "citalaboratorio_estadocita_check",
+          "kind": "c",
+          "columns": [
+            "estadocita"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "CHECK (((estadocita)::text = ANY ((ARRAY['Programada'::character varying, 'Completada'::character varying, 'Cancelada'::character varying])::text[])))"
+        },
+        {
+          "name": "citalaboratorio_pkey",
+          "kind": "p",
+          "columns": [
+            "idcitalab"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "PRIMARY KEY (idcitalab)"
+        },
+        {
+          "name": "fk_citalab_institucion",
+          "kind": "f",
+          "columns": [
+            "idinstitucion"
+          ],
+          "references": "institucionsalud",
+          "reference_columns": [
+            "idinstitucion"
+          ],
+          "definition": "FOREIGN KEY (idinstitucion) REFERENCES institucionsalud(idinstitucion)"
+        },
+        {
+          "name": "fk_citalab_receptor",
+          "kind": "f",
+          "columns": [
+            "idreceptor"
+          ],
+          "references": "receptor",
+          "reference_columns": [
+            "idpersona"
+          ],
+          "definition": "FOREIGN KEY (idreceptor) REFERENCES receptor(idpersona)"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "citalaboratorio_pkey",
+          "unique": true,
+          "primary": true,
+          "columns": [
+            "idcitalab"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX citalaboratorio_pkey ON public.citalaboratorio USING btree (idcitalab)",
+          "valid": true,
+          "expression": false
+        }
+      ]
+    },
+    "colectaautologa": {
+      "columns": [
+        {
+          "name": "idunidadmadre",
+          "type": "integer",
+          "not_null": true,
+          "position": 1
+        },
+        {
+          "name": "idreceptor",
+          "type": "integer",
+          "not_null": true,
+          "position": 2
+        },
+        {
+          "name": "fechacirugia",
+          "type": "date",
+          "not_null": true,
+          "position": 3
+        },
+        {
+          "name": "idpersonalsalud",
+          "type": "integer",
+          "not_null": true,
+          "position": 4
+        },
+        {
+          "name": "idprograma",
+          "type": "integer",
+          "not_null": false,
+          "position": 5
+        }
+      ],
+      "constraints": [
+        {
+          "name": "colectaautologa_idpersonalsalud_fkey",
+          "kind": "f",
+          "columns": [
+            "idpersonalsalud"
+          ],
+          "references": "personalsalud",
+          "reference_columns": [
+            "idpersona"
+          ],
+          "definition": "FOREIGN KEY (idpersonalsalud) REFERENCES personalsalud(idpersona)"
+        },
+        {
+          "name": "colectaautologa_idprograma_fkey",
+          "kind": "f",
+          "columns": [
+            "idprograma"
+          ],
+          "references": "programacionautologa",
+          "reference_columns": [
+            "idprograma"
+          ],
+          "definition": "FOREIGN KEY (idprograma) REFERENCES programacionautologa(idprograma)"
+        },
+        {
+          "name": "colectaautologa_idreceptor_fkey",
+          "kind": "f",
+          "columns": [
+            "idreceptor"
+          ],
+          "references": "receptor",
+          "reference_columns": [
+            "idpersona"
+          ],
+          "definition": "FOREIGN KEY (idreceptor) REFERENCES receptor(idpersona)"
+        },
+        {
+          "name": "colectaautologa_idunidadmadre_fkey",
+          "kind": "f",
+          "columns": [
+            "idunidadmadre"
+          ],
+          "references": "unidadsangretotal",
+          "reference_columns": [
+            "idunidadmadre"
+          ],
+          "definition": "FOREIGN KEY (idunidadmadre) REFERENCES unidadsangretotal(idunidadmadre)"
+        },
+        {
+          "name": "colectaautologa_pkey",
+          "kind": "p",
+          "columns": [
+            "idunidadmadre"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "PRIMARY KEY (idunidadmadre)"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "colectaautologa_pkey",
+          "unique": true,
+          "primary": true,
+          "columns": [
+            "idunidadmadre"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX colectaautologa_pkey ON public.colectaautologa USING btree (idunidadmadre)",
+          "valid": true,
+          "expression": false
+        },
+        {
+          "name": "ix_colecta_programa",
+          "unique": false,
+          "primary": false,
+          "columns": [
+            "idprograma"
+          ],
+          "predicate": null,
+          "definition": "CREATE INDEX ix_colecta_programa ON public.colectaautologa USING btree (idprograma)",
+          "valid": true,
+          "expression": false
+        }
+      ]
+    },
+    "comprobantedespacho": {
+      "columns": [
+        {
+          "name": "iddespacho",
+          "type": "integer",
+          "not_null": true,
+          "position": 1
+        },
+        {
+          "name": "idsolicitud",
+          "type": "integer",
+          "not_null": true,
+          "position": 2
+        },
+        {
+          "name": "codigoguiadespacho",
+          "type": "character varying(35)",
+          "not_null": true,
+          "position": 3
+        },
+        {
+          "name": "fechahorasalida",
+          "type": "timestamp without time zone",
+          "not_null": true,
+          "position": 4
+        },
+        {
+          "name": "receptorentrega",
+          "type": "character varying(100)",
+          "not_null": true,
+          "position": 5
+        },
+        {
+          "name": "temperaturadespacho",
+          "type": "numeric(4,1)",
+          "not_null": true,
+          "position": 6
+        },
+        {
+          "name": "estadoentrega",
+          "type": "character varying(30)",
+          "not_null": true,
+          "position": 7
+        }
+      ],
+      "constraints": [
+        {
+          "name": "comprobantedespacho_codigoguiadespacho_key",
+          "kind": "u",
+          "columns": [
+            "codigoguiadespacho"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "UNIQUE (codigoguiadespacho)"
+        },
+        {
+          "name": "comprobantedespacho_estadoentrega_check",
+          "kind": "c",
+          "columns": [
+            "estadoentrega"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "CHECK (((estadoentrega)::text = ANY ((ARRAY['En Transito'::character varying, 'En Transito Urgente'::character varying, 'Entregado en Destino'::character varying])::text[])))"
+        },
+        {
+          "name": "comprobantedespacho_pkey",
+          "kind": "p",
+          "columns": [
+            "iddespacho"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "PRIMARY KEY (iddespacho)"
+        },
+        {
+          "name": "fk_despacho_solicitud",
+          "kind": "f",
+          "columns": [
+            "idsolicitud"
+          ],
+          "references": "solicitudhospitalaria",
+          "reference_columns": [
+            "idsolicitud"
+          ],
+          "definition": "FOREIGN KEY (idsolicitud) REFERENCES solicitudhospitalaria(idsolicitud)"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "comprobantedespacho_codigoguiadespacho_key",
+          "unique": true,
+          "primary": false,
+          "columns": [
+            "codigoguiadespacho"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX comprobantedespacho_codigoguiadespacho_key ON public.comprobantedespacho USING btree (codigoguiadespacho)",
+          "valid": true,
+          "expression": false
+        },
+        {
+          "name": "comprobantedespacho_pkey",
+          "unique": true,
+          "primary": true,
+          "columns": [
+            "iddespacho"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX comprobantedespacho_pkey ON public.comprobantedespacho USING btree (iddespacho)",
+          "valid": true,
+          "expression": false
+        }
+      ]
+    },
+    "comprobantepago": {
+      "columns": [
+        {
+          "name": "idcomprobante",
+          "type": "integer",
+          "not_null": true,
+          "position": 1
+        },
+        {
+          "name": "idsolicitud",
+          "type": "integer",
+          "not_null": true,
+          "position": 2
+        },
+        {
+          "name": "numerorecibofactura",
+          "type": "character varying(35)",
+          "not_null": true,
+          "position": 3
+        },
+        {
+          "name": "conceptoservicio",
+          "type": "character varying(150)",
+          "not_null": true,
+          "position": 4
+        },
+        {
+          "name": "montototal",
+          "type": "numeric(10,2)",
+          "not_null": true,
+          "position": 5
+        },
+        {
+          "name": "estadopago",
+          "type": "character varying(30)",
+          "not_null": true,
+          "position": 6
+        },
+        {
+          "name": "metodopago",
+          "type": "character varying(50)",
+          "not_null": true,
+          "position": 7
+        },
+        {
+          "name": "fechahorapago",
+          "type": "timestamp without time zone",
+          "not_null": false,
+          "position": 8
+        },
+        {
+          "name": "iddeuda",
+          "type": "bigint",
+          "not_null": false,
+          "position": 9
+        },
+        {
+          "name": "fechaemision",
+          "type": "timestamp with time zone",
+          "not_null": false,
+          "position": 10
+        }
+      ],
+      "constraints": [
+        {
+          "name": "comprobantepago_estadopago_check",
+          "kind": "c",
+          "columns": [
+            "estadopago"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "CHECK (((estadopago)::text = ANY ((ARRAY['Pagado'::character varying, 'Exonerado SUS'::character varying, 'Convenio Institucional'::character varying, 'Pendiente'::character varying])::text[])))"
+        },
+        {
+          "name": "comprobantepago_idsolicitud_key",
+          "kind": "u",
+          "columns": [
+            "idsolicitud"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "UNIQUE (idsolicitud)"
+        },
+        {
+          "name": "comprobantepago_numerorecibofactura_key",
+          "kind": "u",
+          "columns": [
+            "numerorecibofactura"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "UNIQUE (numerorecibofactura)"
+        },
+        {
+          "name": "comprobantepago_pkey",
+          "kind": "p",
+          "columns": [
+            "idcomprobante"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "PRIMARY KEY (idcomprobante)"
+        },
+        {
+          "name": "fk_comprobantepago_deudafinanciera",
+          "kind": "f",
+          "columns": [
+            "iddeuda"
+          ],
+          "references": "deudafinanciera",
+          "reference_columns": [
+            "iddeuda"
+          ],
+          "definition": "FOREIGN KEY (iddeuda) REFERENCES deudafinanciera(iddeuda)"
+        },
+        {
+          "name": "fk_pago_solicitud",
+          "kind": "f",
+          "columns": [
+            "idsolicitud"
+          ],
+          "references": "solicitudhospitalaria",
+          "reference_columns": [
+            "idsolicitud"
+          ],
+          "definition": "FOREIGN KEY (idsolicitud) REFERENCES solicitudhospitalaria(idsolicitud)"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "comprobantepago_idsolicitud_key",
+          "unique": true,
+          "primary": false,
+          "columns": [
+            "idsolicitud"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX comprobantepago_idsolicitud_key ON public.comprobantepago USING btree (idsolicitud)",
+          "valid": true,
+          "expression": false
+        },
+        {
+          "name": "comprobantepago_numerorecibofactura_key",
+          "unique": true,
+          "primary": false,
+          "columns": [
+            "numerorecibofactura"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX comprobantepago_numerorecibofactura_key ON public.comprobantepago USING btree (numerorecibofactura)",
+          "valid": true,
+          "expression": false
+        },
+        {
+          "name": "comprobantepago_pkey",
+          "unique": true,
+          "primary": true,
+          "columns": [
+            "idcomprobante"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX comprobantepago_pkey ON public.comprobantepago USING btree (idcomprobante)",
+          "valid": true,
+          "expression": false
+        }
+      ]
+    },
+    "compromisodonacion": {
+      "columns": [
+        {
+          "name": "idcompromiso",
+          "type": "integer",
+          "not_null": true,
+          "position": 1
+        },
+        {
+          "name": "idreposicion",
+          "type": "integer",
+          "not_null": true,
+          "position": 2
+        },
+        {
+          "name": "idpersonafirmante",
+          "type": "integer",
+          "not_null": true,
+          "position": 3
+        },
+        {
+          "name": "iddonante",
+          "type": "integer",
+          "not_null": false,
+          "position": 4
+        },
+        {
+          "name": "fechacompromiso",
+          "type": "date",
+          "not_null": true,
+          "position": 5
+        },
+        {
+          "name": "donacionconcretada",
+          "type": "boolean",
+          "not_null": true,
+          "position": 6
+        },
+        {
+          "name": "volumendonadoefectivoml",
+          "type": "integer",
+          "not_null": false,
+          "position": 7
+        },
+        {
+          "name": "estadocompromiso",
+          "type": "character varying(25)",
+          "not_null": true,
+          "position": 8
+        },
+        {
+          "name": "idextraccion",
+          "type": "integer",
+          "not_null": false,
+          "position": 9
+        }
+      ],
+      "constraints": [
+        {
+          "name": "compromisodonacion_estadocompromiso_check",
+          "kind": "c",
+          "columns": [
+            "estadocompromiso"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "CHECK (((estadocompromiso)::text = ANY ((ARRAY['Vigente'::character varying, 'Cumplido'::character varying, 'Anulado'::character varying])::text[])))"
+        },
+        {
+          "name": "compromisodonacion_pkey",
+          "kind": "p",
+          "columns": [
+            "idcompromiso"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "PRIMARY KEY (idcompromiso)"
+        },
+        {
+          "name": "fk_compromiso_donante",
+          "kind": "f",
+          "columns": [
+            "iddonante"
+          ],
+          "references": "donante",
+          "reference_columns": [
+            "idpersona"
+          ],
+          "definition": "FOREIGN KEY (iddonante) REFERENCES donante(idpersona) ON DELETE SET NULL"
+        },
+        {
+          "name": "fk_compromiso_extraccion",
+          "kind": "f",
+          "columns": [
+            "idextraccion"
+          ],
+          "references": "extracciondonacion",
+          "reference_columns": [
+            "idextraccion"
+          ],
+          "definition": "FOREIGN KEY (idextraccion) REFERENCES extracciondonacion(idextraccion) ON DELETE SET NULL"
+        },
+        {
+          "name": "fk_compromiso_firmante",
+          "kind": "f",
+          "columns": [
+            "idpersonafirmante"
+          ],
+          "references": "persona",
+          "reference_columns": [
+            "idpersona"
+          ],
+          "definition": "FOREIGN KEY (idpersonafirmante) REFERENCES persona(idpersona)"
+        },
+        {
+          "name": "fk_compromiso_reposicion",
+          "kind": "f",
+          "columns": [
+            "idreposicion"
+          ],
+          "references": "reposicionpendiente",
+          "reference_columns": [
+            "idreposicion"
+          ],
+          "definition": "FOREIGN KEY (idreposicion) REFERENCES reposicionpendiente(idreposicion) ON DELETE CASCADE"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "compromisodonacion_pkey",
+          "unique": true,
+          "primary": true,
+          "columns": [
+            "idcompromiso"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX compromisodonacion_pkey ON public.compromisodonacion USING btree (idcompromiso)",
+          "valid": true,
+          "expression": false
+        }
+      ]
+    },
+    "consentimientoinformado": {
+      "columns": [
+        {
+          "name": "idconsentimiento",
+          "type": "integer",
+          "not_null": true,
+          "position": 1
+        },
+        {
+          "name": "idextraccion",
+          "type": "integer",
+          "not_null": true,
+          "position": 2
+        },
+        {
+          "name": "fechafirma",
+          "type": "timestamp without time zone",
+          "not_null": true,
+          "position": 3
+        },
+        {
+          "name": "declaracionjuradaaceptada",
+          "type": "boolean",
+          "not_null": true,
+          "position": 4
+        },
+        {
+          "name": "firmadigital",
+          "type": "text",
+          "not_null": true,
+          "position": 5
+        }
+      ],
+      "constraints": [
+        {
+          "name": "consentimientoinformado_declaracionjuradaaceptada_check",
+          "kind": "c",
+          "columns": [
+            "declaracionjuradaaceptada"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "CHECK ((declaracionjuradaaceptada = true))"
+        },
+        {
+          "name": "consentimientoinformado_idextraccion_key",
+          "kind": "u",
+          "columns": [
+            "idextraccion"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "UNIQUE (idextraccion)"
+        },
+        {
+          "name": "consentimientoinformado_pkey",
+          "kind": "p",
+          "columns": [
+            "idconsentimiento"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "PRIMARY KEY (idconsentimiento)"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "consentimientoinformado_idextraccion_key",
+          "unique": true,
+          "primary": false,
+          "columns": [
+            "idextraccion"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX consentimientoinformado_idextraccion_key ON public.consentimientoinformado USING btree (idextraccion)",
+          "valid": true,
+          "expression": false
+        },
+        {
+          "name": "consentimientoinformado_pkey",
+          "unique": true,
+          "primary": true,
+          "columns": [
+            "idconsentimiento"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX consentimientoinformado_pkey ON public.consentimientoinformado USING btree (idconsentimiento)",
+          "valid": true,
+          "expression": false
+        }
+      ]
+    },
+    "detallecitarequisito": {
+      "columns": [
+        {
+          "name": "iddetallecita",
+          "type": "integer",
+          "not_null": true,
+          "position": 1
+        },
+        {
+          "name": "idcita",
+          "type": "integer",
+          "not_null": true,
+          "position": 2
+        },
+        {
+          "name": "idrequisito",
+          "type": "integer",
+          "not_null": true,
+          "position": 3
+        },
+        {
+          "name": "cumplerequisito",
+          "type": "boolean",
+          "not_null": true,
+          "position": 4
+        },
+        {
+          "name": "observacionrespuesta",
+          "type": "character varying(200)",
+          "not_null": false,
+          "position": 5
+        }
+      ],
+      "constraints": [
+        {
+          "name": "detallecitarequisito_pkey",
+          "kind": "p",
+          "columns": [
+            "iddetallecita"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "PRIMARY KEY (iddetallecita)"
+        },
+        {
+          "name": "fk_detalle_cita",
+          "kind": "f",
+          "columns": [
+            "idcita"
+          ],
+          "references": "citadonacion",
+          "reference_columns": [
+            "idcita"
+          ],
+          "definition": "FOREIGN KEY (idcita) REFERENCES citadonacion(idcita) ON DELETE CASCADE"
+        },
+        {
+          "name": "fk_detalle_requisito",
+          "kind": "f",
+          "columns": [
+            "idrequisito"
+          ],
+          "references": "requisitodonacion",
+          "reference_columns": [
+            "idrequisito"
+          ],
+          "definition": "FOREIGN KEY (idrequisito) REFERENCES requisitodonacion(idrequisito)"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "detallecitarequisito_pkey",
+          "unique": true,
+          "primary": true,
+          "columns": [
+            "iddetallecita"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX detallecitarequisito_pkey ON public.detallecitarequisito USING btree (iddetallecita)",
+          "valid": true,
+          "expression": false
+        }
+      ]
+    },
+    "detalledespacho": {
+      "columns": [
+        {
+          "name": "iddetalledespacho",
+          "type": "integer",
+          "not_null": true,
+          "position": 1
+        },
+        {
+          "name": "iddespacho",
+          "type": "integer",
+          "not_null": true,
+          "position": 2
+        },
+        {
+          "name": "idejemplarbolsa",
+          "type": "integer",
+          "not_null": true,
+          "position": 3
+        }
+      ],
+      "constraints": [
+        {
+          "name": "detalledespacho_pkey",
+          "kind": "p",
+          "columns": [
+            "iddetalledespacho"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "PRIMARY KEY (iddetalledespacho)"
+        },
+        {
+          "name": "fk_detalledespacho_despacho",
+          "kind": "f",
+          "columns": [
+            "iddespacho"
+          ],
+          "references": "comprobantedespacho",
+          "reference_columns": [
+            "iddespacho"
+          ],
+          "definition": "FOREIGN KEY (iddespacho) REFERENCES comprobantedespacho(iddespacho) ON DELETE CASCADE"
+        },
+        {
+          "name": "fk_detalledespacho_ejemplar",
+          "kind": "f",
+          "columns": [
+            "idejemplarbolsa"
+          ],
+          "references": "ejemplarbolsa",
+          "reference_columns": [
+            "idejemplarbolsa"
+          ],
+          "definition": "FOREIGN KEY (idejemplarbolsa) REFERENCES ejemplarbolsa(idejemplarbolsa)"
+        },
+        {
+          "name": "uq_detalledespacho_ejemplar",
+          "kind": "u",
+          "columns": [
+            "idejemplarbolsa"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "UNIQUE (idejemplarbolsa)"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "detalledespacho_pkey",
+          "unique": true,
+          "primary": true,
+          "columns": [
+            "iddetalledespacho"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX detalledespacho_pkey ON public.detalledespacho USING btree (iddetalledespacho)",
+          "valid": true,
+          "expression": false
+        },
+        {
+          "name": "uq_detalledespacho_ejemplar",
+          "unique": true,
+          "primary": false,
+          "columns": [
+            "idejemplarbolsa"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX uq_detalledespacho_ejemplar ON public.detalledespacho USING btree (idejemplarbolsa)",
+          "valid": true,
+          "expression": false
+        }
+      ]
+    },
+    "detallesolicitud": {
+      "columns": [
+        {
+          "name": "iddetalle",
+          "type": "integer",
+          "not_null": true,
+          "position": 1
+        },
+        {
+          "name": "idsolicitud",
+          "type": "integer",
+          "not_null": true,
+          "position": 2
+        },
+        {
+          "name": "idgrupo",
+          "type": "integer",
+          "not_null": true,
+          "position": 3
+        },
+        {
+          "name": "tipocomponenterequerido",
+          "type": "character varying(50)",
+          "not_null": true,
+          "position": 4
+        },
+        {
+          "name": "cantidadsolicitada",
+          "type": "integer",
+          "not_null": true,
+          "position": 5
+        },
+        {
+          "name": "cantidadasignada",
+          "type": "integer",
+          "not_null": true,
+          "position": 6
+        },
+        {
+          "name": "categoriaetaria",
+          "type": "character varying(20)",
+          "not_null": true,
+          "position": 7
+        }
+      ],
+      "constraints": [
+        {
+          "name": "chk_solicitud_categoria_etaria",
+          "kind": "c",
+          "columns": [
+            "categoriaetaria"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "CHECK (((categoriaetaria)::text = ANY ((ARRAY['Pediátrico'::character varying, 'Adolescente'::character varying, 'Adulto'::character varying])::text[])))"
+        },
+        {
+          "name": "detallesolicitud_cantidadasignada_check",
+          "kind": "c",
+          "columns": [
+            "cantidadasignada"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "CHECK ((cantidadasignada >= 0))"
+        },
+        {
+          "name": "detallesolicitud_cantidadsolicitada_check",
+          "kind": "c",
+          "columns": [
+            "cantidadsolicitada"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "CHECK ((cantidadsolicitada > 0))"
+        },
+        {
+          "name": "detallesolicitud_pkey",
+          "kind": "p",
+          "columns": [
+            "iddetalle"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "PRIMARY KEY (iddetalle)"
+        },
+        {
+          "name": "detallesolicitud_tipocomponenterequerido_check",
+          "kind": "c",
+          "columns": [
+            "tipocomponenterequerido"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "CHECK (((tipocomponenterequerido)::text = ANY ((ARRAY['Concentrado de Globulos Rojos'::character varying, 'Plasma Fresco Congelado'::character varying, 'Concentrado Plaquetario'::character varying, 'Crioprecipitado'::character varying])::text[])))"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "detallesolicitud_pkey",
+          "unique": true,
+          "primary": true,
+          "columns": [
+            "iddetalle"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX detallesolicitud_pkey ON public.detallesolicitud USING btree (iddetalle)",
+          "valid": true,
+          "expression": false
+        }
+      ]
+    },
+    "deudafinanciera": {
+      "columns": [
+        {
+          "name": "iddeuda",
+          "type": "bigint",
+          "not_null": true,
+          "position": 1
+        },
+        {
+          "name": "idsolicitud",
+          "type": "integer",
+          "not_null": true,
+          "position": 2
+        },
+        {
+          "name": "montooriginal",
+          "type": "numeric(12,2)",
+          "not_null": true,
+          "position": 3
+        },
+        {
+          "name": "montoabonado",
+          "type": "numeric(12,2)",
+          "not_null": true,
+          "position": 4
+        },
+        {
+          "name": "saldopendiente",
+          "type": "numeric(12,2)",
+          "not_null": false,
+          "position": 5
+        },
+        {
+          "name": "estadodeuda",
+          "type": "character varying(20)",
+          "not_null": true,
+          "position": 6
+        },
+        {
+          "name": "fechacreacion",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "position": 7
+        },
+        {
+          "name": "fechavencimiento",
+          "type": "timestamp with time zone",
+          "not_null": false,
+          "position": 8
+        },
+        {
+          "name": "motivodeuda",
+          "type": "text",
+          "not_null": true,
+          "position": 9
+        },
+        {
+          "name": "pagoposteriorautorizado",
+          "type": "boolean",
+          "not_null": true,
+          "position": 10
+        },
+        {
+          "name": "autorizadopor",
+          "type": "integer",
+          "not_null": false,
+          "position": 11
+        },
+        {
+          "name": "observacionautorizacion",
+          "type": "text",
+          "not_null": false,
+          "position": 12
+        },
+        {
+          "name": "moneda",
+          "type": "character varying(3)",
+          "not_null": false,
+          "position": 13
+        }
+      ],
+      "constraints": [
+        {
+          "name": "deudafinanciera_check",
+          "kind": "c",
+          "columns": [
+            "montoabonado",
+            "montooriginal"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "CHECK ((montoabonado <= montooriginal))"
+        },
+        {
+          "name": "deudafinanciera_check1",
+          "kind": "c",
+          "columns": [
+            "fechavencimiento",
+            "fechacreacion"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "CHECK (((fechavencimiento IS NULL) OR (fechavencimiento >= fechacreacion)))"
+        },
+        {
+          "name": "deudafinanciera_estadodeuda_check",
+          "kind": "c",
+          "columns": [
+            "estadodeuda"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "CHECK (((estadodeuda)::text = ANY ((ARRAY['Pendiente'::character varying, 'Parcial'::character varying, 'Liquidada'::character varying, 'Vencida'::character varying])::text[])))"
+        },
+        {
+          "name": "deudafinanciera_idsolicitud_fkey",
+          "kind": "f",
+          "columns": [
+            "idsolicitud"
+          ],
+          "references": "solicitudhospitalaria",
+          "reference_columns": [
+            "idsolicitud"
+          ],
+          "definition": "FOREIGN KEY (idsolicitud) REFERENCES solicitudhospitalaria(idsolicitud)"
+        },
+        {
+          "name": "deudafinanciera_idsolicitud_key",
+          "kind": "u",
+          "columns": [
+            "idsolicitud"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "UNIQUE (idsolicitud)"
+        },
+        {
+          "name": "deudafinanciera_montoabonado_check",
+          "kind": "c",
+          "columns": [
+            "montoabonado"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "CHECK ((montoabonado >= (0)::numeric))"
+        },
+        {
+          "name": "deudafinanciera_montooriginal_check",
+          "kind": "c",
+          "columns": [
+            "montooriginal"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "CHECK ((montooriginal >= (0)::numeric))"
+        },
+        {
+          "name": "deudafinanciera_pkey",
+          "kind": "p",
+          "columns": [
+            "iddeuda"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "PRIMARY KEY (iddeuda)"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "deudafinanciera_idsolicitud_key",
+          "unique": true,
+          "primary": false,
+          "columns": [
+            "idsolicitud"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX deudafinanciera_idsolicitud_key ON public.deudafinanciera USING btree (idsolicitud)",
+          "valid": true,
+          "expression": false
+        },
+        {
+          "name": "deudafinanciera_pkey",
+          "unique": true,
+          "primary": true,
+          "columns": [
+            "iddeuda"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX deudafinanciera_pkey ON public.deudafinanciera USING btree (iddeuda)",
+          "valid": true,
+          "expression": false
+        },
+        {
+          "name": "ix_deudafinanciera_estado_vencimiento",
+          "unique": false,
+          "primary": false,
+          "columns": [
+            "estadodeuda",
+            "fechavencimiento"
+          ],
+          "predicate": null,
+          "definition": "CREATE INDEX ix_deudafinanciera_estado_vencimiento ON public.deudafinanciera USING btree (estadodeuda, fechavencimiento)",
+          "valid": true,
+          "expression": false
+        }
+      ]
+    },
+    "diferimiento": {
+      "columns": [
+        {
+          "name": "iddiferimiento",
+          "type": "integer",
+          "not_null": true,
+          "position": 1
+        },
+        {
+          "name": "idtriaje",
+          "type": "integer",
+          "not_null": false,
+          "position": 2
+        },
+        {
+          "name": "idposibledonador",
+          "type": "integer",
+          "not_null": true,
+          "position": 3
+        },
+        {
+          "name": "motivodetallado",
+          "type": "character varying(255)",
+          "not_null": true,
+          "position": 4
+        },
+        {
+          "name": "diasinhabilitacion",
+          "type": "integer",
+          "not_null": true,
+          "position": 5
+        },
+        {
+          "name": "fechainiciodiferimiento",
+          "type": "date",
+          "not_null": true,
+          "position": 6
+        },
+        {
+          "name": "fechafindiferimiento",
+          "type": "date",
+          "not_null": false,
+          "position": 7
+        },
+        {
+          "name": "idserologia",
+          "type": "integer",
+          "not_null": false,
+          "position": 8
+        },
+        {
+          "name": "idhematologia",
+          "type": "integer",
+          "not_null": false,
+          "position": 9
+        },
+        {
+          "name": "comunicacionfecha",
+          "type": "timestamp with time zone",
+          "not_null": false,
+          "position": 10
+        },
+        {
+          "name": "canalcomunicacion",
+          "type": "character varying(25)",
+          "not_null": false,
+          "position": 11
+        },
+        {
+          "name": "comunicadopor",
+          "type": "integer",
+          "not_null": false,
+          "position": 12
+        }
+      ],
+      "constraints": [
+        {
+          "name": "diferimiento_comunicadopor_fkey",
+          "kind": "f",
+          "columns": [
+            "comunicadopor"
+          ],
+          "references": "personalsalud",
+          "reference_columns": [
+            "idpersona"
+          ],
+          "definition": "FOREIGN KEY (comunicadopor) REFERENCES personalsalud(idpersona)"
+        },
+        {
+          "name": "diferimiento_idhematologia_fkey",
+          "kind": "f",
+          "columns": [
+            "idhematologia"
+          ],
+          "references": "analisisinmunohematologico",
+          "reference_columns": [
+            "idanalisishematologico"
+          ],
+          "definition": "FOREIGN KEY (idhematologia) REFERENCES analisisinmunohematologico(idanalisishematologico)"
+        },
+        {
+          "name": "diferimiento_idserologia_fkey",
+          "kind": "f",
+          "columns": [
+            "idserologia"
+          ],
+          "references": "analisisinmunoserologico",
+          "reference_columns": [
+            "idanalisis"
+          ],
+          "definition": "FOREIGN KEY (idserologia) REFERENCES analisisinmunoserologico(idanalisis)"
+        },
+        {
+          "name": "diferimiento_idtriaje_key",
+          "kind": "u",
+          "columns": [
+            "idtriaje"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "UNIQUE (idtriaje)"
+        },
+        {
+          "name": "diferimiento_pkey",
+          "kind": "p",
+          "columns": [
+            "iddiferimiento"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "PRIMARY KEY (iddiferimiento)"
+        },
+        {
+          "name": "fk_diferimiento_posible",
+          "kind": "f",
+          "columns": [
+            "idposibledonador"
+          ],
+          "references": "posibledonador",
+          "reference_columns": [
+            "idpersona"
+          ],
+          "definition": "FOREIGN KEY (idposibledonador) REFERENCES posibledonador(idpersona)"
+        },
+        {
+          "name": "fk_diferimiento_triaje",
+          "kind": "f",
+          "columns": [
+            "idtriaje"
+          ],
+          "references": "triajeclinico",
+          "reference_columns": [
+            "idtriaje"
+          ],
+          "definition": "FOREIGN KEY (idtriaje) REFERENCES triajeclinico(idtriaje) ON DELETE SET NULL"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "diferimiento_idtriaje_key",
+          "unique": true,
+          "primary": false,
+          "columns": [
+            "idtriaje"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX diferimiento_idtriaje_key ON public.diferimiento USING btree (idtriaje)",
+          "valid": true,
+          "expression": false
+        },
+        {
+          "name": "diferimiento_pkey",
+          "unique": true,
+          "primary": true,
+          "columns": [
+            "iddiferimiento"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX diferimiento_pkey ON public.diferimiento USING btree (iddiferimiento)",
+          "valid": true,
+          "expression": false
+        }
+      ]
+    },
+    "donante": {
+      "columns": [
+        {
+          "name": "idpersona",
+          "type": "integer",
+          "not_null": true,
+          "position": 1
+        },
+        {
+          "name": "carnetdigitalcodigo",
+          "type": "character varying(30)",
+          "not_null": true,
+          "position": 2
+        },
+        {
+          "name": "tipodonante",
+          "type": "character varying(30)",
+          "not_null": true,
+          "position": 3
+        },
+        {
+          "name": "estadohabilitacion",
+          "type": "character varying(30)",
+          "not_null": true,
+          "position": 4
+        },
+        {
+          "name": "fechaultimadonacion",
+          "type": "date",
+          "not_null": false,
+          "position": 5
+        }
+      ],
+      "constraints": [
+        {
+          "name": "donante_carnetdigitalcodigo_key",
+          "kind": "u",
+          "columns": [
+            "carnetdigitalcodigo"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "UNIQUE (carnetdigitalcodigo)"
+        },
+        {
+          "name": "donante_estadohabilitacion_check",
+          "kind": "c",
+          "columns": [
+            "estadohabilitacion"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "CHECK (((estadohabilitacion)::text = ANY ((ARRAY['Apto'::character varying, 'Diferido Temporal'::character varying, 'Diferido Definitivo'::character varying])::text[])))"
+        },
+        {
+          "name": "donante_pkey",
+          "kind": "p",
+          "columns": [
+            "idpersona"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "PRIMARY KEY (idpersona)"
+        },
+        {
+          "name": "donante_tipodonante_check",
+          "kind": "c",
+          "columns": [
+            "tipodonante"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "CHECK (((tipodonante)::text = ANY ((ARRAY['Voluntario Altruista'::character varying, 'Reposicion Familiar'::character varying, 'Autologo'::character varying])::text[])))"
+        },
+        {
+          "name": "fk_donante_persona",
+          "kind": "f",
+          "columns": [
+            "idpersona"
+          ],
+          "references": "persona",
+          "reference_columns": [
+            "idpersona"
+          ],
+          "definition": "FOREIGN KEY (idpersona) REFERENCES persona(idpersona) ON DELETE CASCADE"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "donante_carnetdigitalcodigo_key",
+          "unique": true,
+          "primary": false,
+          "columns": [
+            "carnetdigitalcodigo"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX donante_carnetdigitalcodigo_key ON public.donante USING btree (carnetdigitalcodigo)",
+          "valid": true,
+          "expression": false
+        },
+        {
+          "name": "donante_pkey",
+          "unique": true,
+          "primary": true,
+          "columns": [
+            "idpersona"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX donante_pkey ON public.donante USING btree (idpersona)",
+          "valid": true,
+          "expression": false
+        },
+        {
+          "name": "idx_donante_carnet_lookup",
+          "unique": false,
+          "primary": false,
+          "columns": [],
+          "predicate": null,
+          "definition": "CREATE INDEX idx_donante_carnet_lookup ON public.donante USING btree (lower(TRIM(BOTH FROM carnetdigitalcodigo)))",
+          "valid": true,
+          "expression": true
+        }
+      ]
+    },
+    "ejemplarbolsa": {
+      "columns": [
+        {
+          "name": "idejemplarbolsa",
+          "type": "integer",
+          "not_null": true,
+          "position": 1
+        },
+        {
+          "name": "idunidadmadre",
+          "type": "integer",
+          "not_null": false,
+          "position": 2
+        },
+        {
+          "name": "idgrupo",
+          "type": "integer",
+          "not_null": true,
+          "position": 3
+        },
+        {
+          "name": "idubicacion",
+          "type": "integer",
+          "not_null": false,
+          "position": 4
+        },
+        {
+          "name": "codigoejemplark",
+          "type": "character varying(40)",
+          "not_null": true,
+          "position": 5
+        },
+        {
+          "name": "tipocomponente",
+          "type": "character varying(50)",
+          "not_null": true,
+          "position": 6
+        },
+        {
+          "name": "volumenml",
+          "type": "integer",
+          "not_null": true,
+          "position": 7
+        },
+        {
+          "name": "fechaextraccion",
+          "type": "date",
+          "not_null": true,
+          "position": 8
+        },
+        {
+          "name": "fechacaducidad",
+          "type": "date",
+          "not_null": true,
+          "position": 9
+        },
+        {
+          "name": "estadobolsak",
+          "type": "character varying(25)",
+          "not_null": true,
+          "position": 10
+        },
+        {
+          "name": "esexclusivoautologo",
+          "type": "boolean",
+          "not_null": true,
+          "position": 11
+        },
+        {
+          "name": "categoriaetaria",
+          "type": "character varying(20)",
+          "not_null": true,
+          "position": 12
+        },
+        {
+          "name": "capacidadbolsaml",
+          "type": "integer",
+          "not_null": false,
+          "position": 13
+        }
+      ],
+      "constraints": [
+        {
+          "name": "chk_ejemplar_categoria_etaria",
+          "kind": "c",
+          "columns": [
+            "categoriaetaria"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "CHECK (((categoriaetaria)::text = ANY ((ARRAY['Pediátrico'::character varying, 'Adolescente'::character varying, 'Adulto'::character varying])::text[])))"
+        },
+        {
+          "name": "chk_ejemplar_volumen_cu04",
+          "kind": "c",
+          "columns": [
+            "estadobolsak",
+            "capacidadbolsaml",
+            "volumenml",
+            "tipocomponente",
+            "categoriaetaria"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "CHECK ((((estadobolsak)::text = 'Baja'::text) OR ((capacidadbolsaml IS NOT NULL) AND (capacidadbolsaml > 0) AND (volumenml > 0) AND (volumenml <= capacidadbolsaml) AND ((((tipocomponente)::text = ANY ((ARRAY['Concentrado de Globulos Rojos'::character varying, 'Paquete Globular'::character varying])::text[])) AND ((((categoriaetaria)::text = 'Pediátrico'::text) AND ((volumenml >= 30) AND (volumenml <= 100)) AND ((capacidadbolsaml >= 100) AND (capacidadbolsaml <= 150))) OR (((categoriaetaria)::text = 'Adolescente'::text) AND ((volumenml >= 150) AND (volumenml <= 200)) AND ((capacidadbolsaml >= 250) AND (capacidadbolsaml <= 300))) OR (((categoriaetaria)::text = 'Adulto'::text) AND ((volumenml >= 230) AND (volumenml <= 280)) AND ((capacidadbolsaml >= 300) AND (capacidadbolsaml <= 400))))) OR (((tipocomponente)::text = 'Plasma Fresco Congelado'::text) AND ((categoriaetaria)::text = 'Adulto'::text) AND ((volumenml >= 150) AND (volumenml <= 220)) AND ((capacidadbolsaml >= 250) AND (capacidadbolsaml <= 300))) OR (((tipocomponente)::text = 'Concentrado Plaquetario'::text) AND ((categoriaetaria)::text = 'Adulto'::text) AND ((volumenml >= 45) AND (volumenml <= 70)) AND ((capacidadbolsaml >= 150) AND (capacidadbolsaml <= 300))) OR ((tipocomponente)::text = ANY ((ARRAY['Crioprecipitado'::character varying, 'Sangre Total'::character varying])::text[])))))) NOT VALID"
+        },
+        {
+          "name": "ejemplarbolsa_codigoejemplark_key",
+          "kind": "u",
+          "columns": [
+            "codigoejemplark"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "UNIQUE (codigoejemplark)"
+        },
+        {
+          "name": "ejemplarbolsa_estadobolsak_check",
+          "kind": "c",
+          "columns": [
+            "estadobolsak"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "CHECK (((estadobolsak)::text = ANY ((ARRAY['Disponible'::character varying, 'En Cuarentena'::character varying, 'Reservada'::character varying, 'Despachada'::character varying, 'Baja'::character varying])::text[])))"
+        },
+        {
+          "name": "ejemplarbolsa_pkey",
+          "kind": "p",
+          "columns": [
+            "idejemplarbolsa"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "PRIMARY KEY (idejemplarbolsa)"
+        },
+        {
+          "name": "ejemplarbolsa_tipocomponente_check",
+          "kind": "c",
+          "columns": [
+            "tipocomponente"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "CHECK (((tipocomponente)::text = ANY ((ARRAY['Concentrado de Globulos Rojos'::character varying, 'Paquete Globular'::character varying, 'Plasma Fresco Congelado'::character varying, 'Concentrado Plaquetario'::character varying, 'Crioprecipitado'::character varying, 'Sangre Total'::character varying])::text[])))"
+        },
+        {
+          "name": "fk_ejemplar_grupo",
+          "kind": "f",
+          "columns": [
+            "idgrupo"
+          ],
+          "references": "gruposanguineo",
+          "reference_columns": [
+            "idgrupo"
+          ],
+          "definition": "FOREIGN KEY (idgrupo) REFERENCES gruposanguineo(idgrupo)"
+        },
+        {
+          "name": "fk_ejemplar_madre",
+          "kind": "f",
+          "columns": [
+            "idunidadmadre"
+          ],
+          "references": "unidadsangretotal",
+          "reference_columns": [
+            "idunidadmadre"
+          ],
+          "definition": "FOREIGN KEY (idunidadmadre) REFERENCES unidadsangretotal(idunidadmadre) ON DELETE SET NULL"
+        },
+        {
+          "name": "fk_ejemplar_ubicacion",
+          "kind": "f",
+          "columns": [
+            "idubicacion"
+          ],
+          "references": "ubicacionalmacen",
+          "reference_columns": [
+            "idubicacion"
+          ],
+          "definition": "FOREIGN KEY (idubicacion) REFERENCES ubicacionalmacen(idubicacion)"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "ejemplarbolsa_codigoejemplark_key",
+          "unique": true,
+          "primary": false,
+          "columns": [
+            "codigoejemplark"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX ejemplarbolsa_codigoejemplark_key ON public.ejemplarbolsa USING btree (codigoejemplark)",
+          "valid": true,
+          "expression": false
+        },
+        {
+          "name": "ejemplarbolsa_pkey",
+          "unique": true,
+          "primary": true,
+          "columns": [
+            "idejemplarbolsa"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX ejemplarbolsa_pkey ON public.ejemplarbolsa USING btree (idejemplarbolsa)",
+          "valid": true,
+          "expression": false
+        }
+      ]
+    },
+    "eventostripe": {
+      "columns": [
+        {
+          "name": "idevento",
+          "type": "character varying(150)",
+          "not_null": true,
+          "position": 1
+        },
+        {
+          "name": "tipo",
+          "type": "character varying(100)",
+          "not_null": true,
+          "position": 2
+        },
+        {
+          "name": "sesionid",
+          "type": "character varying(150)",
+          "not_null": true,
+          "position": 3
+        },
+        {
+          "name": "idpago",
+          "type": "bigint",
+          "not_null": false,
+          "position": 4
+        },
+        {
+          "name": "resultado",
+          "type": "character varying(25)",
+          "not_null": true,
+          "position": 5
+        },
+        {
+          "name": "fecharecepcion",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "position": 6
+        }
+      ],
+      "constraints": [
+        {
+          "name": "eventostripe_idpago_fkey",
+          "kind": "f",
+          "columns": [
+            "idpago"
+          ],
+          "references": "pagofinanciero",
+          "reference_columns": [
+            "idpago"
+          ],
+          "definition": "FOREIGN KEY (idpago) REFERENCES pagofinanciero(idpago)"
+        },
+        {
+          "name": "eventostripe_pkey",
+          "kind": "p",
+          "columns": [
+            "idevento"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "PRIMARY KEY (idevento)"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "eventostripe_pkey",
+          "unique": true,
+          "primary": true,
+          "columns": [
+            "idevento"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX eventostripe_pkey ON public.eventostripe USING btree (idevento)",
+          "valid": true,
+          "expression": false
+        }
+      ]
+    },
+    "extracciondonacion": {
+      "columns": [
+        {
+          "name": "idextraccion",
+          "type": "integer",
+          "not_null": true,
+          "position": 1
+        },
+        {
+          "name": "idpersonadonante",
+          "type": "integer",
+          "not_null": true,
+          "position": 2
+        },
+        {
+          "name": "idpersonalsalud",
+          "type": "integer",
+          "not_null": true,
+          "position": 3
+        },
+        {
+          "name": "codigoextraccion",
+          "type": "character varying(30)",
+          "not_null": true,
+          "position": 4
+        },
+        {
+          "name": "fechahora",
+          "type": "timestamp without time zone",
+          "not_null": true,
+          "position": 5
+        },
+        {
+          "name": "volumenextraidoml",
+          "type": "integer",
+          "not_null": true,
+          "position": 6
+        },
+        {
+          "name": "brazoextraccion",
+          "type": "character varying(15)",
+          "not_null": true,
+          "position": 7
+        },
+        {
+          "name": "idtriaje",
+          "type": "integer",
+          "not_null": false,
+          "position": 8
+        }
+      ],
+      "constraints": [
+        {
+          "name": "extracciondonacion_brazoextraccion_check",
+          "kind": "c",
+          "columns": [
+            "brazoextraccion"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "CHECK (((brazoextraccion)::text = ANY ((ARRAY['Izquierdo'::character varying, 'Derecho'::character varying])::text[])))"
+        },
+        {
+          "name": "extracciondonacion_codigoextraccion_key",
+          "kind": "u",
+          "columns": [
+            "codigoextraccion"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "UNIQUE (codigoextraccion)"
+        },
+        {
+          "name": "extracciondonacion_pkey",
+          "kind": "p",
+          "columns": [
+            "idextraccion"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "PRIMARY KEY (idextraccion)"
+        },
+        {
+          "name": "extracciondonacion_volumenextraidoml_check",
+          "kind": "c",
+          "columns": [
+            "volumenextraidoml"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "CHECK ((volumenextraidoml > 0))"
+        },
+        {
+          "name": "fk_extraccion_enfermero",
+          "kind": "f",
+          "columns": [
+            "idpersonalsalud"
+          ],
+          "references": "personalsalud",
+          "reference_columns": [
+            "idpersona"
+          ],
+          "definition": "FOREIGN KEY (idpersonalsalud) REFERENCES personalsalud(idpersona)"
+        },
+        {
+          "name": "fk_extraccion_persona",
+          "kind": "f",
+          "columns": [
+            "idpersonadonante"
+          ],
+          "references": "persona",
+          "reference_columns": [
+            "idpersona"
+          ],
+          "definition": "FOREIGN KEY (idpersonadonante) REFERENCES persona(idpersona)"
+        },
+        {
+          "name": "fk_extraccion_triaje",
+          "kind": "f",
+          "columns": [
+            "idtriaje"
+          ],
+          "references": "triajeclinico",
+          "reference_columns": [
+            "idtriaje"
+          ],
+          "definition": "FOREIGN KEY (idtriaje) REFERENCES triajeclinico(idtriaje) ON DELETE RESTRICT"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "extracciondonacion_codigoextraccion_key",
+          "unique": true,
+          "primary": false,
+          "columns": [
+            "codigoextraccion"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX extracciondonacion_codigoextraccion_key ON public.extracciondonacion USING btree (codigoextraccion)",
+          "valid": true,
+          "expression": false
+        },
+        {
+          "name": "extracciondonacion_pkey",
+          "unique": true,
+          "primary": true,
+          "columns": [
+            "idextraccion"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX extracciondonacion_pkey ON public.extracciondonacion USING btree (idextraccion)",
+          "valid": true,
+          "expression": false
+        }
+      ]
+    },
+    "gruposanguineo": {
+      "columns": [
+        {
+          "name": "idgrupo",
+          "type": "integer",
+          "not_null": true,
+          "position": 1
+        },
+        {
+          "name": "grupoabo",
+          "type": "character varying(5)",
+          "not_null": true,
+          "position": 2
+        },
+        {
+          "name": "factorrh",
+          "type": "character varying(10)",
+          "not_null": true,
+          "position": 3
+        }
+      ],
+      "constraints": [
+        {
+          "name": "gruposanguineo_factorrh_check",
+          "kind": "c",
+          "columns": [
+            "factorrh"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "CHECK (((factorrh)::text = ANY ((ARRAY['Positivo'::character varying, 'Negativo'::character varying])::text[])))"
+        },
+        {
+          "name": "gruposanguineo_grupoabo_check",
+          "kind": "c",
+          "columns": [
+            "grupoabo"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "CHECK (((grupoabo)::text = ANY ((ARRAY['O'::character varying, 'A'::character varying, 'B'::character varying, 'AB'::character varying])::text[])))"
+        },
+        {
+          "name": "gruposanguineo_pkey",
+          "kind": "p",
+          "columns": [
+            "idgrupo"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "PRIMARY KEY (idgrupo)"
+        },
+        {
+          "name": "uq_grupo_rh",
+          "kind": "u",
+          "columns": [
+            "grupoabo",
+            "factorrh"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "UNIQUE (grupoabo, factorrh)"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "gruposanguineo_pkey",
+          "unique": true,
+          "primary": true,
+          "columns": [
+            "idgrupo"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX gruposanguineo_pkey ON public.gruposanguineo USING btree (idgrupo)",
+          "valid": true,
+          "expression": false
+        },
+        {
+          "name": "uq_grupo_rh",
+          "unique": true,
+          "primary": false,
+          "columns": [
+            "grupoabo",
+            "factorrh"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX uq_grupo_rh ON public.gruposanguineo USING btree (grupoabo, factorrh)",
+          "valid": true,
+          "expression": false
+        }
+      ]
+    },
+    "incentivoentrega": {
+      "columns": [
+        {
+          "name": "idincentivo",
+          "type": "integer",
+          "not_null": true,
+          "position": 1
+        },
+        {
+          "name": "idextraccion",
+          "type": "integer",
+          "not_null": true,
+          "position": 2
+        },
+        {
+          "name": "tipoarticulo",
+          "type": "character varying(80)",
+          "not_null": true,
+          "position": 3
+        },
+        {
+          "name": "refrigerioentregado",
+          "type": "boolean",
+          "not_null": true,
+          "position": 4
+        },
+        {
+          "name": "fechahoraentrega",
+          "type": "timestamp without time zone",
+          "not_null": true,
+          "position": 5
+        }
+      ],
+      "constraints": [
+        {
+          "name": "fk_incentivo_extraccion",
+          "kind": "f",
+          "columns": [
+            "idextraccion"
+          ],
+          "references": "extracciondonacion",
+          "reference_columns": [
+            "idextraccion"
+          ],
+          "definition": "FOREIGN KEY (idextraccion) REFERENCES extracciondonacion(idextraccion) ON DELETE CASCADE"
+        },
+        {
+          "name": "incentivoentrega_idextraccion_key",
+          "kind": "u",
+          "columns": [
+            "idextraccion"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "UNIQUE (idextraccion)"
+        },
+        {
+          "name": "incentivoentrega_pkey",
+          "kind": "p",
+          "columns": [
+            "idincentivo"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "PRIMARY KEY (idincentivo)"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "incentivoentrega_idextraccion_key",
+          "unique": true,
+          "primary": false,
+          "columns": [
+            "idextraccion"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX incentivoentrega_idextraccion_key ON public.incentivoentrega USING btree (idextraccion)",
+          "valid": true,
+          "expression": false
+        },
+        {
+          "name": "incentivoentrega_pkey",
+          "unique": true,
+          "primary": true,
+          "columns": [
+            "idincentivo"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX incentivoentrega_pkey ON public.incentivoentrega USING btree (idincentivo)",
+          "valid": true,
+          "expression": false
+        }
+      ]
+    },
+    "incidenciacolecta": {
+      "columns": [
+        {
+          "name": "idincidencia",
+          "type": "bigint",
+          "not_null": true,
+          "position": 1
+        },
+        {
+          "name": "idtriaje",
+          "type": "integer",
+          "not_null": true,
+          "position": 2
+        },
+        {
+          "name": "idpersonalsalud",
+          "type": "integer",
+          "not_null": true,
+          "position": 3
+        },
+        {
+          "name": "fechahora",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "position": 4
+        },
+        {
+          "name": "motivo",
+          "type": "text",
+          "not_null": true,
+          "position": 5
+        },
+        {
+          "name": "volumenobtenidoml",
+          "type": "integer",
+          "not_null": true,
+          "position": 6
+        }
+      ],
+      "constraints": [
+        {
+          "name": "incidenciacolecta_idpersonalsalud_fkey",
+          "kind": "f",
+          "columns": [
+            "idpersonalsalud"
+          ],
+          "references": "personalsalud",
+          "reference_columns": [
+            "idpersona"
+          ],
+          "definition": "FOREIGN KEY (idpersonalsalud) REFERENCES personalsalud(idpersona)"
+        },
+        {
+          "name": "incidenciacolecta_idtriaje_fkey",
+          "kind": "f",
+          "columns": [
+            "idtriaje"
+          ],
+          "references": "triajeclinico",
+          "reference_columns": [
+            "idtriaje"
+          ],
+          "definition": "FOREIGN KEY (idtriaje) REFERENCES triajeclinico(idtriaje)"
+        },
+        {
+          "name": "incidenciacolecta_pkey",
+          "kind": "p",
+          "columns": [
+            "idincidencia"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "PRIMARY KEY (idincidencia)"
+        },
+        {
+          "name": "incidenciacolecta_volumenobtenidoml_check",
+          "kind": "c",
+          "columns": [
+            "volumenobtenidoml"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "CHECK ((volumenobtenidoml >= 0))"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "incidenciacolecta_pkey",
+          "unique": true,
+          "primary": true,
+          "columns": [
+            "idincidencia"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX incidenciacolecta_pkey ON public.incidenciacolecta USING btree (idincidencia)",
+          "valid": true,
+          "expression": false
+        }
+      ]
+    },
+    "institucionsalud": {
+      "columns": [
+        {
+          "name": "idinstitucion",
+          "type": "integer",
+          "not_null": true,
+          "position": 1
+        },
+        {
+          "name": "nombreinstitucion",
+          "type": "character varying(100)",
+          "not_null": true,
+          "position": 2
+        },
+        {
+          "name": "tipoinstitucion",
+          "type": "character varying(50)",
+          "not_null": true,
+          "position": 3
+        },
+        {
+          "name": "direccion",
+          "type": "character varying(150)",
+          "not_null": false,
+          "position": 4
+        },
+        {
+          "name": "telefonocontacto",
+          "type": "character varying(25)",
+          "not_null": false,
+          "position": 5
+        }
+      ],
+      "constraints": [
+        {
+          "name": "institucionsalud_nombreinstitucion_key",
+          "kind": "u",
+          "columns": [
+            "nombreinstitucion"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "UNIQUE (nombreinstitucion)"
+        },
+        {
+          "name": "institucionsalud_pkey",
+          "kind": "p",
+          "columns": [
+            "idinstitucion"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "PRIMARY KEY (idinstitucion)"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "institucionsalud_nombreinstitucion_key",
+          "unique": true,
+          "primary": false,
+          "columns": [
+            "nombreinstitucion"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX institucionsalud_nombreinstitucion_key ON public.institucionsalud USING btree (nombreinstitucion)",
+          "valid": true,
+          "expression": false
+        },
+        {
+          "name": "institucionsalud_pkey",
+          "unique": true,
+          "primary": true,
+          "columns": [
+            "idinstitucion"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX institucionsalud_pkey ON public.institucionsalud USING btree (idinstitucion)",
+          "valid": true,
+          "expression": false
+        }
+      ]
+    },
+    "pagofinanciero": {
+      "columns": [
+        {
+          "name": "idpago",
+          "type": "bigint",
+          "not_null": true,
+          "position": 1
+        },
+        {
+          "name": "iddeuda",
+          "type": "bigint",
+          "not_null": true,
+          "position": 2
+        },
+        {
+          "name": "montopagado",
+          "type": "numeric(12,2)",
+          "not_null": true,
+          "position": 3
+        },
+        {
+          "name": "metodopago",
+          "type": "character varying(35)",
+          "not_null": true,
+          "position": 4
+        },
+        {
+          "name": "estadotransaccion",
+          "type": "character varying(20)",
+          "not_null": true,
+          "position": 5
+        },
+        {
+          "name": "referenciaexterna",
+          "type": "character varying(150)",
+          "not_null": false,
+          "position": 6
+        },
+        {
+          "name": "proveedorpasarela",
+          "type": "character varying(80)",
+          "not_null": false,
+          "position": 7
+        },
+        {
+          "name": "fechacreacion",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "position": 8
+        },
+        {
+          "name": "fechahorapago",
+          "type": "timestamp with time zone",
+          "not_null": false,
+          "position": 9
+        },
+        {
+          "name": "observaciones",
+          "type": "text",
+          "not_null": false,
+          "position": 10
+        }
+      ],
+      "constraints": [
+        {
+          "name": "pagofinanciero_check",
+          "kind": "c",
+          "columns": [
+            "estadotransaccion",
+            "fechahorapago"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "CHECK ((((estadotransaccion)::text <> 'Confirmada'::text) OR (fechahorapago IS NOT NULL)))"
+        },
+        {
+          "name": "pagofinanciero_estadotransaccion_check",
+          "kind": "c",
+          "columns": [
+            "estadotransaccion"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "CHECK (((estadotransaccion)::text = ANY ((ARRAY['Pendiente'::character varying, 'Confirmada'::character varying, 'Rechazada'::character varying, 'Anulada'::character varying])::text[])))"
+        },
+        {
+          "name": "pagofinanciero_iddeuda_fkey",
+          "kind": "f",
+          "columns": [
+            "iddeuda"
+          ],
+          "references": "deudafinanciera",
+          "reference_columns": [
+            "iddeuda"
+          ],
+          "definition": "FOREIGN KEY (iddeuda) REFERENCES deudafinanciera(iddeuda)"
+        },
+        {
+          "name": "pagofinanciero_metodopago_check",
+          "kind": "c",
+          "columns": [
+            "metodopago"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "CHECK (((metodopago)::text = ANY ((ARRAY['Efectivo'::character varying, 'Deposito'::character varying, 'Transferencia QR'::character varying, 'Tarjeta'::character varying, 'Transferencia bancaria'::character varying])::text[])))"
+        },
+        {
+          "name": "pagofinanciero_montopagado_check",
+          "kind": "c",
+          "columns": [
+            "montopagado"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "CHECK ((montopagado > (0)::numeric))"
+        },
+        {
+          "name": "pagofinanciero_pkey",
+          "kind": "p",
+          "columns": [
+            "idpago"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "PRIMARY KEY (idpago)"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "ix_pagofinanciero_deuda_estado",
+          "unique": false,
+          "primary": false,
+          "columns": [
+            "iddeuda",
+            "estadotransaccion"
+          ],
+          "predicate": null,
+          "definition": "CREATE INDEX ix_pagofinanciero_deuda_estado ON public.pagofinanciero USING btree (iddeuda, estadotransaccion)",
+          "valid": true,
+          "expression": false
+        },
+        {
+          "name": "pagofinanciero_pkey",
+          "unique": true,
+          "primary": true,
+          "columns": [
+            "idpago"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX pagofinanciero_pkey ON public.pagofinanciero USING btree (idpago)",
+          "valid": true,
+          "expression": false
+        },
+        {
+          "name": "uq_pagofinanciero_proveedor_referencia",
+          "unique": true,
+          "primary": false,
+          "columns": [
+            "proveedorpasarela",
+            "referenciaexterna"
+          ],
+          "predicate": "((proveedorpasarela IS NOT NULL) AND (referenciaexterna IS NOT NULL))",
+          "definition": "CREATE UNIQUE INDEX uq_pagofinanciero_proveedor_referencia ON public.pagofinanciero USING btree (proveedorpasarela, referenciaexterna) WHERE ((proveedorpasarela IS NOT NULL) AND (referenciaexterna IS NOT NULL))",
+          "valid": true,
+          "expression": false
+        }
+      ]
+    },
+    "parametrostockminimo": {
+      "columns": [
+        {
+          "name": "idparametro",
+          "type": "integer",
+          "not_null": true,
+          "position": 1
+        },
+        {
+          "name": "idgrupo",
+          "type": "integer",
+          "not_null": true,
+          "position": 2
+        },
+        {
+          "name": "tipocomponente",
+          "type": "character varying(50)",
+          "not_null": true,
+          "position": 3
+        },
+        {
+          "name": "stockminimoseguridad",
+          "type": "integer",
+          "not_null": true,
+          "position": 4
+        },
+        {
+          "name": "stockcriticoalerta",
+          "type": "integer",
+          "not_null": true,
+          "position": 5
+        },
+        {
+          "name": "categoriaetaria",
+          "type": "character varying(20)",
+          "not_null": true,
+          "position": 6
+        }
+      ],
+      "constraints": [
+        {
+          "name": "chk_parametro_categoria_etaria",
+          "kind": "c",
+          "columns": [
+            "categoriaetaria"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "CHECK (((categoriaetaria)::text = ANY ((ARRAY['Pediátrico'::character varying, 'Adolescente'::character varying, 'Adulto'::character varying])::text[])))"
+        },
+        {
+          "name": "chk_parametro_umbrales_logicos",
+          "kind": "c",
+          "columns": [
+            "stockcriticoalerta",
+            "stockminimoseguridad"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "CHECK (((stockcriticoalerta >= 0) AND (stockminimoseguridad > stockcriticoalerta))) NOT VALID"
+        },
+        {
+          "name": "fk_parametro_grupo",
+          "kind": "f",
+          "columns": [
+            "idgrupo"
+          ],
+          "references": "gruposanguineo",
+          "reference_columns": [
+            "idgrupo"
+          ],
+          "definition": "FOREIGN KEY (idgrupo) REFERENCES gruposanguineo(idgrupo)"
+        },
+        {
+          "name": "parametrostockminimo_pkey",
+          "kind": "p",
+          "columns": [
+            "idparametro"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "PRIMARY KEY (idparametro)"
+        },
+        {
+          "name": "uq_parametro_grupo_comp_edad",
+          "kind": "u",
+          "columns": [
+            "idgrupo",
+            "tipocomponente",
+            "categoriaetaria"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "UNIQUE (idgrupo, tipocomponente, categoriaetaria)"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "parametrostockminimo_pkey",
+          "unique": true,
+          "primary": true,
+          "columns": [
+            "idparametro"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX parametrostockminimo_pkey ON public.parametrostockminimo USING btree (idparametro)",
+          "valid": true,
+          "expression": false
+        },
+        {
+          "name": "uq_parametro_grupo_comp_edad",
+          "unique": true,
+          "primary": false,
+          "columns": [
+            "idgrupo",
+            "tipocomponente",
+            "categoriaetaria"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX uq_parametro_grupo_comp_edad ON public.parametrostockminimo USING btree (idgrupo, tipocomponente, categoriaetaria)",
+          "valid": true,
+          "expression": false
+        }
+      ]
+    },
+    "persona": {
+      "columns": [
+        {
+          "name": "idpersona",
+          "type": "integer",
+          "not_null": true,
+          "position": 1
+        },
+        {
+          "name": "ci",
+          "type": "character varying(20)",
+          "not_null": true,
+          "position": 2
+        },
+        {
+          "name": "nombres",
+          "type": "character varying(80)",
+          "not_null": true,
+          "position": 3
+        },
+        {
+          "name": "apellidos",
+          "type": "character varying(80)",
+          "not_null": true,
+          "position": 4
+        },
+        {
+          "name": "sexo",
+          "type": "character(1)",
+          "not_null": true,
+          "position": 5
+        },
+        {
+          "name": "fechanacimiento",
+          "type": "date",
+          "not_null": true,
+          "position": 6
+        },
+        {
+          "name": "direccion",
+          "type": "character varying(150)",
+          "not_null": false,
+          "position": 7
+        },
+        {
+          "name": "celular",
+          "type": "character varying(20)",
+          "not_null": false,
+          "position": 8
+        },
+        {
+          "name": "ocupacion",
+          "type": "character varying(80)",
+          "not_null": false,
+          "position": 9
+        },
+        {
+          "name": "nacionalidad",
+          "type": "character varying(50)",
+          "not_null": false,
+          "position": 10
+        }
+      ],
+      "constraints": [
+        {
+          "name": "persona_ci_key",
+          "kind": "u",
+          "columns": [
+            "ci"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "UNIQUE (ci)"
+        },
+        {
+          "name": "persona_pkey",
+          "kind": "p",
+          "columns": [
+            "idpersona"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "PRIMARY KEY (idpersona)"
+        },
+        {
+          "name": "persona_sexo_check",
+          "kind": "c",
+          "columns": [
+            "sexo"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "CHECK ((sexo = ANY (ARRAY['M'::bpchar, 'F'::bpchar, 'O'::bpchar])))"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_persona_ci_lookup",
+          "unique": false,
+          "primary": false,
+          "columns": [],
+          "predicate": null,
+          "definition": "CREATE INDEX idx_persona_ci_lookup ON public.persona USING btree (lower(TRIM(BOTH FROM ci)))",
+          "valid": true,
+          "expression": true
+        },
+        {
+          "name": "persona_ci_key",
+          "unique": true,
+          "primary": false,
+          "columns": [
+            "ci"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX persona_ci_key ON public.persona USING btree (ci)",
+          "valid": true,
+          "expression": false
+        },
+        {
+          "name": "persona_pkey",
+          "unique": true,
+          "primary": true,
+          "columns": [
+            "idpersona"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX persona_pkey ON public.persona USING btree (idpersona)",
+          "valid": true,
+          "expression": false
+        }
+      ]
+    },
+    "personalsalud": {
+      "columns": [
+        {
+          "name": "idpersona",
+          "type": "integer",
+          "not_null": true,
+          "position": 1
+        },
+        {
+          "name": "cargo",
+          "type": "character varying(80)",
+          "not_null": true,
+          "position": 2
+        },
+        {
+          "name": "registroprofesional",
+          "type": "character varying(40)",
+          "not_null": true,
+          "position": 3
+        }
+      ],
+      "constraints": [
+        {
+          "name": "fk_personalsalud_persona",
+          "kind": "f",
+          "columns": [
+            "idpersona"
+          ],
+          "references": "persona",
+          "reference_columns": [
+            "idpersona"
+          ],
+          "definition": "FOREIGN KEY (idpersona) REFERENCES persona(idpersona) ON DELETE CASCADE"
+        },
+        {
+          "name": "personalsalud_pkey",
+          "kind": "p",
+          "columns": [
+            "idpersona"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "PRIMARY KEY (idpersona)"
+        },
+        {
+          "name": "personalsalud_registroprofesional_key",
+          "kind": "u",
+          "columns": [
+            "registroprofesional"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "UNIQUE (registroprofesional)"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "personalsalud_pkey",
+          "unique": true,
+          "primary": true,
+          "columns": [
+            "idpersona"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX personalsalud_pkey ON public.personalsalud USING btree (idpersona)",
+          "valid": true,
+          "expression": false
+        },
+        {
+          "name": "personalsalud_registroprofesional_key",
+          "unique": true,
+          "primary": false,
+          "columns": [
+            "registroprofesional"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX personalsalud_registroprofesional_key ON public.personalsalud USING btree (registroprofesional)",
+          "valid": true,
+          "expression": false
+        }
+      ]
+    },
+    "posibledonador": {
+      "columns": [
+        {
+          "name": "idpersona",
+          "type": "integer",
+          "not_null": true,
+          "position": 1
+        },
+        {
+          "name": "estadoaptitud",
+          "type": "character varying(30)",
+          "not_null": true,
+          "position": 2
+        },
+        {
+          "name": "tieneanalisis",
+          "type": "boolean",
+          "not_null": true,
+          "position": 3
+        },
+        {
+          "name": "fecharegistropostulante",
+          "type": "date",
+          "not_null": true,
+          "position": 4
+        },
+        {
+          "name": "carnetprovisionalcodigo",
+          "type": "character varying(40)",
+          "not_null": false,
+          "position": 5
+        }
+      ],
+      "constraints": [
+        {
+          "name": "fk_posibledonador_persona",
+          "kind": "f",
+          "columns": [
+            "idpersona"
+          ],
+          "references": "persona",
+          "reference_columns": [
+            "idpersona"
+          ],
+          "definition": "FOREIGN KEY (idpersona) REFERENCES persona(idpersona) ON DELETE CASCADE"
+        },
+        {
+          "name": "posibledonador_carnetprovisionalcodigo_key",
+          "kind": "u",
+          "columns": [
+            "carnetprovisionalcodigo"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "UNIQUE (carnetprovisionalcodigo)"
+        },
+        {
+          "name": "posibledonador_estadoaptitud_check",
+          "kind": "c",
+          "columns": [
+            "estadoaptitud"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "CHECK (((estadoaptitud)::text = ANY ((ARRAY['No Apto'::character varying, 'En Evaluacion'::character varying, 'Apto'::character varying])::text[])))"
+        },
+        {
+          "name": "posibledonador_pkey",
+          "kind": "p",
+          "columns": [
+            "idpersona"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "PRIMARY KEY (idpersona)"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_posible_carnet_lookup",
+          "unique": false,
+          "primary": false,
+          "columns": [],
+          "predicate": null,
+          "definition": "CREATE INDEX idx_posible_carnet_lookup ON public.posibledonador USING btree (lower(TRIM(BOTH FROM carnetprovisionalcodigo)))",
+          "valid": true,
+          "expression": true
+        },
+        {
+          "name": "posibledonador_carnetprovisionalcodigo_key",
+          "unique": true,
+          "primary": false,
+          "columns": [
+            "carnetprovisionalcodigo"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX posibledonador_carnetprovisionalcodigo_key ON public.posibledonador USING btree (carnetprovisionalcodigo)",
+          "valid": true,
+          "expression": false
+        },
+        {
+          "name": "posibledonador_pkey",
+          "unique": true,
+          "primary": true,
+          "columns": [
+            "idpersona"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX posibledonador_pkey ON public.posibledonador USING btree (idpersona)",
+          "valid": true,
+          "expression": false
+        }
+      ]
+    },
+    "prefiltroborrador": {
+      "columns": [
+        {
+          "name": "idpersona",
+          "type": "integer",
+          "not_null": true,
+          "position": 1
+        },
+        {
+          "name": "idusuario",
+          "type": "integer",
+          "not_null": true,
+          "position": 2
+        },
+        {
+          "name": "versioncatalogo",
+          "type": "character varying(64)",
+          "not_null": true,
+          "position": 3
+        },
+        {
+          "name": "catalogo",
+          "type": "jsonb",
+          "not_null": true,
+          "position": 4
+        },
+        {
+          "name": "respuestas",
+          "type": "jsonb",
+          "not_null": true,
+          "position": 5
+        },
+        {
+          "name": "idturno",
+          "type": "integer",
+          "not_null": false,
+          "position": 6
+        },
+        {
+          "name": "tipoatencion",
+          "type": "character varying(20)",
+          "not_null": true,
+          "position": 7
+        },
+        {
+          "name": "idprograma",
+          "type": "integer",
+          "not_null": false,
+          "position": 8
+        },
+        {
+          "name": "actualizado",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "position": 9
+        }
+      ],
+      "constraints": [
+        {
+          "name": "prefiltroborrador_catalogo_check",
+          "kind": "c",
+          "columns": [
+            "catalogo"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "CHECK ((jsonb_typeof(catalogo) = 'array'::text))"
+        },
+        {
+          "name": "prefiltroborrador_idpersona_fkey",
+          "kind": "f",
+          "columns": [
+            "idpersona"
+          ],
+          "references": "posibledonador",
+          "reference_columns": [
+            "idpersona"
+          ],
+          "definition": "FOREIGN KEY (idpersona) REFERENCES posibledonador(idpersona)"
+        },
+        {
+          "name": "prefiltroborrador_idprograma_fkey",
+          "kind": "f",
+          "columns": [
+            "idprograma"
+          ],
+          "references": "programacionautologa",
+          "reference_columns": [
+            "idprograma"
+          ],
+          "definition": "FOREIGN KEY (idprograma) REFERENCES programacionautologa(idprograma)"
+        },
+        {
+          "name": "prefiltroborrador_idturno_fkey",
+          "kind": "f",
+          "columns": [
+            "idturno"
+          ],
+          "references": "agendaturno",
+          "reference_columns": [
+            "idturno"
+          ],
+          "definition": "FOREIGN KEY (idturno) REFERENCES agendaturno(idturno)"
+        },
+        {
+          "name": "prefiltroborrador_idusuario_fkey",
+          "kind": "f",
+          "columns": [
+            "idusuario"
+          ],
+          "references": "usuario",
+          "reference_columns": [
+            "idusuario"
+          ],
+          "definition": "FOREIGN KEY (idusuario) REFERENCES usuario(idusuario)"
+        },
+        {
+          "name": "prefiltroborrador_pkey",
+          "kind": "p",
+          "columns": [
+            "idpersona"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "PRIMARY KEY (idpersona)"
+        },
+        {
+          "name": "prefiltroborrador_respuestas_check",
+          "kind": "c",
+          "columns": [
+            "respuestas"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "CHECK ((jsonb_typeof(respuestas) = 'array'::text))"
+        },
+        {
+          "name": "prefiltroborrador_tipoatencion_check",
+          "kind": "c",
+          "columns": [
+            "tipoatencion"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "CHECK (((tipoatencion)::text = ANY ((ARRAY['Evaluacion'::character varying, 'Donacion'::character varying, 'Autologa'::character varying])::text[])))"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "prefiltroborrador_pkey",
+          "unique": true,
+          "primary": true,
+          "columns": [
+            "idpersona"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX prefiltroborrador_pkey ON public.prefiltroborrador USING btree (idpersona)",
+          "valid": true,
+          "expression": false
+        }
+      ]
+    },
+    "prefiltrocita": {
+      "columns": [
+        {
+          "name": "idcita",
+          "type": "integer",
+          "not_null": true,
+          "position": 1
+        },
+        {
+          "name": "idusuario",
+          "type": "integer",
+          "not_null": true,
+          "position": 2
+        },
+        {
+          "name": "versioncatalogo",
+          "type": "character varying(64)",
+          "not_null": true,
+          "position": 3
+        },
+        {
+          "name": "catalogo",
+          "type": "jsonb",
+          "not_null": true,
+          "position": 4
+        },
+        {
+          "name": "respuestas",
+          "type": "jsonb",
+          "not_null": true,
+          "position": 5
+        },
+        {
+          "name": "aprobado",
+          "type": "boolean",
+          "not_null": true,
+          "position": 6
+        },
+        {
+          "name": "fecharegistro",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "position": 7
+        }
+      ],
+      "constraints": [
+        {
+          "name": "prefiltrocita_catalogo_check",
+          "kind": "c",
+          "columns": [
+            "catalogo"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "CHECK ((jsonb_typeof(catalogo) = 'array'::text))"
+        },
+        {
+          "name": "prefiltrocita_idcita_fkey",
+          "kind": "f",
+          "columns": [
+            "idcita"
+          ],
+          "references": "citadonacion",
+          "reference_columns": [
+            "idcita"
+          ],
+          "definition": "FOREIGN KEY (idcita) REFERENCES citadonacion(idcita)"
+        },
+        {
+          "name": "prefiltrocita_idusuario_fkey",
+          "kind": "f",
+          "columns": [
+            "idusuario"
+          ],
+          "references": "usuario",
+          "reference_columns": [
+            "idusuario"
+          ],
+          "definition": "FOREIGN KEY (idusuario) REFERENCES usuario(idusuario)"
+        },
+        {
+          "name": "prefiltrocita_pkey",
+          "kind": "p",
+          "columns": [
+            "idcita"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "PRIMARY KEY (idcita)"
+        },
+        {
+          "name": "prefiltrocita_respuestas_check",
+          "kind": "c",
+          "columns": [
+            "respuestas"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "CHECK ((jsonb_typeof(respuestas) = 'array'::text))"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "prefiltrocita_pkey",
+          "unique": true,
+          "primary": true,
+          "columns": [
+            "idcita"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX prefiltrocita_pkey ON public.prefiltrocita USING btree (idcita)",
+          "valid": true,
+          "expression": false
+        }
+      ]
+    },
+    "programacionautologa": {
+      "columns": [
+        {
+          "name": "idprograma",
+          "type": "integer",
+          "not_null": true,
+          "position": 1
+        },
+        {
+          "name": "idreceptor",
+          "type": "integer",
+          "not_null": true,
+          "position": 2
+        },
+        {
+          "name": "fechacirugia",
+          "type": "date",
+          "not_null": true,
+          "position": 3
+        },
+        {
+          "name": "indicacion",
+          "type": "text",
+          "not_null": true,
+          "position": 4
+        },
+        {
+          "name": "referenciamedica",
+          "type": "character varying(120)",
+          "not_null": true,
+          "position": 5
+        },
+        {
+          "name": "idmedico",
+          "type": "integer",
+          "not_null": true,
+          "position": 6
+        },
+        {
+          "name": "estado",
+          "type": "character varying(25)",
+          "not_null": true,
+          "position": 7
+        },
+        {
+          "name": "version",
+          "type": "integer",
+          "not_null": true,
+          "position": 8
+        },
+        {
+          "name": "revisadopor",
+          "type": "integer",
+          "not_null": false,
+          "position": 9
+        },
+        {
+          "name": "fecharevision",
+          "type": "timestamp with time zone",
+          "not_null": false,
+          "position": 10
+        },
+        {
+          "name": "motivorevision",
+          "type": "character varying(500)",
+          "not_null": false,
+          "position": 11
+        },
+        {
+          "name": "creado",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "position": 12
+        },
+        {
+          "name": "actualizado",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "position": 13
+        }
+      ],
+      "constraints": [
+        {
+          "name": "programacionautologa_estado_check",
+          "kind": "c",
+          "columns": [
+            "estado"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "CHECK (((estado)::text = ANY ((ARRAY['PendienteRevision'::character varying, 'Aprobada'::character varying, 'RevisionRequerida'::character varying, 'Cancelada'::character varying, 'Cerrada'::character varying])::text[])))"
+        },
+        {
+          "name": "programacionautologa_idmedico_fkey",
+          "kind": "f",
+          "columns": [
+            "idmedico"
+          ],
+          "references": "personalsalud",
+          "reference_columns": [
+            "idpersona"
+          ],
+          "definition": "FOREIGN KEY (idmedico) REFERENCES personalsalud(idpersona)"
+        },
+        {
+          "name": "programacionautologa_idreceptor_fkey",
+          "kind": "f",
+          "columns": [
+            "idreceptor"
+          ],
+          "references": "receptor",
+          "reference_columns": [
+            "idpersona"
+          ],
+          "definition": "FOREIGN KEY (idreceptor) REFERENCES receptor(idpersona)"
+        },
+        {
+          "name": "programacionautologa_pkey",
+          "kind": "p",
+          "columns": [
+            "idprograma"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "PRIMARY KEY (idprograma)"
+        },
+        {
+          "name": "programacionautologa_revisadopor_fkey",
+          "kind": "f",
+          "columns": [
+            "revisadopor"
+          ],
+          "references": "personalsalud",
+          "reference_columns": [
+            "idpersona"
+          ],
+          "definition": "FOREIGN KEY (revisadopor) REFERENCES personalsalud(idpersona)"
+        },
+        {
+          "name": "programacionautologa_version_check",
+          "kind": "c",
+          "columns": [
+            "version"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "CHECK ((version > 0))"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "programacionautologa_pkey",
+          "unique": true,
+          "primary": true,
+          "columns": [
+            "idprograma"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX programacionautologa_pkey ON public.programacionautologa USING btree (idprograma)",
+          "valid": true,
+          "expression": false
+        },
+        {
+          "name": "ux_programa_autologo_activo",
+          "unique": true,
+          "primary": false,
+          "columns": [
+            "idreceptor"
+          ],
+          "predicate": "((estado)::text <> ALL ((ARRAY['Cancelada'::character varying, 'Cerrada'::character varying])::text[]))",
+          "definition": "CREATE UNIQUE INDEX ux_programa_autologo_activo ON public.programacionautologa USING btree (idreceptor) WHERE ((estado)::text <> ALL ((ARRAY['Cancelada'::character varying, 'Cerrada'::character varying])::text[]))",
+          "valid": true,
+          "expression": false
+        }
+      ]
+    },
+    "programacionautologahistorial": {
+      "columns": [
+        {
+          "name": "idhistorial",
+          "type": "integer",
+          "not_null": true,
+          "position": 1
+        },
+        {
+          "name": "idprograma",
+          "type": "integer",
+          "not_null": true,
+          "position": 2
+        },
+        {
+          "name": "version",
+          "type": "integer",
+          "not_null": true,
+          "position": 3
+        },
+        {
+          "name": "contenido",
+          "type": "jsonb",
+          "not_null": true,
+          "position": 4
+        },
+        {
+          "name": "idusuario",
+          "type": "integer",
+          "not_null": true,
+          "position": 5
+        },
+        {
+          "name": "registrado",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "position": 6
+        }
+      ],
+      "constraints": [
+        {
+          "name": "programacionautologahistorial_idprograma_fkey",
+          "kind": "f",
+          "columns": [
+            "idprograma"
+          ],
+          "references": "programacionautologa",
+          "reference_columns": [
+            "idprograma"
+          ],
+          "definition": "FOREIGN KEY (idprograma) REFERENCES programacionautologa(idprograma)"
+        },
+        {
+          "name": "programacionautologahistorial_idprograma_version_key",
+          "kind": "u",
+          "columns": [
+            "idprograma",
+            "version"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "UNIQUE (idprograma, version)"
+        },
+        {
+          "name": "programacionautologahistorial_idusuario_fkey",
+          "kind": "f",
+          "columns": [
+            "idusuario"
+          ],
+          "references": "usuario",
+          "reference_columns": [
+            "idusuario"
+          ],
+          "definition": "FOREIGN KEY (idusuario) REFERENCES usuario(idusuario)"
+        },
+        {
+          "name": "programacionautologahistorial_pkey",
+          "kind": "p",
+          "columns": [
+            "idhistorial"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "PRIMARY KEY (idhistorial)"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "programacionautologahistorial_idprograma_version_key",
+          "unique": true,
+          "primary": false,
+          "columns": [
+            "idprograma",
+            "version"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX programacionautologahistorial_idprograma_version_key ON public.programacionautologahistorial USING btree (idprograma, version)",
+          "valid": true,
+          "expression": false
+        },
+        {
+          "name": "programacionautologahistorial_pkey",
+          "unique": true,
+          "primary": true,
+          "columns": [
+            "idhistorial"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX programacionautologahistorial_pkey ON public.programacionautologahistorial USING btree (idhistorial)",
+          "valid": true,
+          "expression": false
+        }
+      ]
+    },
+    "protocoloconservacion": {
+      "columns": [
+        {
+          "name": "tipocomponente",
+          "type": "character varying(50)",
+          "not_null": true,
+          "position": 1
+        },
+        {
+          "name": "temperaturamin",
+          "type": "numeric(5,1)",
+          "not_null": true,
+          "position": 2
+        },
+        {
+          "name": "temperaturamax",
+          "type": "numeric(5,1)",
+          "not_null": true,
+          "position": 3
+        },
+        {
+          "name": "diasconservacion",
+          "type": "integer",
+          "not_null": true,
+          "position": 4
+        },
+        {
+          "name": "requiereagitacion",
+          "type": "boolean",
+          "not_null": true,
+          "position": 5
+        },
+        {
+          "name": "aprobadopor",
+          "type": "integer",
+          "not_null": true,
+          "position": 6
+        },
+        {
+          "name": "fechaaprobacion",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "position": 7
+        },
+        {
+          "name": "contexto",
+          "type": "character varying(30)",
+          "not_null": true,
+          "position": 8
+        },
+        {
+          "name": "referencia",
+          "type": "character varying(500)",
+          "not_null": true,
+          "position": 9
+        }
+      ],
+      "constraints": [
+        {
+          "name": "protocoloconservacion_aprobadopor_fkey",
+          "kind": "f",
+          "columns": [
+            "aprobadopor"
+          ],
+          "references": "personalsalud",
+          "reference_columns": [
+            "idpersona"
+          ],
+          "definition": "FOREIGN KEY (aprobadopor) REFERENCES personalsalud(idpersona)"
+        },
+        {
+          "name": "protocoloconservacion_check",
+          "kind": "c",
+          "columns": [
+            "temperaturamin",
+            "temperaturamax"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "CHECK ((temperaturamin <= temperaturamax))"
+        },
+        {
+          "name": "protocoloconservacion_diasconservacion_check",
+          "kind": "c",
+          "columns": [
+            "diasconservacion"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "CHECK ((diasconservacion > 0))"
+        },
+        {
+          "name": "protocoloconservacion_pkey",
+          "kind": "p",
+          "columns": [
+            "tipocomponente"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "PRIMARY KEY (tipocomponente)"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "protocoloconservacion_pkey",
+          "unique": true,
+          "primary": true,
+          "columns": [
+            "tipocomponente"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX protocoloconservacion_pkey ON public.protocoloconservacion USING btree (tipocomponente)",
+          "valid": true,
+          "expression": false
+        }
+      ]
+    },
+    "pruebacompatibilidad": {
+      "columns": [
+        {
+          "name": "idpruebacompatibilidad",
+          "type": "integer",
+          "not_null": true,
+          "position": 1
+        },
+        {
+          "name": "idsolicitud",
+          "type": "integer",
+          "not_null": true,
+          "position": 2
+        },
+        {
+          "name": "idejemplarbolsa",
+          "type": "integer",
+          "not_null": true,
+          "position": 3
+        },
+        {
+          "name": "idpersonalsalud",
+          "type": "integer",
+          "not_null": true,
+          "position": 4
+        },
+        {
+          "name": "fechahoraprueba",
+          "type": "timestamp without time zone",
+          "not_null": true,
+          "position": 5
+        },
+        {
+          "name": "resultadocompatibilidad",
+          "type": "character varying(25)",
+          "not_null": true,
+          "position": 6
+        },
+        {
+          "name": "faseantiglobulina",
+          "type": "character varying(50)",
+          "not_null": false,
+          "position": 7
+        },
+        {
+          "name": "reaccionobservada",
+          "type": "character varying(150)",
+          "not_null": false,
+          "position": 8
+        },
+        {
+          "name": "aprobadoparadespacho",
+          "type": "boolean",
+          "not_null": true,
+          "position": 9
+        }
+      ],
+      "constraints": [
+        {
+          "name": "fk_cruce_ejemplar",
+          "kind": "f",
+          "columns": [
+            "idejemplarbolsa"
+          ],
+          "references": "ejemplarbolsa",
+          "reference_columns": [
+            "idejemplarbolsa"
+          ],
+          "definition": "FOREIGN KEY (idejemplarbolsa) REFERENCES ejemplarbolsa(idejemplarbolsa)"
+        },
+        {
+          "name": "fk_cruce_personal",
+          "kind": "f",
+          "columns": [
+            "idpersonalsalud"
+          ],
+          "references": "personalsalud",
+          "reference_columns": [
+            "idpersona"
+          ],
+          "definition": "FOREIGN KEY (idpersonalsalud) REFERENCES personalsalud(idpersona)"
+        },
+        {
+          "name": "fk_cruce_solicitud",
+          "kind": "f",
+          "columns": [
+            "idsolicitud"
+          ],
+          "references": "solicitudhospitalaria",
+          "reference_columns": [
+            "idsolicitud"
+          ],
+          "definition": "FOREIGN KEY (idsolicitud) REFERENCES solicitudhospitalaria(idsolicitud)"
+        },
+        {
+          "name": "pruebacompatibilidad_pkey",
+          "kind": "p",
+          "columns": [
+            "idpruebacompatibilidad"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "PRIMARY KEY (idpruebacompatibilidad)"
+        },
+        {
+          "name": "pruebacompatibilidad_resultadocompatibilidad_check",
+          "kind": "c",
+          "columns": [
+            "resultadocompatibilidad"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "CHECK (((resultadocompatibilidad)::text = ANY ((ARRAY['Compatible'::character varying, 'Incompatible'::character varying, 'Dudoso'::character varying])::text[])))"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "pruebacompatibilidad_pkey",
+          "unique": true,
+          "primary": true,
+          "columns": [
+            "idpruebacompatibilidad"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX pruebacompatibilidad_pkey ON public.pruebacompatibilidad USING btree (idpruebacompatibilidad)",
+          "valid": true,
+          "expression": false
+        }
+      ]
+    },
+    "receptor": {
+      "columns": [
+        {
+          "name": "idpersona",
+          "type": "integer",
+          "not_null": true,
+          "position": 1
+        },
+        {
+          "name": "codigohistorialclinico",
+          "type": "character varying(40)",
+          "not_null": true,
+          "position": 2
+        },
+        {
+          "name": "gruposanguineoreceptor",
+          "type": "character varying(20)",
+          "not_null": true,
+          "position": 3
+        },
+        {
+          "name": "idgrupo",
+          "type": "integer",
+          "not_null": false,
+          "position": 4
+        }
+      ],
+      "constraints": [
+        {
+          "name": "fk_receptor_grupo",
+          "kind": "f",
+          "columns": [
+            "idgrupo"
+          ],
+          "references": "gruposanguineo",
+          "reference_columns": [
+            "idgrupo"
+          ],
+          "definition": "FOREIGN KEY (idgrupo) REFERENCES gruposanguineo(idgrupo) ON DELETE RESTRICT"
+        },
+        {
+          "name": "fk_receptor_persona",
+          "kind": "f",
+          "columns": [
+            "idpersona"
+          ],
+          "references": "persona",
+          "reference_columns": [
+            "idpersona"
+          ],
+          "definition": "FOREIGN KEY (idpersona) REFERENCES persona(idpersona) ON DELETE CASCADE"
+        },
+        {
+          "name": "receptor_codigohistorialclinico_key",
+          "kind": "u",
+          "columns": [
+            "codigohistorialclinico"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "UNIQUE (codigohistorialclinico)"
+        },
+        {
+          "name": "receptor_pkey",
+          "kind": "p",
+          "columns": [
+            "idpersona"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "PRIMARY KEY (idpersona)"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "receptor_codigohistorialclinico_key",
+          "unique": true,
+          "primary": false,
+          "columns": [
+            "codigohistorialclinico"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX receptor_codigohistorialclinico_key ON public.receptor USING btree (codigohistorialclinico)",
+          "valid": true,
+          "expression": false
+        },
+        {
+          "name": "receptor_pkey",
+          "unique": true,
+          "primary": true,
+          "columns": [
+            "idpersona"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX receptor_pkey ON public.receptor USING btree (idpersona)",
+          "valid": true,
+          "expression": false
+        }
+      ]
+    },
+    "reposicionpendiente": {
+      "columns": [
+        {
+          "name": "idreposicion",
+          "type": "integer",
+          "not_null": true,
+          "position": 1
+        },
+        {
+          "name": "idsolicitud",
+          "type": "integer",
+          "not_null": true,
+          "position": 2
+        },
+        {
+          "name": "cantidadbolsasareponer",
+          "type": "integer",
+          "not_null": true,
+          "position": 3
+        },
+        {
+          "name": "cantidadrecuperada",
+          "type": "integer",
+          "not_null": true,
+          "position": 4
+        },
+        {
+          "name": "fechalimitereposicion",
+          "type": "date",
+          "not_null": true,
+          "position": 5
+        },
+        {
+          "name": "estadoreposicion",
+          "type": "character varying(25)",
+          "not_null": true,
+          "position": 6
+        }
+      ],
+      "constraints": [
+        {
+          "name": "fk_reposicion_solicitud",
+          "kind": "f",
+          "columns": [
+            "idsolicitud"
+          ],
+          "references": "solicitudhospitalaria",
+          "reference_columns": [
+            "idsolicitud"
+          ],
+          "definition": "FOREIGN KEY (idsolicitud) REFERENCES solicitudhospitalaria(idsolicitud)"
+        },
+        {
+          "name": "reposicionpendiente_cantidadbolsasareponer_check",
+          "kind": "c",
+          "columns": [
+            "cantidadbolsasareponer"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "CHECK ((cantidadbolsasareponer >= 0))"
+        },
+        {
+          "name": "reposicionpendiente_cantidadrecuperada_check",
+          "kind": "c",
+          "columns": [
+            "cantidadrecuperada"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "CHECK ((cantidadrecuperada >= 0))"
+        },
+        {
+          "name": "reposicionpendiente_estadoreposicion_check",
+          "kind": "c",
+          "columns": [
+            "estadoreposicion"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "CHECK (((estadoreposicion)::text = ANY ((ARRAY['Pendiente'::character varying, 'Parcial'::character varying, 'Liquidada'::character varying, 'Incumplida'::character varying])::text[])))"
+        },
+        {
+          "name": "reposicionpendiente_idsolicitud_key",
+          "kind": "u",
+          "columns": [
+            "idsolicitud"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "UNIQUE (idsolicitud)"
+        },
+        {
+          "name": "reposicionpendiente_pkey",
+          "kind": "p",
+          "columns": [
+            "idreposicion"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "PRIMARY KEY (idreposicion)"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "reposicionpendiente_idsolicitud_key",
+          "unique": true,
+          "primary": false,
+          "columns": [
+            "idsolicitud"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX reposicionpendiente_idsolicitud_key ON public.reposicionpendiente USING btree (idsolicitud)",
+          "valid": true,
+          "expression": false
+        },
+        {
+          "name": "reposicionpendiente_pkey",
+          "unique": true,
+          "primary": true,
+          "columns": [
+            "idreposicion"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX reposicionpendiente_pkey ON public.reposicionpendiente USING btree (idreposicion)",
+          "valid": true,
+          "expression": false
+        }
+      ]
+    },
+    "requisitodonacion": {
+      "columns": [
+        {
+          "name": "idrequisito",
+          "type": "integer",
+          "not_null": true,
+          "position": 1
+        },
+        {
+          "name": "nombrerequisito",
+          "type": "character varying(120)",
+          "not_null": true,
+          "position": 2
+        },
+        {
+          "name": "tiporequisito",
+          "type": "character varying(40)",
+          "not_null": true,
+          "position": 3
+        },
+        {
+          "name": "esexcluyentedefinitivo",
+          "type": "boolean",
+          "not_null": true,
+          "position": 4
+        },
+        {
+          "name": "activo",
+          "type": "boolean",
+          "not_null": true,
+          "position": 5
+        }
+      ],
+      "constraints": [
+        {
+          "name": "requisitodonacion_pkey",
+          "kind": "p",
+          "columns": [
+            "idrequisito"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "PRIMARY KEY (idrequisito)"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "requisitodonacion_pkey",
+          "unique": true,
+          "primary": true,
+          "columns": [
+            "idrequisito"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX requisitodonacion_pkey ON public.requisitodonacion USING btree (idrequisito)",
+          "valid": true,
+          "expression": false
+        }
+      ]
+    },
+    "reservasangre": {
+      "columns": [
+        {
+          "name": "idreserva",
+          "type": "integer",
+          "not_null": true,
+          "position": 1
+        },
+        {
+          "name": "idreceptor",
+          "type": "integer",
+          "not_null": true,
+          "position": 2
+        },
+        {
+          "name": "idejemplarbolsa",
+          "type": "integer",
+          "not_null": true,
+          "position": 3
+        },
+        {
+          "name": "iddetallesolicitud",
+          "type": "integer",
+          "not_null": false,
+          "position": 4
+        },
+        {
+          "name": "fechareserva",
+          "type": "timestamp without time zone",
+          "not_null": true,
+          "position": 5
+        },
+        {
+          "name": "esautologa",
+          "type": "boolean",
+          "not_null": true,
+          "position": 6
+        },
+        {
+          "name": "motivoreserva",
+          "type": "character varying(100)",
+          "not_null": false,
+          "position": 7
+        },
+        {
+          "name": "fechavencimientoreserva",
+          "type": "date",
+          "not_null": true,
+          "position": 8
+        },
+        {
+          "name": "estadoreserva",
+          "type": "character varying(30)",
+          "not_null": true,
+          "position": 9
+        }
+      ],
+      "constraints": [
+        {
+          "name": "reservasangre_estadoreserva_check",
+          "kind": "c",
+          "columns": [
+            "estadoreserva"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "CHECK (((estadoreserva)::text = ANY ((ARRAY['Activa'::character varying, 'Consumida'::character varying, 'Vencida'::character varying, 'Cancelada'::character varying])::text[])))"
+        },
+        {
+          "name": "reservasangre_iddetallesolicitud_fkey",
+          "kind": "f",
+          "columns": [
+            "iddetallesolicitud"
+          ],
+          "references": "detallesolicitud",
+          "reference_columns": [
+            "iddetalle"
+          ],
+          "definition": "FOREIGN KEY (iddetallesolicitud) REFERENCES detallesolicitud(iddetalle) ON DELETE SET NULL"
+        },
+        {
+          "name": "reservasangre_idejemplarbolsa_key",
+          "kind": "u",
+          "columns": [
+            "idejemplarbolsa"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "UNIQUE (idejemplarbolsa)"
+        },
+        {
+          "name": "reservasangre_pkey",
+          "kind": "p",
+          "columns": [
+            "idreserva"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "PRIMARY KEY (idreserva)"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "reservasangre_idejemplarbolsa_key",
+          "unique": true,
+          "primary": false,
+          "columns": [
+            "idejemplarbolsa"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX reservasangre_idejemplarbolsa_key ON public.reservasangre USING btree (idejemplarbolsa)",
+          "valid": true,
+          "expression": false
+        },
+        {
+          "name": "reservasangre_pkey",
+          "unique": true,
+          "primary": true,
+          "columns": [
+            "idreserva"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX reservasangre_pkey ON public.reservasangre USING btree (idreserva)",
+          "valid": true,
+          "expression": false
+        }
+      ]
+    },
+    "rol": {
+      "columns": [
+        {
+          "name": "idrol",
+          "type": "integer",
+          "not_null": true,
+          "position": 1
+        },
+        {
+          "name": "nombrerol",
+          "type": "character varying(60)",
+          "not_null": true,
+          "position": 2
+        },
+        {
+          "name": "codigorol",
+          "type": "character varying(30)",
+          "not_null": true,
+          "position": 3
+        },
+        {
+          "name": "descripcion",
+          "type": "text",
+          "not_null": false,
+          "position": 4
+        }
+      ],
+      "constraints": [
+        {
+          "name": "rol_codigorol_key",
+          "kind": "u",
+          "columns": [
+            "codigorol"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "UNIQUE (codigorol)"
+        },
+        {
+          "name": "rol_nombrerol_key",
+          "kind": "u",
+          "columns": [
+            "nombrerol"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "UNIQUE (nombrerol)"
+        },
+        {
+          "name": "rol_pkey",
+          "kind": "p",
+          "columns": [
+            "idrol"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "PRIMARY KEY (idrol)"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "rol_codigorol_key",
+          "unique": true,
+          "primary": false,
+          "columns": [
+            "codigorol"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX rol_codigorol_key ON public.rol USING btree (codigorol)",
+          "valid": true,
+          "expression": false
+        },
+        {
+          "name": "rol_nombrerol_key",
+          "unique": true,
+          "primary": false,
+          "columns": [
+            "nombrerol"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX rol_nombrerol_key ON public.rol USING btree (nombrerol)",
+          "valid": true,
+          "expression": false
+        },
+        {
+          "name": "rol_pkey",
+          "unique": true,
+          "primary": true,
+          "columns": [
+            "idrol"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX rol_pkey ON public.rol USING btree (idrol)",
+          "valid": true,
+          "expression": false
+        }
+      ]
+    },
+    "solicitudhospitalaria": {
+      "columns": [
+        {
+          "name": "idsolicitud",
+          "type": "integer",
+          "not_null": true,
+          "position": 1
+        },
+        {
+          "name": "idinstitucion",
+          "type": "integer",
+          "not_null": true,
+          "position": 2
+        },
+        {
+          "name": "idreceptor",
+          "type": "integer",
+          "not_null": true,
+          "position": 3
+        },
+        {
+          "name": "numerosolicitud",
+          "type": "character varying(35)",
+          "not_null": true,
+          "position": 4
+        },
+        {
+          "name": "fechahorarequerimiento",
+          "type": "timestamp without time zone",
+          "not_null": true,
+          "position": 5
+        },
+        {
+          "name": "prioridadsolicitud",
+          "type": "character varying(25)",
+          "not_null": true,
+          "position": 6
+        },
+        {
+          "name": "motivotransfusion",
+          "type": "character varying(150)",
+          "not_null": false,
+          "position": 7
+        },
+        {
+          "name": "velocidadgoteo",
+          "type": "character varying(50)",
+          "not_null": false,
+          "position": 8
+        },
+        {
+          "name": "horariorequerido",
+          "type": "character varying(50)",
+          "not_null": false,
+          "position": 9
+        },
+        {
+          "name": "cantidadbolsassolicitadas",
+          "type": "integer",
+          "not_null": true,
+          "position": 10
+        },
+        {
+          "name": "cantidadentregadareceptor",
+          "type": "integer",
+          "not_null": true,
+          "position": 11
+        },
+        {
+          "name": "cantidadretiradastock",
+          "type": "integer",
+          "not_null": true,
+          "position": 12
+        },
+        {
+          "name": "estadosolicitud",
+          "type": "character varying(25)",
+          "not_null": true,
+          "position": 13
+        }
+      ],
+      "constraints": [
+        {
+          "name": "fk_solicitud_institucion",
+          "kind": "f",
+          "columns": [
+            "idinstitucion"
+          ],
+          "references": "institucionsalud",
+          "reference_columns": [
+            "idinstitucion"
+          ],
+          "definition": "FOREIGN KEY (idinstitucion) REFERENCES institucionsalud(idinstitucion)"
+        },
+        {
+          "name": "fk_solicitud_receptor",
+          "kind": "f",
+          "columns": [
+            "idreceptor"
+          ],
+          "references": "receptor",
+          "reference_columns": [
+            "idpersona"
+          ],
+          "definition": "FOREIGN KEY (idreceptor) REFERENCES receptor(idpersona)"
+        },
+        {
+          "name": "solicitudhospitalaria_cantidadbolsassolicitadas_check",
+          "kind": "c",
+          "columns": [
+            "cantidadbolsassolicitadas"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "CHECK ((cantidadbolsassolicitadas > 0))"
+        },
+        {
+          "name": "solicitudhospitalaria_estadosolicitud_check",
+          "kind": "c",
+          "columns": [
+            "estadosolicitud"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "CHECK (((estadosolicitud)::text = ANY ((ARRAY['Registrada'::character varying, 'En Evaluacion'::character varying, 'En Proceso'::character varying, 'Despachada'::character varying, 'Anulada'::character varying])::text[])))"
+        },
+        {
+          "name": "solicitudhospitalaria_numerosolicitud_key",
+          "kind": "u",
+          "columns": [
+            "numerosolicitud"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "UNIQUE (numerosolicitud)"
+        },
+        {
+          "name": "solicitudhospitalaria_pkey",
+          "kind": "p",
+          "columns": [
+            "idsolicitud"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "PRIMARY KEY (idsolicitud)"
+        },
+        {
+          "name": "solicitudhospitalaria_prioridadsolicitud_check",
+          "kind": "c",
+          "columns": [
+            "prioridadsolicitud"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "CHECK (((prioridadsolicitud)::text = ANY ((ARRAY['Programada'::character varying, 'Urgente'::character varying, 'Código Rojo'::character varying])::text[])))"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "solicitudhospitalaria_numerosolicitud_key",
+          "unique": true,
+          "primary": false,
+          "columns": [
+            "numerosolicitud"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX solicitudhospitalaria_numerosolicitud_key ON public.solicitudhospitalaria USING btree (numerosolicitud)",
+          "valid": true,
+          "expression": false
+        },
+        {
+          "name": "solicitudhospitalaria_pkey",
+          "unique": true,
+          "primary": true,
+          "columns": [
+            "idsolicitud"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX solicitudhospitalaria_pkey ON public.solicitudhospitalaria USING btree (idsolicitud)",
+          "valid": true,
+          "expression": false
+        }
+      ]
+    },
+    "triajeclinico": {
+      "columns": [
+        {
+          "name": "idtriaje",
+          "type": "integer",
+          "not_null": true,
+          "position": 1
+        },
+        {
+          "name": "idposibledonador",
+          "type": "integer",
+          "not_null": true,
+          "position": 2
+        },
+        {
+          "name": "idpersonalsalud",
+          "type": "integer",
+          "not_null": true,
+          "position": 3
+        },
+        {
+          "name": "fechahora",
+          "type": "timestamp without time zone",
+          "not_null": true,
+          "position": 4
+        },
+        {
+          "name": "pesokg",
+          "type": "numeric(5,2)",
+          "not_null": true,
+          "position": 5
+        },
+        {
+          "name": "presionsistolicammhg",
+          "type": "integer",
+          "not_null": true,
+          "position": 6
+        },
+        {
+          "name": "presiondiastolicammhg",
+          "type": "integer",
+          "not_null": true,
+          "position": 7
+        },
+        {
+          "name": "nivelhemoglobina",
+          "type": "numeric(4,1)",
+          "not_null": true,
+          "position": 8
+        },
+        {
+          "name": "temperatura",
+          "type": "numeric(4,1)",
+          "not_null": true,
+          "position": 9
+        },
+        {
+          "name": "resultadoaptitud",
+          "type": "character varying(20)",
+          "not_null": true,
+          "position": 10
+        },
+        {
+          "name": "observaciones",
+          "type": "text",
+          "not_null": false,
+          "position": 11
+        }
+      ],
+      "constraints": [
+        {
+          "name": "fk_triaje_medico",
+          "kind": "f",
+          "columns": [
+            "idpersonalsalud"
+          ],
+          "references": "personalsalud",
+          "reference_columns": [
+            "idpersona"
+          ],
+          "definition": "FOREIGN KEY (idpersonalsalud) REFERENCES personalsalud(idpersona)"
+        },
+        {
+          "name": "fk_triaje_posible",
+          "kind": "f",
+          "columns": [
+            "idposibledonador"
+          ],
+          "references": "posibledonador",
+          "reference_columns": [
+            "idpersona"
+          ],
+          "definition": "FOREIGN KEY (idposibledonador) REFERENCES posibledonador(idpersona)"
+        },
+        {
+          "name": "triajeclinico_pkey",
+          "kind": "p",
+          "columns": [
+            "idtriaje"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "PRIMARY KEY (idtriaje)"
+        },
+        {
+          "name": "triajeclinico_resultadoaptitud_check",
+          "kind": "c",
+          "columns": [
+            "resultadoaptitud"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "CHECK (((resultadoaptitud)::text = ANY ((ARRAY['Apto'::character varying, 'Rechazado'::character varying])::text[])))"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "triajeclinico_pkey",
+          "unique": true,
+          "primary": true,
+          "columns": [
+            "idtriaje"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX triajeclinico_pkey ON public.triajeclinico USING btree (idtriaje)",
+          "valid": true,
+          "expression": false
+        }
+      ]
+    },
+    "ubicacionalmacen": {
+      "columns": [
+        {
+          "name": "idubicacion",
+          "type": "integer",
+          "not_null": true,
+          "position": 1
+        },
+        {
+          "name": "identificadorcompartimento",
+          "type": "character varying(30)",
+          "not_null": true,
+          "position": 2
+        },
+        {
+          "name": "tipoequipo",
+          "type": "character varying(80)",
+          "not_null": true,
+          "position": 3
+        },
+        {
+          "name": "temperaturaregistro",
+          "type": "numeric(4,1)",
+          "not_null": true,
+          "position": 4
+        },
+        {
+          "name": "capacidadmaxima",
+          "type": "integer",
+          "not_null": true,
+          "position": 5
+        },
+        {
+          "name": "capacidadocupada",
+          "type": "integer",
+          "not_null": true,
+          "position": 6
+        },
+        {
+          "name": "tieneagitacion",
+          "type": "boolean",
+          "not_null": true,
+          "position": 7
+        }
+      ],
+      "constraints": [
+        {
+          "name": "ubicacionalmacen_identificadorcompartimento_key",
+          "kind": "u",
+          "columns": [
+            "identificadorcompartimento"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "UNIQUE (identificadorcompartimento)"
+        },
+        {
+          "name": "ubicacionalmacen_pkey",
+          "kind": "p",
+          "columns": [
+            "idubicacion"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "PRIMARY KEY (idubicacion)"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "ubicacionalmacen_identificadorcompartimento_key",
+          "unique": true,
+          "primary": false,
+          "columns": [
+            "identificadorcompartimento"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX ubicacionalmacen_identificadorcompartimento_key ON public.ubicacionalmacen USING btree (identificadorcompartimento)",
+          "valid": true,
+          "expression": false
+        },
+        {
+          "name": "ubicacionalmacen_pkey",
+          "unique": true,
+          "primary": true,
+          "columns": [
+            "idubicacion"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX ubicacionalmacen_pkey ON public.ubicacionalmacen USING btree (idubicacion)",
+          "valid": true,
+          "expression": false
+        }
+      ]
+    },
+    "unidadsangretotal": {
+      "columns": [
+        {
+          "name": "idunidadmadre",
+          "type": "integer",
+          "not_null": true,
+          "position": 1
+        },
+        {
+          "name": "idextraccion",
+          "type": "integer",
+          "not_null": true,
+          "position": 2
+        },
+        {
+          "name": "idgrupo",
+          "type": "integer",
+          "not_null": true,
+          "position": 3
+        },
+        {
+          "name": "codigobolsamadre",
+          "type": "character varying(40)",
+          "not_null": true,
+          "position": 4
+        },
+        {
+          "name": "tipobolsa",
+          "type": "character varying(40)",
+          "not_null": true,
+          "position": 5
+        },
+        {
+          "name": "estadoliberacion",
+          "type": "character varying(30)",
+          "not_null": true,
+          "position": 6
+        }
+      ],
+      "constraints": [
+        {
+          "name": "fk_madre_extraccion",
+          "kind": "f",
+          "columns": [
+            "idextraccion"
+          ],
+          "references": "extracciondonacion",
+          "reference_columns": [
+            "idextraccion"
+          ],
+          "definition": "FOREIGN KEY (idextraccion) REFERENCES extracciondonacion(idextraccion) ON DELETE CASCADE"
+        },
+        {
+          "name": "fk_madre_grupo",
+          "kind": "f",
+          "columns": [
+            "idgrupo"
+          ],
+          "references": "gruposanguineo",
+          "reference_columns": [
+            "idgrupo"
+          ],
+          "definition": "FOREIGN KEY (idgrupo) REFERENCES gruposanguineo(idgrupo)"
+        },
+        {
+          "name": "unidadsangretotal_codigobolsamadre_key",
+          "kind": "u",
+          "columns": [
+            "codigobolsamadre"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "UNIQUE (codigobolsamadre)"
+        },
+        {
+          "name": "unidadsangretotal_estadoliberacion_check",
+          "kind": "c",
+          "columns": [
+            "estadoliberacion"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "CHECK (((estadoliberacion)::text = ANY ((ARRAY['En Cuarentena'::character varying, 'Liberada Apta'::character varying, 'Rechazada'::character varying])::text[])))"
+        },
+        {
+          "name": "unidadsangretotal_idextraccion_key",
+          "kind": "u",
+          "columns": [
+            "idextraccion"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "UNIQUE (idextraccion)"
+        },
+        {
+          "name": "unidadsangretotal_pkey",
+          "kind": "p",
+          "columns": [
+            "idunidadmadre"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "PRIMARY KEY (idunidadmadre)"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "unidadsangretotal_codigobolsamadre_key",
+          "unique": true,
+          "primary": false,
+          "columns": [
+            "codigobolsamadre"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX unidadsangretotal_codigobolsamadre_key ON public.unidadsangretotal USING btree (codigobolsamadre)",
+          "valid": true,
+          "expression": false
+        },
+        {
+          "name": "unidadsangretotal_idextraccion_key",
+          "unique": true,
+          "primary": false,
+          "columns": [
+            "idextraccion"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX unidadsangretotal_idextraccion_key ON public.unidadsangretotal USING btree (idextraccion)",
+          "valid": true,
+          "expression": false
+        },
+        {
+          "name": "unidadsangretotal_pkey",
+          "unique": true,
+          "primary": true,
+          "columns": [
+            "idunidadmadre"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX unidadsangretotal_pkey ON public.unidadsangretotal USING btree (idunidadmadre)",
+          "valid": true,
+          "expression": false
+        }
+      ]
+    },
+    "usuario": {
+      "columns": [
+        {
+          "name": "idusuario",
+          "type": "integer",
+          "not_null": true,
+          "position": 1
+        },
+        {
+          "name": "idpersona",
+          "type": "integer",
+          "not_null": true,
+          "position": 2
+        },
+        {
+          "name": "username",
+          "type": "character varying(50)",
+          "not_null": true,
+          "position": 3
+        },
+        {
+          "name": "email",
+          "type": "character varying(100)",
+          "not_null": true,
+          "position": 4
+        },
+        {
+          "name": "passwordhash",
+          "type": "character varying(255)",
+          "not_null": true,
+          "position": 5
+        },
+        {
+          "name": "estado",
+          "type": "character varying(20)",
+          "not_null": true,
+          "position": 6
+        },
+        {
+          "name": "fechacreacion",
+          "type": "timestamp without time zone",
+          "not_null": true,
+          "position": 7
+        },
+        {
+          "name": "intentosfallidos",
+          "type": "integer",
+          "not_null": true,
+          "position": 8
+        },
+        {
+          "name": "fechabloqueohasta",
+          "type": "timestamp without time zone",
+          "not_null": false,
+          "position": 9
+        },
+        {
+          "name": "totalbloqueosrecibidos",
+          "type": "integer",
+          "not_null": true,
+          "position": 10
+        },
+        {
+          "name": "fechaintentosdia",
+          "type": "date",
+          "not_null": false,
+          "position": 11
+        }
+      ],
+      "constraints": [
+        {
+          "name": "fk_usuario_persona",
+          "kind": "f",
+          "columns": [
+            "idpersona"
+          ],
+          "references": "persona",
+          "reference_columns": [
+            "idpersona"
+          ],
+          "definition": "FOREIGN KEY (idpersona) REFERENCES persona(idpersona) ON DELETE CASCADE"
+        },
+        {
+          "name": "usuario_email_key",
+          "kind": "u",
+          "columns": [
+            "email"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "UNIQUE (email)"
+        },
+        {
+          "name": "usuario_estado_check",
+          "kind": "c",
+          "columns": [
+            "estado"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "CHECK (((estado)::text = ANY ((ARRAY['Activo'::character varying, 'Inactivo'::character varying, 'Bloqueado'::character varying, 'Bloqueado Temporal'::character varying])::text[])))"
+        },
+        {
+          "name": "usuario_idpersona_key",
+          "kind": "u",
+          "columns": [
+            "idpersona"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "UNIQUE (idpersona)"
+        },
+        {
+          "name": "usuario_pkey",
+          "kind": "p",
+          "columns": [
+            "idusuario"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "PRIMARY KEY (idusuario)"
+        },
+        {
+          "name": "usuario_username_key",
+          "kind": "u",
+          "columns": [
+            "username"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "UNIQUE (username)"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "usuario_email_key",
+          "unique": true,
+          "primary": false,
+          "columns": [
+            "email"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX usuario_email_key ON public.usuario USING btree (email)",
+          "valid": true,
+          "expression": false
+        },
+        {
+          "name": "usuario_idpersona_key",
+          "unique": true,
+          "primary": false,
+          "columns": [
+            "idpersona"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX usuario_idpersona_key ON public.usuario USING btree (idpersona)",
+          "valid": true,
+          "expression": false
+        },
+        {
+          "name": "usuario_pkey",
+          "unique": true,
+          "primary": true,
+          "columns": [
+            "idusuario"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX usuario_pkey ON public.usuario USING btree (idusuario)",
+          "valid": true,
+          "expression": false
+        },
+        {
+          "name": "usuario_username_key",
+          "unique": true,
+          "primary": false,
+          "columns": [
+            "username"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX usuario_username_key ON public.usuario USING btree (username)",
+          "valid": true,
+          "expression": false
+        }
+      ]
+    },
+    "usuariorol": {
+      "columns": [
+        {
+          "name": "idusuario",
+          "type": "integer",
+          "not_null": true,
+          "position": 1
+        },
+        {
+          "name": "idrol",
+          "type": "integer",
+          "not_null": true,
+          "position": 2
+        },
+        {
+          "name": "fechaasignacion",
+          "type": "timestamp without time zone",
+          "not_null": true,
+          "position": 3
+        }
+      ],
+      "constraints": [
+        {
+          "name": "fk_usuariorol_rol",
+          "kind": "f",
+          "columns": [
+            "idrol"
+          ],
+          "references": "rol",
+          "reference_columns": [
+            "idrol"
+          ],
+          "definition": "FOREIGN KEY (idrol) REFERENCES rol(idrol) ON DELETE CASCADE"
+        },
+        {
+          "name": "fk_usuariorol_usuario",
+          "kind": "f",
+          "columns": [
+            "idusuario"
+          ],
+          "references": "usuario",
+          "reference_columns": [
+            "idusuario"
+          ],
+          "definition": "FOREIGN KEY (idusuario) REFERENCES usuario(idusuario) ON DELETE CASCADE"
+        },
+        {
+          "name": "pk_usuariorol",
+          "kind": "p",
+          "columns": [
+            "idusuario",
+            "idrol"
+          ],
+          "references": null,
+          "reference_columns": [],
+          "definition": "PRIMARY KEY (idusuario, idrol)"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "pk_usuariorol",
+          "unique": true,
+          "primary": true,
+          "columns": [
+            "idusuario",
+            "idrol"
+          ],
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX pk_usuariorol ON public.usuariorol USING btree (idusuario, idrol)",
+          "valid": true,
+          "expression": false
+        }
+      ]
+    }
+  }
+}

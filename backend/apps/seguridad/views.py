@@ -188,7 +188,7 @@ class UsuarioEstadoUpdateView(APIView):
 
     @transaction.atomic
     def patch(self, request, pk):
-        usuario = get_object_or_404(Usuario, idUsuario=pk)
+        usuario = get_object_or_404(Usuario.objects.select_for_update(), idUsuario=pk)
         serializer = UsuarioEstadoUpdateSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

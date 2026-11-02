@@ -1,0 +1,349 @@
+{
+  "fecha": "2026-11-01T22:55:27.236907-04:00",
+  "origen": "Supabase public; agregados de solo lectura",
+  "tablas": [
+    {
+      "tabla": "agendaturno",
+      "filas": 36,
+      "datos_bytes": 8192,
+      "indices_bytes": 32768,
+      "columnas": 6
+    },
+    {
+      "tabla": "analisisinmunohematologico",
+      "filas": 1,
+      "datos_bytes": 16384,
+      "indices_bytes": 16384,
+      "columnas": 17
+    },
+    {
+      "tabla": "analisisinmunoserologico",
+      "filas": 6,
+      "datos_bytes": 8192,
+      "indices_bytes": 49152,
+      "columnas": 13
+    },
+    {
+      "tabla": "bajainventario",
+      "filas": 3,
+      "datos_bytes": 16384,
+      "indices_bytes": 16384,
+      "columnas": 7
+    },
+    {
+      "tabla": "bitacoraauditoria",
+      "filas": 300,
+      "datos_bytes": 65536,
+      "indices_bytes": 16384,
+      "columnas": 8
+    },
+    {
+      "tabla": "checkoutstripe",
+      "filas": 0,
+      "datos_bytes": 8192,
+      "indices_bytes": 24576,
+      "columnas": 8
+    },
+    {
+      "tabla": "cierreagenda",
+      "filas": 0,
+      "datos_bytes": 0,
+      "indices_bytes": 16384,
+      "columnas": 6
+    },
+    {
+      "tabla": "citadonacion",
+      "filas": 14,
+      "datos_bytes": 8192,
+      "indices_bytes": 49152,
+      "columnas": 9
+    },
+    {
+      "tabla": "citalaboratorio",
+      "filas": 2,
+      "datos_bytes": 8192,
+      "indices_bytes": 16384,
+      "columnas": 8
+    },
+    {
+      "tabla": "colectaautologa",
+      "filas": 0,
+      "datos_bytes": 0,
+      "indices_bytes": 16384,
+      "columnas": 5
+    },
+    {
+      "tabla": "comprobantedespacho",
+      "filas": 3,
+      "datos_bytes": 8192,
+      "indices_bytes": 32768,
+      "columnas": 7
+    },
+    {
+      "tabla": "comprobantepago",
+      "filas": 4,
+      "datos_bytes": 8192,
+      "indices_bytes": 49152,
+      "columnas": 10
+    },
+    {
+      "tabla": "compromisodonacion",
+      "filas": 3,
+      "datos_bytes": 8192,
+      "indices_bytes": 16384,
+      "columnas": 9
+    },
+    {
+      "tabla": "consentimientoinformado",
+      "filas": 2,
+      "datos_bytes": 16384,
+      "indices_bytes": 32768,
+      "columnas": 5
+    },
+    {
+      "tabla": "detallecitarequisito",
+      "filas": 59,
+      "datos_bytes": 8192,
+      "indices_bytes": 16384,
+      "columnas": 5
+    },
+    {
+      "tabla": "detalledespacho",
+      "filas": 3,
+      "datos_bytes": 8192,
+      "indices_bytes": 32768,
+      "columnas": 3
+    },
+    {
+      "tabla": "detallesolicitud",
+      "filas": 5,
+      "datos_bytes": 8192,
+      "indices_bytes": 16384,
+      "columnas": 7
+    },
+    {
+      "tabla": "deudafinanciera",
+      "filas": 4,
+      "datos_bytes": 16384,
+      "indices_bytes": 49152,
+      "columnas": 13
+    },
+    {
+      "tabla": "diferimiento",
+      "filas": 4,
+      "datos_bytes": 8192,
+      "indices_bytes": 32768,
+      "columnas": 12
+    },
+    {
+      "tabla": "donante",
+      "filas": 10,
+      "datos_bytes": 8192,
+      "indices_bytes": 49152,
+      "columnas": 5
+    },
+    {
+      "tabla": "ejemplarbolsa",
+      "filas": 11,
+      "datos_bytes": 8192,
+      "indices_bytes": 32768,
+      "columnas": 13
+    },
+    {
+      "tabla": "eventostripe",
+      "filas": 0,
+      "datos_bytes": 0,
+      "indices_bytes": 8192,
+      "columnas": 6
+    },
+    {
+      "tabla": "extracciondonacion",
+      "filas": 8,
+      "datos_bytes": 8192,
+      "indices_bytes": 32768,
+      "columnas": 8
+    },
+    {
+      "tabla": "gruposanguineo",
+      "filas": 8,
+      "datos_bytes": 8192,
+      "indices_bytes": 32768,
+      "columnas": 3
+    },
+    {
+      "tabla": "incentivoentrega",
+      "filas": 6,
+      "datos_bytes": 8192,
+      "indices_bytes": 32768,
+      "columnas": 5
+    },
+    {
+      "tabla": "incidenciacolecta",
+      "filas": 0,
+      "datos_bytes": 8192,
+      "indices_bytes": 8192,
+      "columnas": 6
+    },
+    {
+      "tabla": "institucionsalud",
+      "filas": 7,
+      "datos_bytes": 8192,
+      "indices_bytes": 32768,
+      "columnas": 5
+    },
+    {
+      "tabla": "pagofinanciero",
+      "filas": 1,
+      "datos_bytes": 16384,
+      "indices_bytes": 49152,
+      "columnas": 10
+    },
+    {
+      "tabla": "parametrostockminimo",
+      "filas": 72,
+      "datos_bytes": 8192,
+      "indices_bytes": 32768,
+      "columnas": 6
+    },
+    {
+      "tabla": "persona",
+      "filas": 54,
+      "datos_bytes": 40960,
+      "indices_bytes": 49152,
+      "columnas": 10
+    },
+    {
+      "tabla": "personalsalud",
+      "filas": 15,
+      "datos_bytes": 8192,
+      "indices_bytes": 32768,
+      "columnas": 3
+    },
+    {
+      "tabla": "posibledonador",
+      "filas": 31,
+      "datos_bytes": 8192,
+      "indices_bytes": 49152,
+      "columnas": 5
+    },
+    {
+      "tabla": "prefiltroborrador",
+      "filas": 0,
+      "datos_bytes": 8192,
+      "indices_bytes": 8192,
+      "columnas": 9
+    },
+    {
+      "tabla": "prefiltrocita",
+      "filas": 9,
+      "datos_bytes": 57344,
+      "indices_bytes": 16384,
+      "columnas": 7
+    },
+    {
+      "tabla": "programacionautologa",
+      "filas": 2,
+      "datos_bytes": 16384,
+      "indices_bytes": 32768,
+      "columnas": 13
+    },
+    {
+      "tabla": "programacionautologahistorial",
+      "filas": 2,
+      "datos_bytes": 16384,
+      "indices_bytes": 32768,
+      "columnas": 6
+    },
+    {
+      "tabla": "protocoloconservacion",
+      "filas": 6,
+      "datos_bytes": 16384,
+      "indices_bytes": 16384,
+      "columnas": 9
+    },
+    {
+      "tabla": "pruebacompatibilidad",
+      "filas": 3,
+      "datos_bytes": 8192,
+      "indices_bytes": 16384,
+      "columnas": 9
+    },
+    {
+      "tabla": "receptor",
+      "filas": 10,
+      "datos_bytes": 8192,
+      "indices_bytes": 32768,
+      "columnas": 4
+    },
+    {
+      "tabla": "reposicionpendiente",
+      "filas": 3,
+      "datos_bytes": 8192,
+      "indices_bytes": 32768,
+      "columnas": 6
+    },
+    {
+      "tabla": "requisitodonacion",
+      "filas": 6,
+      "datos_bytes": 8192,
+      "indices_bytes": 16384,
+      "columnas": 5
+    },
+    {
+      "tabla": "reservasangre",
+      "filas": 0,
+      "datos_bytes": 0,
+      "indices_bytes": 16384,
+      "columnas": 9
+    },
+    {
+      "tabla": "rol",
+      "filas": 9,
+      "datos_bytes": 16384,
+      "indices_bytes": 49152,
+      "columnas": 4
+    },
+    {
+      "tabla": "solicitudhospitalaria",
+      "filas": 9,
+      "datos_bytes": 8192,
+      "indices_bytes": 32768,
+      "columnas": 13
+    },
+    {
+      "tabla": "triajeclinico",
+      "filas": 9,
+      "datos_bytes": 16384,
+      "indices_bytes": 16384,
+      "columnas": 11
+    },
+    {
+      "tabla": "ubicacionalmacen",
+      "filas": 8,
+      "datos_bytes": 8192,
+      "indices_bytes": 32768,
+      "columnas": 7
+    },
+    {
+      "tabla": "unidadsangretotal",
+      "filas": 6,
+      "datos_bytes": 8192,
+      "indices_bytes": 49152,
+      "columnas": 6
+    },
+    {
+      "tabla": "usuario",
+      "filas": 35,
+      "datos_bytes": 8192,
+      "indices_bytes": 65536,
+      "columnas": 11
+    },
+    {
+      "tabla": "usuariorol",
+      "filas": 44,
+      "datos_bytes": 8192,
+      "indices_bytes": 16384,
+      "columnas": 3
+    }
+  ]
+}

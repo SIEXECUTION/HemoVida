@@ -15,6 +15,7 @@ import {
   CreditCard,
   CalendarDays,
 } from "lucide-react";
+import { WalkthroughPage } from "./components/WalkthroughPage";
 import { FinancePage } from "./components/FinancePage";
 import { AgendaPage } from "./components/AgendaPage";
 import { IncentivesPage } from "./components/IncentivesPage";
@@ -92,6 +93,16 @@ export default function App() {
       setError((e as Error).message);
     }
   }
+  const verificationCode = new URLSearchParams(window.location.search).get("carnet");
+  if (verificationCode) {
+    return <main className="min-h-screen bg-slate-50 p-4 sm:p-8">
+      <div className="max-w-4xl mx-auto space-y-4">
+        <a href="/" className="underline">Volver a HemoVida</a>
+        <p>Consulta del carnet registrado. La evaluación clínica confirma la aptitud para donar.</p>
+        <ApiRecords path={`donantes/${encodeURIComponent(verificationCode)}/carnet/`} title="Verificación de carnet" token="" />
+      </div>
+    </main>;
+  }
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col font-['Plus_Jakarta_Sans',sans-serif]">
       <Navbar
@@ -139,6 +150,7 @@ export default function App() {
             >
               {[
                 ["inicio", "Mi espacio"],
+                ["recorrido", "Guía de recorrido"],
                 ...(["ADMIN", "PERS_COLECTA"].includes(session.activeRole)
                   ? [
                       ["citas", "Citas y recepción"],
@@ -216,6 +228,7 @@ export default function App() {
                 </button>
               ))}
             </nav>
+            {tab === "recorrido" && <WalkthroughPage />}
             {tab === "inicio" && session.activeRole === "MED_SOLICITANTE" && (
               <AutologousPage
                 token={session.token!}

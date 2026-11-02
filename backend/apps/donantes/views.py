@@ -29,7 +29,6 @@ class DonanteCarnetDigitalView(APIView):
         query = ci.strip()
         query_hyphen = query.replace(' ', '-').replace('_', '-')
         query_spaced = query.replace('-', ' ')
-        query_digits = ''.join(c for c in query if c.isdigit())
         
         # 1. Búsqueda en Donante Calificado (superó Inmunoserología)
         donante_filter = (
@@ -39,8 +38,6 @@ class DonanteCarnetDigitalView(APIView):
             Q(carnetDigitalCodigo__iexact=query_hyphen) |
             Q(carnetDigitalCodigo__iexact=query_spaced)
         )
-        if len(query_digits) >= 4:
-            donante_filter |= Q(persona__ci__icontains=query_digits) | Q(carnetDigitalCodigo__icontains=query_digits)
 
         donante = Donante.objects.select_related('persona').filter(donante_filter).first()
 
@@ -122,12 +119,6 @@ class DonanteCarnetDigitalView(APIView):
             Q(persona__usuario__username__iexact=query) |
             Q(persona__usuario__username__iexact=query_hyphen)
         )
-        if len(query_digits) >= 4:
-            posible_filter |= (
-                Q(persona__ci__icontains=query_digits) |
-                Q(carnetProvisionalCodigo__icontains=query_digits) |
-                Q(persona__usuario__username__icontains=query_digits)
-            )
 
         posible = PosibleDonador.objects.select_related('persona').filter(posible_filter).first()
 

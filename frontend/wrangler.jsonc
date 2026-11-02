@@ -1,0 +1,8 @@
+{
+  "name": "hemovida-banco-de-sangre",
+  "compatibility_date": "2026-11-01",
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "single-page-application"
+  }
+}

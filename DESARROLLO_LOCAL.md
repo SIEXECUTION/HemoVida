@@ -59,3 +59,18 @@ Recuperación: el código ya no se devuelve en la API ni se muestra/autocompleta
 ## Stripe en desarrollo
 
 Las dos claves test están configuradas y se verificó el flujo externo en sandbox. Ejecutar `iniciar_stripe_local.bat` en una tercera terminal para recibir notificaciones en el backend local (puerto 8000), además de los lanzadores de backend y frontend. El secreto de CLI permanece privado y debe coincidir con backend/.env. El lanzador no aplica SQL ni permite modo live. La validación de pagos se hizo sobre PostgreSQL local aislado, sin operaciones financieras de prueba en Supabase. Ver CICLO3_IMPLEMENTACION.md para el despliegue y el secreto diferente del endpoint de Render.
+
+
+## Cloudflare Workers desde la rama secundaria
+
+Rama de producción: `codex/ciclo3-desarrollo-local`.
+Directorio raíz: `frontend`.
+Comando de compilación: `npm ci && npm run build`.
+Comando de despliegue de producción: `npx wrangler deploy`.
+La configuración `frontend/wrangler.jsonc` declara el Worker `hemovidax`,
+los archivos compilados en `dist` y el fallback de rutas de React como SPA.
+Para una Preview, `npx wrangler preview --worker-name hemovidax` apunta al
+mismo Worker, pero publica una URL de vista previa. Para actualizar la URL
+habitual se debe desplegar producción desde la rama seleccionada.
+Configurar `VITE_API_BASE_URL=https://hemovidax.onrender.com/api` como variable
+de compilación en Cloudflare. El proxy de Vite solo funciona en desarrollo.

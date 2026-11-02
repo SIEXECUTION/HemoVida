@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
-import { 
-  X, 
-  Stethoscope, 
-  FlaskConical, 
-  Truck, 
-  UserCheck, 
-  ShieldCheck, 
-  Send, 
-  CheckCircle2, 
+import {
+  X,
+  Stethoscope,
+  FlaskConical,
+  Truck,
+  UserCheck,
+  ShieldCheck,
+  Send,
+  CheckCircle2,
   AlertTriangle,
   Briefcase,
   Building2,
@@ -84,7 +84,7 @@ const HEALTH_ROLES: AvailableHealthRole[] = [
     responsibilities: [
       'Registro oficial de nuevos postulantes y verificación de C.I.',
       'Control de flujo de atención y recepción en salas de colecta',
-      'Gestión de Donación Autóloga Programada (CU21) para cirugías electivas',
+      'Gestión de Donación Autóloga Programada  para cirugías electivas',
       'Gestión y entrega de refrigerios e incentivos solidarios'
     ]
   },
@@ -149,7 +149,7 @@ export const OtherRolesModal: React.FC<OtherRolesModalProps> = ({
     });
 
     setSuccessMessage(`¡Solicitud enviada exitosamente para ${selectedRole.title}! Se ha registrado en la bitácora institucional y ahora puedes acceder de prueba a esta área.`);
-    
+
     // Auto cambiar de rol para permitir la experiencia/prueba inmediata
     setTimeout(() => {
       onSwitchRole(selectedRole.code);
@@ -160,7 +160,7 @@ export const OtherRolesModal: React.FC<OtherRolesModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
       <div className="bg-white rounded-3xl shadow-2xl max-w-3xl w-full overflow-hidden border border-slate-200 animate-in fade-in zoom-in-95 duration-150">
-        
+
         {/* Header */}
         <div className="bg-gradient-to-r from-slate-900 via-rose-950 to-slate-900 text-white p-6 flex items-start justify-between relative">
           <div className="flex items-center gap-3.5">
@@ -180,7 +180,7 @@ export const OtherRolesModal: React.FC<OtherRolesModalProps> = ({
               </p>
             </div>
           </div>
-          <button 
+          <button
             onClick={onClose}
             className="text-white/70 hover:text-white bg-white/10 hover:bg-white/20 p-2 rounded-xl transition-colors cursor-pointer"
             aria-label="Cerrar modal"
@@ -191,7 +191,7 @@ export const OtherRolesModal: React.FC<OtherRolesModalProps> = ({
 
         {/* Content */}
         <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto text-xs">
-          
+
           {/* Explicación de la funcionalidad */}
           <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-slate-600 leading-relaxed space-y-1.5">
             <p className="font-bold text-slate-800 text-xs flex items-center gap-1.5">
@@ -303,11 +303,11 @@ export const OtherRolesModal: React.FC<OtherRolesModalProps> = ({
                 const isAlreadyAssigned = rolesAsignados.some(r => r.codigo === role.code);
 
                 return (
-                  <div 
+                  <div
                     key={role.code}
                     className={`rounded-2xl p-4.5 border transition-all flex flex-col justify-between gap-3 ${
-                      isCurrentlyActive 
-                        ? 'border-rose-400 bg-rose-50/40 ring-2 ring-rose-300/60 shadow-xs' 
+                      isCurrentlyActive
+                        ? 'border-rose-400 bg-rose-50/40 ring-2 ring-rose-300/60 shadow-xs'
                         : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-xs'
                     }`}
                   >

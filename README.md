@@ -1,3 +1,7 @@
+# Despliegue vigente
+
+Cloudflare Workers + Render + Supabase. Consulta [DESPLIEGUE.md](DESPLIEGUE.md) para las ramas, variables y verificaciones. Los entregables generados se conservan localmente en `output/`, fuera de Git.
+
 # 🩸 HemoVida - Sistema de Gestión para Banco de Sangre
 
 > Plataforma modular integral para la gestión de donantes, hemocomponentes, auditoría forense y trazabilidad transfusional.
@@ -10,6 +14,8 @@
 > Estado actual del ciclo 2: [CICLO2_CU21_CU23_Y_AJUSTES.md](CICLO2_CU21_CU23_Y_AJUSTES.md). CU21/CU23, borradores, cierres, búsqueda y admisión presencial están implementados y probados localmente. 08/09 están verificadas en Supabase y 10 aplicada; la aceptación del despliegue sigue separada.
 
 > Población académica aplicada en Supabase con respaldo previo: [registros y verificación](informes/POBLACION_DEMO_2026-11-01.md). Seis personas DEMO, cuatro citas para el 02/11/2026, programa autólogo pendiente y dos deudas por 300 BOB; usuarios existentes conservados.
+
+> Demostración por perfiles: [recorrido de los ciclos 2 y 3](informes/RECORRIDO_CICLOS_2_Y_3.md). Doce cuentas sintéticas y escenarios DEMO aplicados en Supabase. Credenciales privadas fuera de Git; guía también integrada en el frontend.
 
 ---
 

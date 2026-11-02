@@ -1,14 +1,14 @@
 import React from 'react';
-import { 
-  User, 
-  ShieldAlert, 
-  Clock, 
-  CheckCircle2, 
-  Calendar, 
-  FileText, 
-  Phone, 
-  MapPin, 
-  Briefcase, 
+import {
+  User,
+  ShieldAlert,
+  Clock,
+  CheckCircle2,
+  Calendar,
+  FileText,
+  Phone,
+  MapPin,
+  Briefcase,
   AlertCircle,
   HelpCircle,
   Sparkles,
@@ -88,7 +88,7 @@ export const PosibleDonadorView: React.FC<PosibleDonadorViewProps> = ({
 
       {/* 2. Grid de Información Básica y Estado Clínico */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
+
         {/* Columna Izquierda: Tarjeta de Estado del Postulante */}
         <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-5">
           <div className="flex items-center gap-3 pb-3 border-b border-slate-100">
@@ -250,10 +250,10 @@ export const PosibleDonadorView: React.FC<PosibleDonadorViewProps> = ({
             <div className="flex items-center justify-between">
               <h4 className="font-bold flex items-center gap-2 text-purple-900">
                 <Sparkles className="w-4 h-4 text-purple-600" />
-                ¿Tienes una intervención quirúrgica programada? (Donación Autóloga - CU21)
+                ¿Tienes una intervención quirúrgica programada? (Donación Autóloga)
               </h4>
               <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-purple-200/80 text-purple-800 font-mono">
-                CU21 Autólogo
+                Autólogo
               </span>
             </div>
             <p className="text-[11px] text-purple-800 leading-relaxed">
@@ -265,7 +265,7 @@ export const PosibleDonadorView: React.FC<PosibleDonadorViewProps> = ({
                 onClick={onOpenPrecheck}
                 className="px-3.5 py-1.5 bg-purple-700 hover:bg-purple-800 text-white font-bold rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 text-xs"
               >
-                <span>Hacer Prefiltro Autólogo (CU21)</span>
+                <span>Hacer Prefiltro Autólogo </span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>

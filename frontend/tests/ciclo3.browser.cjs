@@ -310,7 +310,7 @@ test("El protocolo sin agitación se envía como false y requiere confirmación 
     await p
       .getByRole("button", { name: "Atención clínica", exact: true })
       .click();
-    const f = form(p, "CU15 · Configurar conservación académica");
+    const f = form(p, "Configurar conservación académica");
     await f
       .locator("select")
       .selectOption({ label: "Concentrado de Globulos Rojos" });
@@ -484,7 +484,7 @@ test("ADMIN consulta laboratorio pero no puede editar ABO/Rh existente ni concil
     await p.getByRole("button", { name: "Laboratorio", exact: true }).click();
     await p.getByLabel("Bolsa madre").selectOption("1");
     await p
-      .getByRole("heading", { name: "CU14 Inmunohematología", exact: true })
+      .getByRole("heading", { name: "Inmunohematología", exact: true })
       .waitFor();
     assert.equal(
       await p.getByLabel("Grupo ABO", { exact: true }).isDisabled(),
@@ -538,7 +538,7 @@ test("Logística configura los parámetros académicos de conservación sin libe
     await p
       .getByRole("button", { name: "Atención clínica", exact: true })
       .click();
-    const f = form(p, "CU15 · Configurar conservación académica");
+    const f = form(p, "Configurar conservación académica");
     await f
       .getByLabel("Componente", { exact: true })
       .selectOption("Plasma Fresco Congelado");

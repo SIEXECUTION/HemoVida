@@ -1,28 +1,28 @@
 import React, { useState } from 'react';
-import { 
-  Building2, 
-  UserCheck, 
-  FileText, 
-  CheckCircle2, 
-  X, 
-  DollarSign, 
-  Layers, 
-  AlertCircle, 
-  Truck, 
-  Printer, 
-  AlertTriangle, 
-  Thermometer, 
-  ShieldCheck, 
-  Clock, 
+import {
+  Building2,
+  UserCheck,
+  FileText,
+  CheckCircle2,
+  X,
+  DollarSign,
+  Layers,
+  AlertCircle,
+  Truck,
+  Printer,
+  AlertTriangle,
+  Thermometer,
+  ShieldCheck,
+  Clock,
   RefreshCw,
   Flame,
   FileCheck
 } from 'lucide-react';
-import { 
-  BloodInventoryItem, 
-  BloodDispatchRecord, 
-  PatientReplacementRecord, 
-  BloodGroup, 
+import {
+  BloodInventoryItem,
+  BloodDispatchRecord,
+  PatientReplacementRecord,
+  BloodGroup,
   RhFactor,
   CompatibilityTestRecord,
   EmergencyActRecord
@@ -130,12 +130,12 @@ export const NewDispatchModal: React.FC<NewDispatchModalProps> = ({
 
   // If Código Rojo is selected: filter for universal donor O-
   const isCodigoRojo = prioridad === 'Código Rojo';
-  const displayItems = isCodigoRojo 
+  const displayItems = isCodigoRojo
     ? availableItems.filter(i => i.grupoSanguineo === 'O' && i.factorRh === 'Negativo' && i.componente === 'Concentrado de Globulos Rojos')
     : availableItems;
 
   const toggleSelectBag = (id: string) => {
-    setSelectedBagIds(prev => 
+    setSelectedBagIds(prev =>
       prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
     );
   };
@@ -183,8 +183,8 @@ export const NewDispatchModal: React.FC<NewDispatchModalProps> = ({
   };
 
   // Compute total service fee
-  const calculatedTotalBs = estadoPago === 'Exonerado SUS' 
-    ? 0 
+  const calculatedTotalBs = estadoPago === 'Exonerado SUS'
+    ? 0
     : selectedUnits.reduce((acc, item) => acc + (COMPONENT_PRICES[item.componente] || 180), 0);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -327,7 +327,7 @@ export const NewDispatchModal: React.FC<NewDispatchModalProps> = ({
         hospital: finalHospital || 'Hospital General',
         fechaSolicitudInicial: new Date().toISOString().split('T')[0],
         unidadesRecibidas: unitsCount,
-        donantesRequeridos: unitsCount, // strict 1 to 1 (CU20)
+        donantesRequeridos: unitsCount, // strict 1 to 1
         grupoReceptor: `${pacienteGrupo}${pacienteRh === 'Positivo' ? '+' : '-'}`,
         donantesRepuestos: [],
         estado: 'Pendiente',
@@ -338,9 +338,9 @@ export const NewDispatchModal: React.FC<NewDispatchModalProps> = ({
     }
 
     onConfirmDispatch(
-      dispatchRecord, 
-      updatedInventory, 
-      updatedReplacements, 
+      dispatchRecord,
+      updatedInventory,
+      updatedReplacements,
       emergencyAct,
       crossmatchAudits[0]
     );
@@ -351,11 +351,11 @@ export const NewDispatchModal: React.FC<NewDispatchModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/80 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
       <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full border border-slate-200 overflow-hidden transform transition-all my-6">
-        
+
         {/* Header */}
         <div className={`p-5 sm:p-6 text-white relative ${
-          isCodigoRojo 
-            ? 'bg-gradient-to-r from-red-950 via-rose-900 to-red-950 animate-pulse' 
+          isCodigoRojo
+            ? 'bg-gradient-to-r from-red-950 via-rose-900 to-red-950 animate-pulse'
             : 'bg-gradient-to-r from-red-950 via-slate-900 to-red-950'
         }`}>
           <div className="flex items-center justify-between">
@@ -636,8 +636,8 @@ export const NewDispatchModal: React.FC<NewDispatchModalProps> = ({
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-56 overflow-y-auto pr-1">
                   {displayItems.length === 0 ? (
                     <div className="col-span-full p-4 text-center text-xs text-slate-400 bg-slate-50 rounded-2xl">
-                      {isCodigoRojo 
-                        ? 'No hay unidades de Glóbulos Rojos O- Negativo disponibles en inventario.' 
+                      {isCodigoRojo
+                        ? 'No hay unidades de Glóbulos Rojos O- Negativo disponibles en inventario.'
                         : 'No hay unidades disponibles en inventario.'}
                     </div>
                   ) : (
@@ -649,8 +649,8 @@ export const NewDispatchModal: React.FC<NewDispatchModalProps> = ({
                         <div
                           key={bag.id}
                           className={`p-3 rounded-2xl border transition-all text-xs space-y-2 ${
-                            isSelected 
-                              ? 'border-red-600 bg-red-50/50 shadow-xs' 
+                            isSelected
+                              ? 'border-red-600 bg-red-50/50 shadow-xs'
                               : 'border-slate-200 bg-white hover:border-slate-300'
                           }`}
                         >
@@ -700,8 +700,8 @@ export const NewDispatchModal: React.FC<NewDispatchModalProps> = ({
                             type="button"
                             onClick={() => toggleSelectBag(bag.id)}
                             className={`w-full py-1.5 font-bold rounded-lg text-xs cursor-pointer transition-colors ${
-                              isSelected 
-                                ? 'bg-red-700 text-white' 
+                              isSelected
+                                ? 'bg-red-700 text-white'
                                 : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                             }`}
                           >
@@ -821,15 +821,15 @@ export const NewDispatchModal: React.FC<NewDispatchModalProps> = ({
               <button
                 type="submit"
                 className={`w-full py-4 text-white font-bold text-sm rounded-xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer ${
-                  isCodigoRojo 
-                    ? 'bg-red-700 hover:bg-red-800 shadow-red-900/40 animate-pulse' 
+                  isCodigoRojo
+                    ? 'bg-red-700 hover:bg-red-800 shadow-red-900/40 animate-pulse'
                     : 'bg-red-600 hover:bg-red-700 shadow-red-600/30'
                 }`}
               >
                 <Truck className="w-5 h-5" />
                 <span>
-                  {isCodigoRojo 
-                    ? 'AUTORIZAR DESPACHO INMEDIATO CÓDIGO ROJO (O Rh-)' 
+                  {isCodigoRojo
+                    ? 'AUTORIZAR DESPACHO INMEDIATO CÓDIGO ROJO (O Rh-)'
                     : 'Autorizar y Despachar Hemocomponentes'}
                 </span>
                 <CheckCircle2 className="w-5 h-5" />

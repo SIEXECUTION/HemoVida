@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
-import { 
-  Layers, 
-  Droplet, 
-  Search, 
-  Filter, 
-  AlertTriangle, 
-  CheckCircle2, 
-  Truck, 
-  Thermometer, 
+import {
+  Layers,
+  Droplet,
+  Search,
+  Filter,
+  AlertTriangle,
+  CheckCircle2,
+  Truck,
+  Thermometer,
   Calendar,
   Sparkles
 } from 'lucide-react';
@@ -45,7 +45,7 @@ export const BloodInventorySection: React.FC<BloodInventorySectionProps> = ({
 
   // Filtered items
   const filteredBags = currentDisplayList.filter(bag => {
-    const matchesSearch = 
+    const matchesSearch =
       bag.codigoBolsa.toLowerCase().includes(searchTerm.toLowerCase()) ||
       bag.componente.toLowerCase().includes(searchTerm.toLowerCase()) ||
       bag.ubicacionCamara.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -165,7 +165,7 @@ export const BloodInventorySection: React.FC<BloodInventorySectionProps> = ({
               }`}
             >
               <span className="w-2 h-2 rounded-full bg-purple-600"></span>
-              <span>Bolsas Autólogas Reservadas - CU21 ({autologousBags.length})</span>
+              <span>Bolsas Autólogas Reservadas -  ({autologousBags.length})</span>
             </button>
           </div>
           {activeInventoryTab === 'autologas' && (
@@ -260,7 +260,7 @@ export const BloodInventorySection: React.FC<BloodInventorySectionProps> = ({
                         <span>{bag.codigoBolsa}</span>
                         {bag.esExclusivoAutologo && (
                           <span className="text-[9px] font-extrabold bg-purple-100 text-purple-900 border border-purple-300 px-1.5 py-0.5 rounded-md uppercase tracking-wider">
-                            CU21 Autólogo
+                            Autólogo
                           </span>
                         )}
                       </div>
@@ -272,8 +272,8 @@ export const BloodInventorySection: React.FC<BloodInventorySectionProps> = ({
                     </td>
                     <td className="py-3 px-4">
                       <span className={`inline-flex items-center gap-1 font-mono font-extrabold px-2 py-0.5 rounded text-xs ${
-                        bag.factorRh === 'Positivo' 
-                          ? 'bg-rose-100 text-rose-800' 
+                        bag.factorRh === 'Positivo'
+                          ? 'bg-rose-100 text-rose-800'
                           : 'bg-red-200 text-red-950'
                       }`}>
                         <Droplet className="w-3 h-3 fill-current" />
@@ -291,8 +291,8 @@ export const BloodInventorySection: React.FC<BloodInventorySectionProps> = ({
                         <Calendar className="w-3.5 h-3.5 text-slate-400" />
                         <span>{bag.fechaCaducidad}</span>
                         <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${
-                          bag.diasRestantes <= 5 
-                            ? 'bg-amber-100 text-amber-800' 
+                          bag.diasRestantes <= 5
+                            ? 'bg-amber-100 text-amber-800'
                             : 'bg-slate-100 text-slate-600'
                         }`}>
                           {bag.diasRestantes}d rest.

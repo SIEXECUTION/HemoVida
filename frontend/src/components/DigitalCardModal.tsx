@@ -40,9 +40,7 @@ export const DigitalCardModal: React.FC<DigitalCardModalProps> = ({
 
   const eligibility = calculateBiologicalEligibility(user);
 
-  const carnetCodeToUse = (user.ci && user.ci.trim())
-    ? user.ci.trim()
-    : (user.carnetDigitalCodigo || '0000000');
+  const carnetCodeToUse = user.carnetDigitalCodigo || user.ci || '';
 
   const carnetUrl = typeof window !== 'undefined'
     ? `${window.location.origin}/?carnet=${encodeURIComponent(carnetCodeToUse)}`
@@ -53,7 +51,7 @@ export const DigitalCardModal: React.FC<DigitalCardModalProps> = ({
     if (carnetUrl) {
       QRCode.toDataURL(carnetUrl, {
         width: 240,
-        margin: 1,
+        margin: 4,
         color: {
           dark: '#0f172a',
           light: '#ffffff'
@@ -67,7 +65,7 @@ export const DigitalCardModal: React.FC<DigitalCardModalProps> = ({
     }
   }, [carnetUrl]);
 
-  const qrCodeImageUrl = qrCodeDataUrl || `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(carnetUrl)}&bgcolor=ffffff&color=0f172a&margin=1`;
+  const qrCodeImageUrl = qrCodeDataUrl;
 
   // DESCARGAR EL CARNET DIGITAL COMO IMAGEN REAL (.PNG) CON EL QR
   const handleDownloadImage = async () => {

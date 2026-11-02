@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { 
-  CheckCircle2, 
-  XCircle, 
-  AlertTriangle, 
-  X, 
-  ArrowRight, 
-  RotateCcw, 
+import {
+  CheckCircle2,
+  XCircle,
+  AlertTriangle,
+  X,
+  ArrowRight,
+  RotateCcw,
   Calendar,
   Sparkles,
   ShieldAlert,
@@ -94,7 +94,7 @@ export const PrecheckModal: React.FC<PrecheckModalProps> = ({
     {
       id: 101,
       tipo: 'general',
-      title: 'Prescripción Médica de Cirugía Electiva (CU21)',
+      title: 'Prescripción Médica de Cirugía Electiva ',
       text: '¿Cuentas con orden médica o indicación formal de tu médico cirujano tratante autorizando la donación autóloga preoperatoria?',
       cumpleEsSi: true,
       explanation: 'La donación autóloga es un procedimiento coordinado con el cirujano y requiere su prescripción escrita en la orden quirúrgica.'
@@ -121,7 +121,7 @@ export const PrecheckModal: React.FC<PrecheckModalProps> = ({
       title: 'Custodia Exclusiva y Prohibición a Terceros',
       text: '¿Comprendes que tu sangre será rotulada exclusivamente para ti y que bajo ninguna circunstancia se donará ni transferirá a otros pacientes?',
       cumpleEsSi: true,
-      explanation: 'Si la cirugía se cancela o no requieres la transfusión, la sangre será sometida a descarte sanitario controlado (CU15), jamás reasignada.'
+      explanation: 'Si la cirugía se cancela o no requieres la transfusión, la sangre será sometida a descarte sanitario controlado, jamás reasignada.'
     }
   ];
 
@@ -176,8 +176,8 @@ export const PrecheckModal: React.FC<PrecheckModalProps> = ({
             )}
             <div>
               <h3 className="font-bold text-lg font-['Outfit',sans-serif]">
-                {assessmentType === 'autologa' 
-                  ? 'Prefiltro: Donación Autóloga (CU21)' 
+                {assessmentType === 'autologa'
+                  ? 'Prefiltro: Donación Autóloga '
                   : 'Prefiltro Web de Autoexclusión Médica'}
               </h3>
               <p className="text-xs text-white/80">
@@ -220,7 +220,7 @@ export const PrecheckModal: React.FC<PrecheckModalProps> = ({
             }`}
           >
             <Sparkles className="w-3.5 h-3.5 text-purple-400" />
-            <span>Autóloga (CU21 - Cirugía Propia)</span>
+            <span>Autóloga (Cirugía Propia)</span>
           </button>
         </div>
 
@@ -229,18 +229,18 @@ export const PrecheckModal: React.FC<PrecheckModalProps> = ({
             <div className="space-y-4">
               {/* Type Switcher Callout Banner (when in alogena mode) */}
               {assessmentType === 'alogena' && (
-                <div 
+                <div
                   onClick={() => handleSwitchType('autologa')}
                   className="p-2.5 rounded-xl bg-purple-50 border border-purple-200 flex items-center justify-between text-xs text-purple-900 cursor-pointer hover:bg-purple-100 transition-colors"
                 >
                   <div className="flex items-center gap-2">
                     <Sparkles className="w-4 h-4 text-purple-600 shrink-0" />
                     <span className="text-[11px] leading-tight">
-                      ¿Tienes una cirugía programada? <strong>En Donación Autóloga (CU21) los requisitos son diferentes.</strong>
+                      ¿Tienes una cirugía programada? <strong>En Donación Autóloga los requisitos son diferentes.</strong>
                     </span>
                   </div>
                   <span className="text-purple-700 font-bold underline text-[11px] shrink-0 ml-2">
-                    Ver CU21 &rarr;
+                    Ver donación autóloga &rarr;
                   </span>
                 </div>
               )}
@@ -250,7 +250,7 @@ export const PrecheckModal: React.FC<PrecheckModalProps> = ({
                 <span className="flex items-center gap-1.5 font-bold">
                   {currentQuestions[step].tipo === 'general' && (
                     <span className={assessmentType === 'autologa' ? 'text-purple-700' : 'text-blue-600'}>
-                      {assessmentType === 'autologa' ? 'Requisito Clínico CU21' : 'Requisito General'}
+                      {assessmentType === 'autologa' ? 'Requisito Clínico ' : 'Requisito General'}
                     </span>
                   )}
                   {currentQuestions[step].tipo === 'temporal' && <span className="text-amber-600">Margen Temporal</span>}
@@ -319,10 +319,10 @@ export const PrecheckModal: React.FC<PrecheckModalProps> = ({
                       <CheckCircle2 className="w-10 h-10" />
                     )}
                   </div>
-                  
+
                   <h4 className="text-xl font-extrabold text-slate-900 font-['Outfit',sans-serif]">
                     {assessmentType === 'autologa'
-                      ? '¡Apto Preliminar para Donación Autóloga (CU21)!'
+                      ? '¡Apto Preliminar para Donación Autóloga !'
                       : '¡Apto en Prefiltro Web Preliminar!'}
                   </h4>
 
@@ -345,12 +345,12 @@ export const PrecheckModal: React.FC<PrecheckModalProps> = ({
                       <option value="Voluntario Altruista">Voluntario Altruista (Con incentivo oficial)</option>
                       <option value="Reposicion Familiar">Reposición Familiar (Para paciente hospitalizado)</option>
                       <option value="Brigada Movil">Brigada Móvil / Colecta Externa</option>
-                      <option value="Autologo">Autóloga Programada (CU21 - Para mi propia cirugía)</option>
+                      <option value="Autologo">Autóloga Programada (Para mi propia cirugía)</option>
                     </select>
 
                     {modalidadSeleccionada === 'Autologo' && (
                       <div className="p-2.5 rounded-xl bg-purple-50 border border-purple-200 text-purple-900 text-[11px] space-y-1">
-                        <strong className="block font-bold">Nota Protocolo CU21:</strong>
+                        <strong className="block font-bold">Nota Protocolo:</strong>
                         Presenta tu orden quirúrgica física emitida por tu médico cirujano tratante al momento de acudir a ventanilla.
                       </div>
                     )}
@@ -369,7 +369,7 @@ export const PrecheckModal: React.FC<PrecheckModalProps> = ({
                       }`}
                     >
                       <Calendar className="w-4 h-4" />
-                      Agendar Cita {modalidadSeleccionada === 'Autologo' ? 'Autóloga (CU21)' : `en Modalidad "${modalidadSeleccionada.split(' ')[0]}"`}
+                      Agendar Cita {modalidadSeleccionada === 'Autologo' ? 'Autóloga ' : `en Modalidad "${modalidadSeleccionada.split(' ')[0]}"`}
                     </button>
                     <button
                       onClick={handleReset}
@@ -426,7 +426,7 @@ export const PrecheckModal: React.FC<PrecheckModalProps> = ({
                   <div className="p-3.5 bg-purple-50 border border-purple-200 rounded-2xl text-left text-xs text-purple-950 space-y-2">
                     <div className="flex items-center gap-2 text-purple-800 font-bold">
                       <Sparkles className="w-4 h-4 text-purple-600" />
-                      <span>¿Tu consulta es para una cirugía propia programada? (CU21)</span>
+                      <span>¿Tu consulta es para una cirugía propia programada? </span>
                     </div>
                     <p className="text-[11px] text-purple-800 leading-relaxed">
                       Estas exclusiones aplican a donaciones dirigidas a terceras personas. Para <strong>Donación Autóloga</strong> (autotransfusión previa a tu cirugía electiva), los criterios son más flexibles y dependen de la prescripción escrita de tu médico cirujano tratante.
@@ -436,7 +436,7 @@ export const PrecheckModal: React.FC<PrecheckModalProps> = ({
                       onClick={() => handleSwitchType('autologa')}
                       className="px-3.5 py-1.5 bg-purple-700 hover:bg-purple-800 text-white font-bold text-xs rounded-lg transition-colors cursor-pointer flex items-center gap-1"
                     >
-                      <span>Evaluar Requisitos de Donación Autóloga (CU21)</span>
+                      <span>Evaluar Requisitos de Donación Autóloga </span>
                       <ArrowRight className="w-3 h-3" />
                     </button>
                   </div>
