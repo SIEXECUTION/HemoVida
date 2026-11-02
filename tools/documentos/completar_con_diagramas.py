@@ -14,6 +14,7 @@ from docx.opc.packuri import PackURI
 from docx.opc.constants import RELATIONSHIP_TYPE as RT
 from lxml import etree
 from PIL import Image
+from enlaces_documento import completar_enlaces
 ROOT=Path(__file__).resolve().parents[2]
 SRC=ROOT/'output/documentos/HEMOVIDA_DOCUMENTO_CORREGIDO_HASTA_CICLO_3.docx'
 OUT=ROOT/'output/documentos/HEMOVIDA_COMPLETO_CON_135_DIAGRAMAS.docx'
@@ -285,10 +286,12 @@ for el in D._element.iter(qn('w:instrText')):
  if 'TOC ' in (el.text or ''):el.text=re.sub(r'\\o "[^"]+"','\\\\o "1-5"',el.text)
 for el in D._element.iter(qn('w:fldSimple')):
  if 'TOC ' in el.get(qn('w:instr'),''):el.set(qn('w:instr'),re.sub(r'\\o "[^"]+"','\\\\o "1-5"',el.get(qn('w:instr'))))
-D.settings.element.append(OxmlElement('w:updateFields'));D.settings.element[-1].set(qn('w:val'),'true')
+# El índice se actualiza explícitamente con actualizar_indice.ps1; evitar una segunda actualización al abrir.
+D.settings.element.append(OxmlElement('w:updateFields'));D.settings.element[-1].set(qn('w:val'),'false')
 assert len(used)==135,sorted(set(entries)-set(used))
 assert original_headings==[p.text for p in D.paragraphs if p.style.name=='Heading 1'],'Se alteró el índice principal'
 assert not any(p.text.startswith('Insertar ') for p in D.paragraphs)
+completar_enlaces(D)
 D.save(OUT)
 (TMP/'insercion_135.json').write_text(json.dumps({'fuente':str(SRC),'salida':str(OUT),'diagramas':used,'imagenes':pictures,'capturas':sorted(capused),'capitulos_conservados':original_headings},ensure_ascii=False,indent=2),encoding='utf-8')
 (TMP/'artifact.md').write_text('Referencia: '+str(SRC)+'\nSHA256: '+hashlib.sha256(SRC.read_bytes()).hexdigest()+'\nConservar portada, entrevistas, capítulos y numeración. Completar texto, sustituir reservas por 135 diagramas únicos; añadir capturas reales. Índice Word actualizado por COM. Figuras con PNG y SVG; no secretos ni registros de datos exportados.\n',encoding='utf-8')

@@ -30,4 +30,10 @@ Herramientas de autoría y actualización: `tools/documentos/`. El Word se expor
 
 SHA256 de la referencia corregida: `6b31b9329989b160bba258f73bfe5a5b2f2ac4e64b9d237d0690118f1ee59f2b`.
 
-SHA256 del DOCX final revisado: `14c11b6b9c1f30fd385a5653d936f4d0a337bc7a07f68b8617e8fa3c44ce84e8`.
+SHA256 del DOCX con enlaces actualizados: `55a0d2a8465002afc9a15c90aeefce62fc396760becad072831901a8dcb78c46`.
+
+## Enlaces de cierre
+
+Se comprobó que Prototipar interfaz de usuario contiene 19 capturas: 5 del ciclo 1, 6 del ciclo 2 y 8 del ciclo 3. Se conserva el enlace clicable al repositorio `https://github.com/SIEXECUTION/HemoVida` y se añade al final `https://hemovida-banco-de-sangre.siexecution2026.workers.dev/`, que respondió HTTP 200 en la comprobación pública. Este resultado confirma disponibilidad de la portada, no aceptación de operaciones autenticadas ni del webhook. Se retira la mención a un QR inexistente en la tabla de cierre. El índice previamente actualizado se conserva; se evita forzar otra actualización automática de campos al abrir el archivo.
+
+Revisión posterior de los enlaces: comprobación estructural del DOCX y relaciones de hipervínculo correcta; encabezados, tablas e imágenes de la versión revisada conservados. La exportación nativa de Word posterior a este cambio se bloqueó y se canceló. La revisión visual de 195 páginas descrita arriba corresponde a la versión anterior a añadir el enlace de producción; la nueva exportación visual queda pendiente. No se modificaron las capturas ni los diagramas.

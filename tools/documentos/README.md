@@ -24,3 +24,5 @@ powershell -NoProfile -File tools/documentos/actualizar_indice.ps1 -ExportarRevi
 El autor requiere `python-docx`, `lxml` y `Pillow`. La actualización del índice requiere Microsoft Word instalado en Windows. El segundo paso repagina, actualiza los campos y guarda el índice; opcionalmente exporta un PDF interno de revisión bajo `.venv/documento_cierre/`. Revisar visualmente las páginas después de regenerar.
 
 Los SVG se incorporan con PNG alternativo para compatibilidad. Las vistas generales de datos se complementan con diagramas por módulo. Los manifiestos temporales se guardan bajo `.venv/documento_cierre/`. El script no aplica migraciones, modifica la base, envía correos ni realiza pagos.
+
+El cierre conserva el repositorio `https://github.com/SIEXECUTION/HemoVida` y añade el enlace del frontend de producción `https://hemovida-banco-de-sangre.siexecution2026.workers.dev/`. `enlaces_documento.py` permite incorporar este cierre sobre el Word ya generado sin reconstruir las figuras.
