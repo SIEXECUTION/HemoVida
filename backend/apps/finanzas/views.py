@@ -103,7 +103,9 @@ class StripeWebhook(APIView):
                 event["data"]["object"]["id"], api_key=settings.STRIPE_SECRET_KEY
             )
             session = session if isinstance(session, dict) else session.to_dict()
-            return Response(ops.process_event(event, session))
+            return Response(
+                ops.process_event(event, session, request.META.get("REMOTE_ADDR", ""))
+            )
         except stripe.StripeError:
             return Response(
                 {"detail": "No se pudo verificar la sesión con Stripe."}, status=502

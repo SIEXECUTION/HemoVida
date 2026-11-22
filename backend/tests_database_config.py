@@ -16,6 +16,7 @@ class DatabaseConfigTests(unittest.TestCase):
         self.assertEqual(c["CONN_MAX_AGE"], 0)
         self.assertTrue(c["DISABLE_SERVER_SIDE_CURSORS"])
         self.assertEqual(c["OPTIONS"]["sslmode"], "require")
+        self.assertEqual(c["TIME_ZONE"], "America/La_Paz")
 
     def test_invalid_url_never_falls_back_or_leaks_secret(self):
         for value in [

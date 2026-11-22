@@ -70,6 +70,8 @@ class CarnetDigitalResponseSerializer(serializers.Serializer):
     direccion = serializers.CharField(allow_null=True)
     ocupacion = serializers.CharField(allow_null=True)
     tipoDonante = serializers.CharField()
+    edad = serializers.IntegerField(required=False, allow_null=True)
+    categoriaEtariaDonante = serializers.CharField(required=False)
     estadoHabilitacion = serializers.CharField()
     fechaUltimaDonacion = serializers.DateField(allow_null=True)
     

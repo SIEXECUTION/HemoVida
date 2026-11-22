@@ -76,12 +76,23 @@ class DonanteCarnetDigitalView(APIView):
             volumen_total = agregados['volumen_total'] or 0
 
             grupo, rh = None, None
+            datos_etarios = {}
             if connection.vendor == 'postgresql':
                 with connection.cursor() as cursor:
                     cursor.execute("SELECT h.grupoaboconfirmado,h.factorrhconfirmado,h.dictameninmunohematologico FROM analisisinmunohematologico h JOIN unidadsangretotal m USING(idunidadmadre) JOIN extracciondonacion e USING(idextraccion) WHERE e.idpersonadonante=%s AND h.etapaanalisis='Post-Extraccion' ORDER BY h.fechaanalisis DESC,h.idanalisishematologico DESC LIMIT 1", [persona.idPersona])
                     result=cursor.fetchone()
                     if result and result[2]=='Apto':grupo,rh=result[:2]
+                    if request.user.is_authenticated and getattr(request.user, 'persona_id', None) == persona.idPersona:
+                        cursor.execute("SELECT to_regclass('public.vw_donante_categoria_etaria')")
+                        if cursor.fetchone()[0]:
+                            cursor.execute(
+                                "SELECT edad, categoria_etaria FROM public.vw_donante_categoria_etaria WHERE idpersona=%s",
+                                [persona.idPersona],
+                            )
+                            edad, categoria = cursor.fetchone()
+                            datos_etarios = {'edad': edad, 'categoriaEtariaDonante': categoria}
             payload = {
+                **datos_etarios,
                 'esPosibleDonador': False,
                 'carnetDigitalCodigo': donante.carnetDigitalCodigo,
                 'ci': persona.ci,

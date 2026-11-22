@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import QRCode from "qrcode";
 import { API_BASE_URL } from "../services/api";
+import { displayDateTime } from "../utils/dateTime";
 const names: Record<string, string> = {
   grupoSanguineo: "Grupo sanguíneo",
   factorRh: "Factor Rh",
@@ -40,6 +41,8 @@ const names: Record<string, string> = {
   tipo: "Tipo",
   resultado: "Resultado",
   fecharecepcion: "Recibida",
+  fechaHora: "Fecha y hora (Bolivia)",
+  fechahora: "Fecha y hora (Bolivia)",
   dimension: "Agrupación",
   cantidad: "Cantidad",
   rechazados: "Evaluaciones rechazadas",
@@ -117,7 +120,7 @@ function Content({ value }: { value: unknown }): React.ReactElement {
     );
   return (
     <span>
-      {typeof value === "boolean" ? (value ? "Sí" : "No") : String(value)}
+      {typeof value === "boolean" ? (value ? "Sí" : "No") : displayDateTime(String(value))}
     </span>
   );
 }
@@ -163,6 +166,15 @@ function DonorCard({ data: c }: { data: Record<string, unknown> }) {
             <p className="text-slate-300">
               C.I. {String(c.ci || "Sin registro")}
             </p>
+            {typeof c.tipoDonante === "string" && (
+              <p className="text-slate-300">Modalidad: {c.tipoDonante}</p>
+            )}
+            {typeof c.categoriaEtariaDonante === "string" && (
+              <p className="text-slate-300">
+                Categoría por edad: <strong>{c.categoriaEtariaDonante}</strong>
+                {typeof c.edad === "number" && ` · ${c.edad} años`}
+              </p>
+            )}
             <strong className="block text-2xl text-rose-300">
               {c.grupoSanguineo
                 ? `${c.grupoSanguineo} ${c.factorRh || ""}`

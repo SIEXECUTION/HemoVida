@@ -275,7 +275,8 @@ class Cycle3Tests(ClinicalTests):
         def send(sig):
             return StripeWebhook.as_view()(
                 APIRequestFactory().post(
-                    "/", raw, content_type="application/json", HTTP_STRIPE_SIGNATURE=sig
+                    "/", raw, content_type="application/json", HTTP_STRIPE_SIGNATURE=sig,
+                    REMOTE_ADDR="127.0.0.1", HTTP_X_FORWARDED_FOR="203.0.113.99",
                 )
             )
 
@@ -286,6 +287,12 @@ class Cycle3Tests(ClinicalTests):
         self.assertEqual(send(f"t={stamp},v1={signature}").status_code, 200)
         self.assertEqual(send(f"t={stamp},v1={signature}").status_code, 200)
         with connection.cursor() as c:
+            c.execute(
+                "SELECT iporigen FROM bitacoraauditoria WHERE tablaafectada='pagofinanciero' "
+                "AND idregistroafectado=%s AND accionrealizada LIKE 'UPDATE origen=stripe_webhook%%'",
+                [pid],
+            )
+            self.assertEqual(c.fetchall(), [("127.0.0.1",)])
             c.execute(
                 "SELECT montoabonado FROM deudafinanciera WHERE iddeuda=%s", [debt]
             )

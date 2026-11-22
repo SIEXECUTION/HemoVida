@@ -29,7 +29,8 @@ def main():
                 "ERROR: el ambiente local debe usar DATABASE_URL PostgreSQL, no SQLite."
             )
             return 1
-        if str(config.get("PORT")) != "6543":
+        local = config.get("HOST") in ("localhost", "127.0.0.1", "::1")
+        if not local and str(config.get("PORT")) != "6543":
             print(
                 "ERROR: esta configuración local requiere el pooler Supabase en puerto 6543."
             )
@@ -38,7 +39,7 @@ def main():
             complete = True
             c.execute("SELECT 1")
             assert c.fetchone()[0] == 1
-            print("OK: conexión PostgreSQL por SSL, puerto 6543.")
+            print("OK: conexión PostgreSQL local." if local else "OK: conexión PostgreSQL por SSL, puerto 6543.")
             for table in [
                 "persona",
                 "usuario",
