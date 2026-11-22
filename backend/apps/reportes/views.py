@@ -47,13 +47,15 @@ class Catalogo(APIView):
                     c,
                     "SELECT DISTINCT prioridadsolicitud AS valor,prioridadsolicitud AS etiqueta FROM solicitudhospitalaria ORDER BY prioridadsolicitud",
                 )
-                if "cartera" in allowed
+                if "cartera" in allowed or "demanda" in allowed
                 else []
             )
         states = {
             "triajes": ["Apto", "Rechazado"],
             "citas": ["Programada", "Atendida", "Cancelada", "Inasistencia", "Pendiente"],
             "serologia": ["Apto", "No Apto"],
+            "laboratorio_unidades": ["En Cuarentena", "Liberada Apta", "Rechazada"],
+            "demanda": ["Registrada", "En Evaluacion", "En Proceso", "Despachada", "Anulada"],
             "cartera": ["Pendiente", "Parcial", "Liquidada", "Vencida"],
         }
         choices = lambda values: [{"valor": v, "etiqueta": v} for v in values]
@@ -143,6 +145,9 @@ class Consulta(APIView):
             raise ConflictoLaboratorio() from exc
         if format == "json":
             return Response(result)
+        return self.export(result, format)
+
+    def export(self, result, format):
         if format == 'pdf' and hasattr(self,'fixed_pdf'):
             return self.fixed_pdf(result)
         if format == "csv":

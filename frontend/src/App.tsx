@@ -22,6 +22,7 @@ import { IncentivesPage } from "./components/IncentivesPage";
 import { AutologousPage } from "./components/AutologousPage";
 import { StaticReportsPage } from "./components/StaticReportsPage";
 import { ReportsPage } from "./components/ReportsPage";
+import { ChatbotWidget } from "./components/ChatbotWidget";
 import React, { useState } from "react";
 import { Navbar } from "./components/Navbar";
 import { LoginModal } from "./components/LoginModal";
@@ -374,6 +375,9 @@ export default function App() {
       <footer className="text-center text-xs p-6 border-t bg-white">
         HemoVida · Banco de Sangre y Transfusión
       </footer>
+      {session?.token && (
+        <ChatbotWidget key={session.token} token={session.token} role={session.activeRole} />
+      )}
       <LoginModal
         isOpen={login}
         onClose={() => setLogin(false)}

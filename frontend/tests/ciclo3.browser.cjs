@@ -3,6 +3,67 @@ const { test, before, after } = require("node:test");
 const assert = require("node:assert/strict");
 const { chromium } = require("playwright");
 let browser;
+
+test("CU25 oculta el asistente al donante y exporta un reporte de logística", async () => {
+  const donor = await open(() => ({ body: {} }), 1280, "DONANTE");
+  try {
+    assert.equal(await donor.page.getByRole("button", { name: "Asistente HemoVida" }).count(), 0);
+  } finally {
+    await donor.close();
+  }
+
+  let submitted;
+  const staff = await open((url, request) => {
+    if (url.pathname === "/api/reportes/chatbot/") {
+      submitted = request.postDataJSON();
+      return { body: {
+        respuesta: "Reporte de stock",
+        columnas: [{ clave: "cantidad", etiqueta: "Cantidad" }],
+        filas: [{ cantidad: 4 }],
+        consulta_exportacion: "ticket-prueba",
+      } };
+    }
+    if (url.pathname === "/api/reportes/chatbot/exportar/") {
+      assert.equal(url.searchParams.get("consulta"), "ticket-prueba");
+      assert.equal(url.searchParams.get("formato"), "csv");
+      return { type: "text/csv", body: "cantidad\n4\n" };
+    }
+    return { body: {} };
+  }, 450, "TEC_LOGISTICA");
+  try {
+    const { page } = staff;
+    await page.context().addInitScript(() => {
+      class TestRecognition {
+        start() {
+          setTimeout(() => {
+            this.onresult({ results: [[{ transcript: "Resume el stock" }]] });
+            this.onend();
+          });
+        }
+        abort() {}
+        stop() {}
+      }
+      window.SpeechRecognition = TestRecognition;
+    });
+    await page.reload();
+    const launcher = page.getByRole("button", { name: "Asistente HemoVida", exact: true });
+    await launcher.click();
+    assert.equal(await launcher.getAttribute("aria-expanded", { timeout: 3000 }), "true");
+    await page.getByRole("button", { name: "Dictar consulta" }).click();
+    const field = page.getByRole("textbox", { name: "Consulta del asistente" });
+    await page.waitForFunction(() => document.querySelector('textarea[aria-label="Consulta del asistente"]')?.value === "Resume el stock");
+    await field.fill("Resume el stock para siete días");
+    await page.getByRole("button", { name: "Enviar", exact: true }).click();
+    await page.getByText("Reporte de stock", { exact: true }).waitFor();
+    assert.equal(submitted.mensaje, "Resume el stock para siete días");
+    const download = page.waitForEvent("download");
+    await page.getByRole("button", { name: "Exportar CSV" }).click();
+    assert.equal((await download).suggestedFilename(), "hemovida-cu25.csv");
+    assert.deepEqual(staff.errors, []);
+  } finally {
+    await staff.close();
+  }
+});
 before(async () => {
   browser = await chromium.launch({
     headless: true,

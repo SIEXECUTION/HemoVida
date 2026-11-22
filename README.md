@@ -19,6 +19,23 @@ Cloudflare Workers + Render + Supabase. Consulta [DESPLIEGUE.md](DESPLIEGUE.md) 
 
 ---
 
+## Ciclo 4
+
+El cuarto ciclo reúne el circuito hospitalario y el asistente analítico. El alcance implementado de esta entrega es RF25/CU25, del paquete P7.
+
+| Caso de uso | Alcance | Estado |
+| --- | --- | --- |
+| CU16 | Citas de compatibilidad pretransfusional | Diseñado |
+| CU17 | Solicitudes hospitalarias y liberación por Código Rojo | Diseñado |
+| CU18 | Compatibilidad cruzada mediante segmento de bolsa | Diseñado |
+| CU19 | Conservadoras, cadena de frío y despacho | Diseñado |
+| CU20 | Deuda biológica y compensación por déficit crítico | Diseñado |
+| CU25 | Reportes dinámicos por chatbot y dictado | Implementado para pruebas locales |
+
+El **Asistente HemoVida** aparece para ADMIN, DOC_TRIAJE, BIOQ_INTEGRAL y TEC_LOGISTICA. Admite texto o dictado en español cuando el navegador lo permite. Gemini interpreta la pregunta y propone una consulta del catálogo. Django verifica el rol activo de la sesión, ejecuta el reporte agregado en PostgreSQL y registra `CONSULTA_CHATBOT` en la bitácora. Los resultados se pueden descargar en CSV y PDF. La fuente de demanda lee solicitudes existentes y sus totales de unidades solicitadas y entregadas.
+
+Para habilitar Gemini, instala las dependencias de `backend/requirements.txt` y añade `GEMINI_API_KEY` a `backend/.env` o a las variables privadas de Render. `GEMINI_MODEL` permite seleccionar el modelo. Usa preguntas de reportes generales y evita incluir datos personales en el chat o el dictado. [Function calling de Gemini](https://ai.google.dev/gemini-api/docs/function-calling) · [Reconocimiento de voz](https://developer.mozilla.org/en-US/docs/Web/API/Web_Speech_API/Using_the_Web_Speech_API)
+
 ## 🏛️ Arquitectura del Sistema
 
 ```text

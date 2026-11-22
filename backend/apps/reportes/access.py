@@ -10,8 +10,10 @@ SOURCES_BY_ROLE = {
         "triajes",
         "citas",
         "serologia",
+        "laboratorio_unidades",
+        "demanda",
         "stock",
         "bajas",
     ),
-    "TEC_LOGISTICA": ("stock", "bajas"),
+    "TEC_LOGISTICA": ("stock", "bajas", "demanda"),
 }
