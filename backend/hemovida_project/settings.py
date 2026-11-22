@@ -228,4 +228,6 @@ STRIPE_WEBHOOK_SECRET=os.getenv('STRIPE_WEBHOOK_SECRET','').strip()
 STRIPE_CURRENCY='bob'
 STRIPE_ACCOUNT_COUNTRY='US'
 STRIPE_MODE=os.getenv('STRIPE_MODE','test').strip()
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "").strip() or "gemini-3.1-flash-lite"
 PAYMENT_FRONTEND_URL=os.getenv('PAYMENT_FRONTEND_URL','http://127.0.0.1:3000').rstrip('/')

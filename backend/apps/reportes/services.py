@@ -72,6 +72,18 @@ CATALOG = {
         "filters": {},
         "unit": "eventos de baja",
     },
+    "laboratorio_unidades": {
+        "date": None,
+        "dims": {"estado": "estadoliberacion"},
+        "filters": {"estado": "estadoliberacion"},
+        "unit": "bolsas madre",
+    },
+    "demanda": {
+        "date": "fechahorarequerimiento",
+        "dims": {"estado": "estadosolicitud", "prioridad": "prioridadsolicitud"},
+        "filters": {"estado": "estadosolicitud", "prioridad": "prioridadsolicitud"},
+        "unit": "solicitudes",
+    },
     "recaudacion": {
         "date": "fechahorapago",
         "dims": {
@@ -157,6 +169,8 @@ METRICS = {
     ],
     "stock": ["cantidad", "volumen", "vencimiento_proximo"],
     "bajas": ["cantidad", "madres", "componentes"],
+    "laboratorio_unidades": ["cantidad"],
+    "demanda": ["cantidad", "unidades_solicitadas", "unidades_entregadas"],
     "recaudacion": ["cantidad", "importe"],
     "cartera": ["cantidad", "importe", "cartera_vencida"],
     "intentos": ["cantidad", "finalizados", "confirmados", "porcentaje_confirmacion"],
@@ -198,7 +212,7 @@ def query(params):
         raise ValidationError("Período u horizonte fuera del rango permitido.")
     if not config["date"] and (params.get("desde") or params.get("hasta")):
         raise ValidationError(
-            "Stock y cartera son fotografías actuales; no admiten un período histórico."
+            "Esta fuente refleja el estado actual y no admite un período histórico."
         )
     conditions = []
     values = []
@@ -240,6 +254,12 @@ def query(params):
     elif kind == "bajas":
         base = "SELECT * FROM bajainventario"
         metrics = "count(*) AS cantidad,count(*) FILTER(WHERE idunidadmadre IS NOT NULL) AS madres,count(*) FILTER(WHERE idejemplarbolsa IS NOT NULL) AS componentes"
+    elif kind == "laboratorio_unidades":
+        base = "SELECT estadoliberacion FROM unidadsangretotal"
+        metrics = "count(*) AS cantidad"
+    elif kind == "demanda":
+        base = "SELECT * FROM solicitudhospitalaria"
+        metrics = "count(*) AS cantidad,coalesce(sum(cantidadbolsassolicitadas),0) AS unidades_solicitadas,coalesce(sum(cantidadentregadareceptor),0) AS unidades_entregadas"
     elif kind == "recaudacion":
         base = "SELECT p.* FROM pagofinanciero p JOIN deudafinanciera d USING(iddeuda) WHERE p.estadotransaccion='Confirmada' AND d.moneda='BOB'"
         metrics = "count(*) AS cantidad,coalesce(sum(montopagado),0) AS importe"
@@ -247,7 +267,12 @@ def query(params):
         base = "SELECT p.* FROM pagofinanciero p JOIN deudafinanciera d USING(iddeuda) WHERE d.moneda='BOB'"
         metrics = "count(*) AS cantidad,count(*) FILTER(WHERE estadotransaccion IN ('Confirmada','Rechazada','Anulada')) AS finalizados,count(*) FILTER(WHERE estadotransaccion='Confirmada') AS confirmados"
     else:
-        base = "SELECT v.*,d.moneda FROM vw_cu22_cuentas_por_cobrar v JOIN deudafinanciera d USING(iddeuda) WHERE d.moneda='BOB'"
+        base = """SELECT v.iddeuda, v.estado_actual, v.prioridadsolicitud, v.saldopendiente,
+                         s.idinstitucion
+                  FROM vw_cu22_cuentas_por_cobrar v
+                  JOIN deudafinanciera d USING (iddeuda)
+                  JOIN solicitudhospitalaria s ON s.idsolicitud=d.idsolicitud
+                  WHERE d.moneda='BOB'"""
         metrics = "count(*) AS cantidad,coalesce(sum(saldopendiente),0) AS importe,coalesce(sum(saldopendiente) FILTER(WHERE estado_actual='Vencida'),0) AS cartera_vencida"
     where = " WHERE " + " AND ".join(conditions) if conditions else ""
     sql = f"WITH base AS ({base}) SELECT {config['dims'][dim]} AS dimension,{metrics} FROM base{where} GROUP BY 1 ORDER BY 1 LIMIT 5001"
