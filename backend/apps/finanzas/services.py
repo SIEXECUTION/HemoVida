@@ -242,19 +242,20 @@ def checkout(request, deuda, d):
 
 
 @contextmanager
-def webhook_context():
+def webhook_context(source_ip=""):
     with transaction.atomic(), connection.cursor() as c:
         for key, value in [
             ("hemovida.origen", "stripe_webhook"),
             ("hemovida.rol_activo", "Stripe verificado"),
             ("hemovida.usuario_id", ""),
+            ("hemovida.ip", source_ip or ""),
         ]:
             c.execute("SELECT set_config(%s,%s,true)", [key, value])
         yield c
 
 
-def process_event(event, session):
-    with webhook_context() as c:
+def process_event(event, session, source_ip=""):
+    with webhook_context(source_ip) as c:
         revision07(c)
         c.execute(
             "SELECT p.iddeuda FROM checkoutstripe s JOIN pagofinanciero p USING(idpago) WHERE s.sesionid=%s",
@@ -420,7 +421,7 @@ def reconcile(request, pago, d, cancel=False):
         + hashlib.sha256((a["sesionid"] + state).encode()).hexdigest(),
         "type": "checkout.session.reconciled",
     }
-    result = process_event(event, session)
+    result = process_event(event, session, request.META.get("REMOTE_ADDR", ""))
     with clinical_operation(request), connection.cursor() as c:
         audit(
             c,
