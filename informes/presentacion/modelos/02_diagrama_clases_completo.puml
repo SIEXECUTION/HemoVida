@@ -1,0 +1,744 @@
+@startuml
+!pragma layout smetana
+' Catálogo PostgreSQL public de HemoVida verificado el 22-11-2026
+hide circle
+hide empty members
+skinparam shadowing false
+skinparam backgroundColor white
+skinparam defaultFontName Arial
+skinparam defaultFontSize 15
+skinparam classAttributeIconSize 0
+skinparam classBackgroundColor #FAF1E4
+skinparam classBorderColor #6E6359
+skinparam classFontColor #202020
+skinparam ArrowColor #615850
+skinparam packageStyle rectangle
+skinparam packageBackgroundColor #F6F7F8
+skinparam packageBorderColor #A6A6A6
+skinparam linetype polyline
+skinparam nodesep 23
+skinparam ranksep 30
+left to right direction
+title HemoVida · Clases de persistencia
+package "Personas, acceso y auditoría" {
+class "Persona" as T_persona {
+  idpersona : integer [PK]
+  ci : varchar(20)
+  nombres : varchar(80)
+  apellidos : varchar(80)
+  sexo : char(1)
+  fechanacimiento : date
+  direccion : varchar(150) {opcional}
+  celular : varchar(20) {opcional}
+  ocupacion : varchar(80) {opcional}
+  nacionalidad : varchar(50) {opcional}
+  --
+  {field} UNIQUE (ci)
+}
+class "Usuario" as T_usuario {
+  idusuario : integer [PK]
+  idpersona : integer [FK]
+  username : varchar(50)
+  email : varchar(100)
+  passwordhash : varchar(255)
+  estado : varchar(20)
+  fechacreacion : timestamp
+  intentosfallidos : integer
+  fechabloqueohasta : timestamp {opcional}
+  totalbloqueosrecibidos : integer
+  fechaintentosdia : date {opcional}
+  --
+  {field} UNIQUE (email)
+  {field} UNIQUE (idpersona)
+  {field} UNIQUE (username)
+}
+class "Rol" as T_rol {
+  idrol : integer [PK]
+  nombrerol : varchar(60)
+  codigorol : varchar(30)
+  descripcion : text {opcional}
+  --
+  {field} UNIQUE (codigorol)
+  {field} UNIQUE (nombrerol)
+}
+class "UsuarioRol" as T_usuariorol {
+  idusuario : integer [PK, FK]
+  idrol : integer [PK, FK]
+  fechaasignacion : timestamp
+}
+class "PersonalSalud" as T_personalsalud {
+  idpersona : integer [PK, FK]
+  cargo : varchar(80)
+  registroprofesional : varchar(40)
+  --
+  {field} UNIQUE (registroprofesional)
+}
+class "BitacoraAuditoria" as T_bitacoraauditoria {
+  idauditoria : integer [PK]
+  idusuario : integer [FK] {opcional}
+  rolactivo : varchar(60) {opcional}
+  accionrealizada : varchar(255)
+  tablaafectada : varchar(60)
+  idregistroafectado : integer {opcional}
+  fechahora : timestamp
+  iporigen : varchar(45) {opcional}
+}
+}
+package "Donantes y receptores" {
+class "PosibleDonador" as T_posibledonador {
+  idpersona : integer [PK, FK]
+  estadoaptitud : varchar(30)
+  tieneanalisis : boolean
+  fecharegistropostulante : date
+  carnetprovisionalcodigo : varchar(40) {opcional}
+  --
+  {field} UNIQUE (carnetprovisionalcodigo)
+}
+class "Donante" as T_donante {
+  idpersona : integer [PK, FK]
+  carnetdigitalcodigo : varchar(30)
+  tipodonante : varchar(30)
+  estadohabilitacion : varchar(30)
+  fechaultimadonacion : date {opcional}
+  --
+  {field} UNIQUE (carnetdigitalcodigo)
+}
+class "Receptor" as T_receptor {
+  idpersona : integer [PK, FK]
+  codigohistorialclinico : varchar(40)
+  gruposanguineoreceptor : varchar(20)
+  idgrupo : integer [FK] {opcional}
+  --
+  {field} UNIQUE (codigohistorialclinico)
+}
+class "CategoriaEtariaDonante" as T_categoriaetariadonante {
+  codigo : varchar(20) [PK]
+  nombre : varchar(40)
+  edad_min : smallint
+  edad_max : smallint
+}
+}
+package "Agenda, prefiltro y programación autóloga" {
+class "AgendaTurno" as T_agendaturno {
+  idturno : integer [PK]
+  inicio : timestamptz
+  fin : timestamptz
+  cupo : integer
+  habilitado : boolean
+  creadopor : integer [FK]
+  --
+  {field} UNIQUE (inicio)
+}
+class "CierreAgenda" as T_cierreagenda {
+  idcierre : integer [PK]
+  fecha : date
+  cerrado : boolean
+  motivo : varchar(250)
+  idusuario : integer [FK]
+  actualizado : timestamptz
+  --
+  {field} UNIQUE (fecha)
+}
+class "CitaDonacion" as T_citadonacion {
+  idcita : integer [PK]
+  idpersona : integer [FK]
+  fechahoraprogramada : timestamp
+  prefiltroaprobado : boolean
+  asistenciaconfirmada : boolean
+  estadocita : varchar(25)
+  idturno : integer [FK] {opcional}
+  tipoatencion : varchar(20) {opcional}
+  idprograma : integer [FK] {opcional}
+}
+class "RequisitoDonacion" as T_requisitodonacion {
+  idrequisito : integer [PK]
+  nombrerequisito : varchar(120)
+  tiporequisito : varchar(40)
+  esexcluyentedefinitivo : boolean
+  activo : boolean
+}
+class "DetalleCitaRequisito" as T_detallecitarequisito {
+  iddetallecita : integer [PK]
+  idcita : integer [FK]
+  idrequisito : integer [FK]
+  cumplerequisito : boolean
+  observacionrespuesta : varchar(200) {opcional}
+}
+class "PrefiltroBorrador" as T_prefiltroborrador {
+  idpersona : integer [PK, FK]
+  idusuario : integer [FK]
+  versioncatalogo : varchar(64)
+  catalogo : jsonb
+  respuestas : jsonb
+  idturno : integer [FK] {opcional}
+  tipoatencion : varchar(20)
+  idprograma : integer [FK] {opcional}
+  actualizado : timestamptz
+}
+class "PrefiltroCita" as T_prefiltrocita {
+  idcita : integer [PK, FK]
+  idusuario : integer [FK]
+  versioncatalogo : varchar(64)
+  catalogo : jsonb
+  respuestas : jsonb
+  aprobado : boolean
+  fecharegistro : timestamptz
+}
+class "ProgramacionAutologa" as T_programacionautologa {
+  idprograma : integer [PK]
+  idreceptor : integer [FK]
+  fechacirugia : date
+  indicacion : text
+  referenciamedica : varchar(120)
+  idmedico : integer [FK]
+  estado : varchar(25)
+  version : integer
+  revisadopor : integer [FK] {opcional}
+  fecharevision : timestamptz {opcional}
+  motivorevision : varchar(500) {opcional}
+  creado : timestamptz
+  actualizado : timestamptz
+}
+class "ProgramacionAutologaHistorial" as T_programacionautologahistorial {
+  idhistorial : integer [PK]
+  idprograma : integer [FK]
+  version : integer
+  contenido : jsonb
+  idusuario : integer [FK]
+  registrado : timestamptz
+  --
+  {field} UNIQUE (idprograma, version)
+}
+class "ColectaAutologa" as T_colectaautologa {
+  idunidadmadre : integer [PK, FK]
+  idreceptor : integer [FK]
+  fechacirugia : date
+  idpersonalsalud : integer [FK]
+  idprograma : integer [FK] {opcional}
+}
+}
+package "Evaluación y colecta" {
+class "TriajeClinico" as T_triajeclinico {
+  idtriaje : integer [PK]
+  idposibledonador : integer [FK]
+  idpersonalsalud : integer [FK]
+  fechahora : timestamp
+  pesokg : numeric(5,2)
+  presionsistolicammhg : integer
+  presiondiastolicammhg : integer
+  nivelhemoglobina : numeric(4,1)
+  temperatura : numeric(4,1)
+  resultadoaptitud : varchar(20)
+  observaciones : text {opcional}
+}
+class "Diferimiento" as T_diferimiento {
+  iddiferimiento : integer [PK]
+  idtriaje : integer [FK] {opcional}
+  idposibledonador : integer [FK]
+  motivodetallado : varchar(255)
+  diasinhabilitacion : integer
+  fechainiciodiferimiento : date
+  fechafindiferimiento : date {opcional}
+  idserologia : integer [FK] {opcional}
+  idhematologia : integer [FK] {opcional}
+  comunicacionfecha : timestamptz {opcional}
+  canalcomunicacion : varchar(25) {opcional}
+  comunicadopor : integer [FK] {opcional}
+  --
+  {field} UNIQUE (idtriaje)
+}
+class "ConsentimientoInformado" as T_consentimientoinformado {
+  idconsentimiento : integer [PK]
+  idextraccion : integer
+  fechafirma : timestamp
+  declaracionjuradaaceptada : boolean
+  firmadigital : text
+  --
+  {field} UNIQUE (idextraccion)
+}
+class "ExtraccionDonacion" as T_extracciondonacion {
+  idextraccion : integer [PK]
+  idpersonadonante : integer [FK]
+  idpersonalsalud : integer [FK]
+  codigoextraccion : varchar(30)
+  fechahora : timestamp
+  volumenextraidoml : integer
+  brazoextraccion : varchar(15)
+  idtriaje : integer [FK] {opcional}
+  --
+  {field} UNIQUE (codigoextraccion)
+}
+class "IncidenciaColecta" as T_incidenciacolecta {
+  idincidencia : bigint [PK]
+  idtriaje : integer [FK]
+  idpersonalsalud : integer [FK]
+  fechahora : timestamptz
+  motivo : text
+  volumenobtenidoml : integer
+}
+class "IncentivoEntrega" as T_incentivoentrega {
+  idincentivo : integer [PK]
+  idextraccion : integer [FK]
+  tipoarticulo : varchar(80)
+  refrigerioentregado : boolean
+  fechahoraentrega : timestamp
+  --
+  {field} UNIQUE (idextraccion)
+}
+}
+package "Laboratorio y unidades" {
+class "UnidadSangreTotal" as T_unidadsangretotal {
+  idunidadmadre : integer [PK]
+  idextraccion : integer [FK]
+  idgrupo : integer [FK]
+  codigobolsamadre : varchar(40)
+  tipobolsa : varchar(40)
+  estadoliberacion : varchar(30)
+  --
+  {field} UNIQUE (codigobolsamadre)
+  {field} UNIQUE (idextraccion)
+}
+class "AnalisisInmunoserologico" as T_analisisinmunoserologico {
+  idanalisis : integer [PK]
+  idunidadmadre : integer [FK]
+  idpersonalsalud : integer [FK]
+  codigoanalisis : varchar(30)
+  fechaanalisis : timestamp
+  resultadovih : varchar(20)
+  resultadochagas : varchar(20)
+  resultadohepatitisb : varchar(20)
+  resultadohepatitisc : varchar(20)
+  resultadosifilis : varchar(20)
+  resultadohtlv : varchar(20)
+  dictamenfinal : varchar(20)
+  habilitaextraccion : boolean
+  --
+  {field} UNIQUE (codigoanalisis)
+  {field} UNIQUE (idunidadmadre)
+}
+class "AnalisisInmunohematologico" as T_analisisinmunohematologico {
+  idanalisishematologico : integer [PK]
+  idpersonalsalud : integer
+  idposibledonador : integer {opcional}
+  idreceptor : integer {opcional}
+  idunidadmadre : integer {opcional}
+  idcitalab : integer {opcional}
+  etapaanalisis : varchar(50)
+  fechaanalisis : timestamp
+  grupoaboconfirmado : varchar(5)
+  factorrhconfirmado : varchar(10)
+  pruebacoombsdirecta : varchar(30)
+  pruebacoombsindirecta : varchar(30)
+  rastreoanticuerposirregulares : varchar(100)
+  observaciones : text {opcional}
+  fasesalina : varchar(30) {opcional}
+  fasetermica : varchar(30) {opcional}
+  dictameninmunohematologico : varchar(100) {opcional}
+}
+class "CitaLaboratorio" as T_citalaboratorio {
+  idcitalab : integer [PK]
+  idreceptor : integer [FK]
+  idinstitucion : integer [FK] {opcional}
+  fechahoracita : timestamp
+  fechacirugiaprogramada : date
+  tipoanalisisrequerido : varchar(100)
+  muestrarecolectada : boolean
+  estadocita : varchar(25)
+}
+class "PruebaCompatibilidad" as T_pruebacompatibilidad {
+  idpruebacompatibilidad : integer [PK]
+  idsolicitud : integer [FK]
+  idejemplarbolsa : integer [FK]
+  idpersonalsalud : integer [FK]
+  fechahoraprueba : timestamp
+  resultadocompatibilidad : varchar(25)
+  faseantiglobulina : varchar(50) {opcional}
+  reaccionobservada : varchar(150) {opcional}
+  aprobadoparadespacho : boolean
+}
+}
+package "Inventario y conservación" {
+class "GrupoSanguineo" as T_gruposanguineo {
+  idgrupo : integer [PK]
+  grupoabo : varchar(5)
+  factorrh : varchar(10)
+  --
+  {field} UNIQUE (grupoabo, factorrh)
+}
+class "ParametroStockMinimo" as T_parametrostockminimo {
+  idparametro : integer [PK]
+  idgrupo : integer [FK]
+  tipocomponente : varchar(50)
+  stockminimoseguridad : integer
+  stockcriticoalerta : integer
+  categoriaetaria : varchar(20)
+  --
+  {field} UNIQUE (idgrupo, tipocomponente, categoriaetaria)
+}
+class "EjemplarBolsa" as T_ejemplarbolsa {
+  idejemplarbolsa : integer [PK]
+  idunidadmadre : integer [FK] {opcional}
+  idgrupo : integer [FK]
+  idubicacion : integer [FK] {opcional}
+  codigoejemplark : varchar(40)
+  tipocomponente : varchar(50)
+  volumenml : integer
+  fechaextraccion : date
+  fechacaducidad : date
+  estadobolsak : varchar(25)
+  esexclusivoautologo : boolean
+  categoriaetaria : varchar(20)
+  capacidadbolsaml : integer {opcional}
+  --
+  {field} UNIQUE (codigoejemplark)
+}
+class "UbicacionAlmacen" as T_ubicacionalmacen {
+  idubicacion : integer [PK]
+  identificadorcompartimento : varchar(30)
+  tipoequipo : varchar(80)
+  temperaturaregistro : numeric(4,1)
+  capacidadmaxima : integer
+  capacidadocupada : integer
+  tieneagitacion : boolean
+  --
+  {field} UNIQUE (identificadorcompartimento)
+}
+class "ProtocoloConservacion" as T_protocoloconservacion {
+  tipocomponente : varchar(50) [PK]
+  temperaturamin : numeric(5,1)
+  temperaturamax : numeric(5,1)
+  diasconservacion : integer
+  requiereagitacion : boolean
+  aprobadopor : integer [FK]
+  fechaaprobacion : timestamptz
+  contexto : varchar(30)
+  referencia : varchar(500)
+}
+class "BajaInventario" as T_bajainventario {
+  idbaja : integer [PK]
+  idunidadmadre : integer [FK] {opcional}
+  idejemplarbolsa : integer [FK] {opcional}
+  idpersonalsalud : integer [FK]
+  fechahorabaja : timestamp
+  motivobaja : varchar(100)
+  observaciones : text {opcional}
+}
+}
+package "Demanda hospitalaria y reposición" {
+class "InstitucionSalud" as T_institucionsalud {
+  idinstitucion : integer [PK]
+  nombreinstitucion : varchar(100)
+  tipoinstitucion : varchar(50)
+  direccion : varchar(150) {opcional}
+  telefonocontacto : varchar(25) {opcional}
+  --
+  {field} UNIQUE (nombreinstitucion)
+}
+class "SolicitudHospitalaria" as T_solicitudhospitalaria {
+  idsolicitud : integer [PK]
+  idinstitucion : integer [FK]
+  idreceptor : integer [FK]
+  numerosolicitud : varchar(35)
+  fechahorarequerimiento : timestamp
+  prioridadsolicitud : varchar(25)
+  motivotransfusion : varchar(150) {opcional}
+  velocidadgoteo : varchar(50) {opcional}
+  horariorequerido : varchar(50) {opcional}
+  cantidadbolsassolicitadas : integer
+  cantidadentregadareceptor : integer
+  cantidadretiradastock : integer
+  estadosolicitud : varchar(25)
+  --
+  {field} UNIQUE (numerosolicitud)
+}
+class "DetalleSolicitud" as T_detallesolicitud {
+  iddetalle : integer [PK]
+  idsolicitud : integer
+  idgrupo : integer
+  tipocomponenterequerido : varchar(50)
+  cantidadsolicitada : integer
+  cantidadasignada : integer
+  categoriaetaria : varchar(20)
+}
+class "ReservaSangre" as T_reservasangre {
+  idreserva : integer [PK]
+  idreceptor : integer
+  idejemplarbolsa : integer
+  iddetallesolicitud : integer [FK] {opcional}
+  fechareserva : timestamp
+  esautologa : boolean
+  motivoreserva : varchar(100) {opcional}
+  fechavencimientoreserva : date
+  estadoreserva : varchar(30)
+  --
+  {field} UNIQUE (idejemplarbolsa)
+}
+class "ComprobanteDespacho" as T_comprobantedespacho {
+  iddespacho : integer [PK]
+  idsolicitud : integer [FK]
+  codigoguiadespacho : varchar(35)
+  fechahorasalida : timestamp
+  receptorentrega : varchar(100)
+  temperaturadespacho : numeric(4,1)
+  estadoentrega : varchar(30)
+  --
+  {field} UNIQUE (codigoguiadespacho)
+}
+class "DetalleDespacho" as T_detalledespacho {
+  iddetalledespacho : integer [PK]
+  iddespacho : integer [FK]
+  idejemplarbolsa : integer [FK]
+  --
+  {field} UNIQUE (idejemplarbolsa)
+}
+class "ReposicionPendiente" as T_reposicionpendiente {
+  idreposicion : integer [PK]
+  idsolicitud : integer [FK]
+  cantidadbolsasareponer : integer
+  cantidadrecuperada : integer
+  fechalimitereposicion : date
+  estadoreposicion : varchar(25)
+  --
+  {field} UNIQUE (idsolicitud)
+}
+class "CompromisoDonacion" as T_compromisodonacion {
+  idcompromiso : integer [PK]
+  idreposicion : integer [FK]
+  idpersonafirmante : integer [FK]
+  iddonante : integer [FK] {opcional}
+  fechacompromiso : date
+  donacionconcretada : boolean
+  volumendonadoefectivoml : integer {opcional}
+  estadocompromiso : varchar(25)
+  idextraccion : integer [FK] {opcional}
+}
+}
+package "Finanzas y Stripe" {
+class "DeudaFinanciera" as T_deudafinanciera {
+  iddeuda : bigint [PK]
+  idsolicitud : integer [FK]
+  montooriginal : numeric(12,2)
+  montoabonado : numeric(12,2)
+  saldopendiente : numeric(12,2) {opcional}
+  estadodeuda : varchar(20)
+  fechacreacion : timestamptz
+  fechavencimiento : timestamptz {opcional}
+  motivodeuda : text
+  pagoposteriorautorizado : boolean
+  autorizadopor : integer {opcional}
+  observacionautorizacion : text {opcional}
+  moneda : varchar(3) {opcional}
+  --
+  {field} UNIQUE (idsolicitud)
+}
+class "PagoFinanciero" as T_pagofinanciero {
+  idpago : bigint [PK]
+  iddeuda : bigint [FK]
+  montopagado : numeric(12,2)
+  metodopago : varchar(35)
+  estadotransaccion : varchar(20)
+  referenciaexterna : varchar(150) {opcional}
+  proveedorpasarela : varchar(80) {opcional}
+  fechacreacion : timestamptz
+  fechahorapago : timestamptz {opcional}
+  observaciones : text {opcional}
+}
+class "ComprobantePago" as T_comprobantepago {
+  idcomprobante : integer [PK]
+  idsolicitud : integer [FK]
+  numerorecibofactura : varchar(35)
+  conceptoservicio : varchar(150)
+  montototal : numeric(10,2)
+  estadopago : varchar(30)
+  metodopago : varchar(50)
+  fechahorapago : timestamp {opcional}
+  iddeuda : bigint [FK] {opcional}
+  fechaemision : timestamptz {opcional}
+  --
+  {field} UNIQUE (idsolicitud)
+  {field} UNIQUE (numerorecibofactura)
+}
+class "CheckoutStripe" as T_checkoutstripe {
+  idpago : bigint [PK, FK]
+  idempotencia : uuid
+  sesionid : varchar(150) {opcional}
+  urlcheckout : text {opcional}
+  moneda : varchar(3)
+  monto : integer
+  idusuario : integer [FK]
+  fechacreacion : timestamptz
+  --
+  {field} UNIQUE (idempotencia)
+  {field} UNIQUE (sesionid)
+}
+class "EventoStripe" as T_eventostripe {
+  idevento : varchar(150) [PK]
+  tipo : varchar(100)
+  sesionid : varchar(150)
+  idpago : bigint [FK] {opcional}
+  resultado : varchar(25)
+  fecharecepcion : timestamptz
+}
+}
+package "Vistas de consulta" {
+class "vw_bolsas_validas_cu04" as T_vw_bolsas_validas_cu04 <<view>> {
+  idejemplarbolsa : integer
+  idunidadmadre : integer
+  idgrupo : integer
+  idubicacion : integer
+  codigoejemplark : varchar(40)
+  tipocomponente : varchar(50)
+  volumenml : integer
+  fechaextraccion : date
+  fechacaducidad : date
+  estadobolsak : varchar(25)
+  esexclusivoautologo : boolean
+  categoriaetaria : varchar(20)
+  capacidadbolsaml : integer
+}
+class "vw_cola_fefo_cu04" as T_vw_cola_fefo_cu04 <<view>> {
+  idejemplarbolsa : integer
+  idunidadmadre : integer
+  idgrupo : integer
+  idubicacion : integer
+  codigoejemplark : varchar(40)
+  tipocomponente : varchar(50)
+  volumenml : integer
+  fechaextraccion : date
+  fechacaducidad : date
+  estadobolsak : varchar(25)
+  esexclusivoautologo : boolean
+  categoriaetaria : varchar(20)
+  capacidadbolsaml : integer
+}
+class "vw_cu22_cuentas_por_cobrar" as T_vw_cu22_cuentas_por_cobrar <<view>> {
+  iddeuda : bigint
+  idsolicitud : integer
+  numerosolicitud : varchar(35)
+  prioridadsolicitud : varchar(25)
+  semaforo_atencion : text
+  montooriginal : numeric(12,2)
+  montoabonado : numeric(12,2)
+  saldopendiente : numeric(12,2)
+  estado_actual : text
+  fechavencimiento : timestamptz
+  pagoposteriorautorizado : boolean
+}
+class "vw_donante_categoria_etaria" as T_vw_donante_categoria_etaria <<view>> {
+  idpersona : integer
+  tipodonante : varchar(30)
+  edad : integer
+  categoria_etaria : varchar
+}
+class "vw_monitor_stock_cu04" as T_vw_monitor_stock_cu04 <<view>> {
+  idgrupo : integer
+  grupoabo : varchar(5)
+  factorrh : varchar(10)
+  tipocomponente : text
+  categoriaetaria : text
+  bolsas_disponibles : bigint
+  volumen_total_disponible_ml : bigint
+  bolsas_alerta_fefo : bigint
+  proxima_fecha_caducidad : date
+  bolsas_pendientes_revision : bigint
+  stockminimoseguridad : integer
+  stockcriticoalerta : integer
+  semaforo : text
+}
+}
+legend bottom
+PK: clave primaria     FK: clave foránea     UNIQUE: restricción de unicidad
+{opcional}: la columna acepta NULL
+Las dependencias discontinuas corresponden a vistas.
+endlegend
+T_agendaturno "0..*" -- "1" T_usuario : creadopor
+T_analisisinmunoserologico "0..*" -- "1" T_personalsalud : idpersonalsalud
+T_analisisinmunoserologico "0..1" -- "1" T_unidadsangretotal : idunidadmadre
+T_bajainventario "0..*" -- "0..1" T_ejemplarbolsa : idejemplarbolsa
+T_bajainventario "0..*" -- "0..1" T_unidadsangretotal : idunidadmadre
+T_bajainventario "0..*" -- "1" T_personalsalud : idpersonalsalud
+T_bitacoraauditoria "0..*" -- "0..1" T_usuario : idusuario
+T_checkoutstripe "0..1" -- "1" T_pagofinanciero : idpago
+T_checkoutstripe "0..*" -- "1" T_usuario : idusuario
+T_cierreagenda "0..*" -- "1" T_usuario : idusuario
+T_citadonacion "0..*" -- "0..1" T_programacionautologa : idprograma
+T_citadonacion "0..*" -- "0..1" T_agendaturno : idturno
+T_citadonacion "0..*" -- "1" T_persona : idpersona
+T_citalaboratorio "0..*" -- "0..1" T_institucionsalud : idinstitucion
+T_citalaboratorio "0..*" -- "1" T_receptor : idreceptor
+T_colectaautologa "0..*" -- "1" T_personalsalud : idpersonalsalud
+T_colectaautologa "0..*" -- "0..1" T_programacionautologa : idprograma
+T_colectaautologa "0..*" -- "1" T_receptor : idreceptor
+T_colectaautologa "0..1" -- "1" T_unidadsangretotal : idunidadmadre
+T_comprobantedespacho "0..*" -- "1" T_solicitudhospitalaria : idsolicitud
+T_comprobantepago "0..*" -- "0..1" T_deudafinanciera : iddeuda
+T_comprobantepago "0..1" -- "1" T_solicitudhospitalaria : idsolicitud
+T_compromisodonacion "0..*" -- "0..1" T_donante : iddonante
+T_compromisodonacion "0..*" -- "0..1" T_extracciondonacion : idextraccion
+T_compromisodonacion "0..*" -- "1" T_persona : idpersonafirmante
+T_compromisodonacion "0..*" -- "1" T_reposicionpendiente : idreposicion
+T_detallecitarequisito "0..*" -- "1" T_citadonacion : idcita
+T_detallecitarequisito "0..*" -- "1" T_requisitodonacion : idrequisito
+T_detalledespacho "0..*" -- "1" T_comprobantedespacho : iddespacho
+T_detalledespacho "0..1" -- "1" T_ejemplarbolsa : idejemplarbolsa
+T_deudafinanciera "0..1" -- "1" T_solicitudhospitalaria : idsolicitud
+T_diferimiento "0..*" -- "0..1" T_personalsalud : comunicadopor
+T_diferimiento "0..*" -- "0..1" T_analisisinmunohematologico : idhematologia
+T_diferimiento "0..*" -- "0..1" T_analisisinmunoserologico : idserologia
+T_diferimiento "0..*" -- "1" T_posibledonador : idposibledonador
+T_diferimiento "0..1" -- "0..1" T_triajeclinico : idtriaje
+T_donante "0..1" -- "1" T_persona : idpersona
+T_ejemplarbolsa "0..*" -- "1" T_gruposanguineo : idgrupo
+T_ejemplarbolsa "0..*" -- "0..1" T_unidadsangretotal : idunidadmadre
+T_ejemplarbolsa "0..*" -- "0..1" T_ubicacionalmacen : idubicacion
+T_eventostripe "0..*" -- "0..1" T_pagofinanciero : idpago
+T_extracciondonacion "0..*" -- "1" T_personalsalud : idpersonalsalud
+T_extracciondonacion "0..*" -- "1" T_persona : idpersonadonante
+T_extracciondonacion "0..*" -- "0..1" T_triajeclinico : idtriaje
+T_incentivoentrega "0..1" -- "1" T_extracciondonacion : idextraccion
+T_incidenciacolecta "0..*" -- "1" T_personalsalud : idpersonalsalud
+T_incidenciacolecta "0..*" -- "1" T_triajeclinico : idtriaje
+T_pagofinanciero "0..*" -- "1" T_deudafinanciera : iddeuda
+T_parametrostockminimo "0..*" -- "1" T_gruposanguineo : idgrupo
+T_personalsalud "0..1" -- "1" T_persona : idpersona
+T_posibledonador "0..1" -- "1" T_persona : idpersona
+T_prefiltroborrador "0..1" -- "1" T_posibledonador : idpersona
+T_prefiltroborrador "0..*" -- "0..1" T_programacionautologa : idprograma
+T_prefiltroborrador "0..*" -- "0..1" T_agendaturno : idturno
+T_prefiltroborrador "0..*" -- "1" T_usuario : idusuario
+T_prefiltrocita "0..1" -- "1" T_citadonacion : idcita
+T_prefiltrocita "0..*" -- "1" T_usuario : idusuario
+T_programacionautologa "0..*" -- "1" T_personalsalud : idmedico
+T_programacionautologa "0..*" -- "1" T_receptor : idreceptor
+T_programacionautologa "0..*" -- "0..1" T_personalsalud : revisadopor
+T_programacionautologahistorial "0..*" -- "1" T_programacionautologa : idprograma
+T_programacionautologahistorial "0..*" -- "1" T_usuario : idusuario
+T_protocoloconservacion "0..*" -- "1" T_personalsalud : aprobadopor
+T_pruebacompatibilidad "0..*" -- "1" T_ejemplarbolsa : idejemplarbolsa
+T_pruebacompatibilidad "0..*" -- "1" T_personalsalud : idpersonalsalud
+T_pruebacompatibilidad "0..*" -- "1" T_solicitudhospitalaria : idsolicitud
+T_receptor "0..*" -- "0..1" T_gruposanguineo : idgrupo
+T_receptor "0..1" -- "1" T_persona : idpersona
+T_reposicionpendiente "0..1" -- "1" T_solicitudhospitalaria : idsolicitud
+T_reservasangre "0..*" -- "0..1" T_detallesolicitud : iddetallesolicitud
+T_solicitudhospitalaria "0..*" -- "1" T_institucionsalud : idinstitucion
+T_solicitudhospitalaria "0..*" -- "1" T_receptor : idreceptor
+T_triajeclinico "0..*" -- "1" T_personalsalud : idpersonalsalud
+T_triajeclinico "0..*" -- "1" T_posibledonador : idposibledonador
+T_unidadsangretotal "0..1" -- "1" T_extracciondonacion : idextraccion
+T_unidadsangretotal "0..*" -- "1" T_gruposanguineo : idgrupo
+T_usuario "0..1" -- "1" T_persona : idpersona
+T_usuariorol "0..*" -- "1" T_rol : idrol
+T_usuariorol "0..*" -- "1" T_usuario : idusuario
+T_vw_bolsas_validas_cu04 ..> T_ejemplarbolsa
+T_vw_cola_fefo_cu04 ..> T_vw_bolsas_validas_cu04
+T_vw_cu22_cuentas_por_cobrar ..> T_deudafinanciera
+T_vw_cu22_cuentas_por_cobrar ..> T_solicitudhospitalaria
+T_vw_donante_categoria_etaria ..> T_categoriaetariadonante
+T_vw_donante_categoria_etaria ..> T_donante
+T_vw_donante_categoria_etaria ..> T_persona
+T_vw_monitor_stock_cu04 ..> T_ejemplarbolsa
+T_vw_monitor_stock_cu04 ..> T_gruposanguineo
+T_vw_monitor_stock_cu04 ..> T_parametrostockminimo
+T_vw_monitor_stock_cu04 ..> T_vw_bolsas_validas_cu04
+@enduml

@@ -1,171 +1,39 @@
-# Despliegue vigente
+# HemoVida
 
-Cloudflare Workers + Render + Supabase. Consulta [DESPLIEGUE.md](DESPLIEGUE.md) para las ramas, variables y verificaciones. Los entregables generados se conservan localmente en `output/`, fuera de Git.
+Sistema de información web para la gestión de donaciones, laboratorio, inventario y finanzas del Banco de Sangre y Servicio de Transfusión Dr. Zuna. Proyecto académico de Sistemas de Información I de la Universidad Autónoma Gabriel René Moreno.
 
-# 🩸 HemoVida - Sistema de Gestión para Banco de Sangre
+## Presentación
 
-> Plataforma modular integral para la gestión de donantes, hemocomponentes, auditoría forense y trazabilidad transfusional.
-> Desarrollado con **Python 3.12**, **Django 5**, **Django REST Framework (DRF)**, **PostgreSQL 18** y **React 19 + Vite**.
+- [Página de producción](https://hemovida-banco-de-sangre.siexecution2026.workers.dev/)
+- [Memoria del proyecto en PDF](informes/presentacion/HEMOVIDA_MEMORIA_PRESENTACION.pdf)
+- [Modelo de dominio en PlantUML](informes/presentacion/modelos/01_modelo_dominio.puml)
+- [Diagrama de clases en PlantUML](informes/presentacion/modelos/02_diagrama_clases_completo.puml)
 
-> Estado actual del ciclo 3: consultar [CICLO3_IMPLEMENTACION.md](CICLO3_IMPLEMENTACION.md). Incluye validación 06/07, clínica, finanzas, Stripe, CU24 y límites de las pruebas locales.
+## Alcance por ciclo
 
-> Cierre técnico académico actualizado: [Informe de ciclos 2 y 3](informes/INFORME_CIERRE_CICLOS_2_Y_3_2026-11-01.md). Supabase tiene 08/09 verificadas y 10 aplicada; conservación académica configurada, calendario Bolivia y permisos heredados corregidos. Código local probado; publicación en Render/Cloudflare separada.
+| Ciclo | Funcionalidades |
+| --- | --- |
+| 1 | Acceso y roles, bitácora de auditoría, alertas de stock y perfil del donante con carnet digital, historial y categoría etaria. |
+| 2 | Prefiltro, agenda, admisión y registro de incentivos, programación de colectas autólogas y reportes predefinidos. |
+| 3 | Evaluación y diferimientos, colecta, laboratorio y liberación conjunta, inventario, cuentas por cobrar, Stripe Checkout en modo de prueba y consultas dinámicas. |
+| 4 | CU25 del asistente de reportes en lenguaje natural, con permisos por rol y exportación CSV y PDF. Los CU16 a CU20 del circuito hospitalario figuran como diseño pendiente. |
 
-> Estado actual del ciclo 2: [CICLO2_CU21_CU23_Y_AJUSTES.md](CICLO2_CU21_CU23_Y_AJUSTES.md). CU21/CU23, borradores, cierres, búsqueda y admisión presencial están implementados y probados localmente. 08/09 están verificadas en Supabase y 10 aplicada; la aceptación del despliegue sigue separada.
+## Recorrido de demostración
 
-> Población académica aplicada en Supabase con respaldo previo: [registros y verificación](informes/POBLACION_DEMO_2026-11-01.md). Seis personas DEMO, cuatro citas para el 02/11/2026, programa autólogo pendiente y dos deudas por 300 BOB; usuarios existentes conservados.
+1. Abrir el portal y revisar el perfil de un donante DEMO, su carnet e historial.
+2. Recorrer la agenda y revisar la trazabilidad de un registro de demostración desde la cita hasta el inventario, cambiando al rol correspondiente.
+3. Desde Administración, revisar una deuda DEMO y su comprobante o ejecutar un abono en el entorno de prueba de Stripe.
+4. Consultar al asistente desde un perfil autorizado, descargar un reporte y comprobar el alcance del menú de consultas de ese rol.
 
-> Demostración por perfiles: [recorrido de los ciclos 2 y 3](informes/RECORRIDO_CICLOS_2_Y_3.md). Doce cuentas sintéticas y escenarios DEMO aplicados en Supabase. Credenciales privadas fuera de Git; guía también integrada en el frontend.
+La [guía de recorrido de los ciclos 2 y 3](informes/RECORRIDO_CICLOS_2_Y_3.md) describe los escenarios y perfiles DEMO. Las credenciales de acceso se administran fuera del repositorio.
 
----
+## Arquitectura y ejecución
 
-## Ciclo 4
+- [Frontend](frontend/) en React y Vite, desplegado en Cloudflare Workers.
+- [Backend](backend/) con Django y Django REST Framework, desplegado en Render. [Estado de la API](https://hemovida-backend.onrender.com/api/health/).
+- [Esquema y migraciones](database/) de PostgreSQL en Supabase, hasta la migración 12.
+- Brevo para correo transaccional, Stripe para pagos de prueba y Gemini para interpretar consultas del asistente. Django aplica los permisos antes de consultar los datos.
 
-El cuarto ciclo reúne el circuito hospitalario y el asistente analítico. El alcance implementado de esta entrega es RF25/CU25, del paquete P7.
+Para trabajar localmente, consulta [Desarrollo local](DESARROLLO_LOCAL.md) y [las variables de ejemplo del backend](backend/.env.example). Para publicar, usa [la guía de despliegue](DESPLIEGUE.md). La [verificación de GitHub Actions](.github/workflows/checks.yml) comprueba el backend y ejecuta pruebas y compilación del frontend.
 
-| Caso de uso | Alcance | Estado |
-| --- | --- | --- |
-| CU16 | Citas de compatibilidad pretransfusional | Diseñado |
-| CU17 | Solicitudes hospitalarias y liberación por Código Rojo | Diseñado |
-| CU18 | Compatibilidad cruzada mediante segmento de bolsa | Diseñado |
-| CU19 | Conservadoras, cadena de frío y despacho | Diseñado |
-| CU20 | Deuda biológica y compensación por déficit crítico | Diseñado |
-| CU25 | Reportes dinámicos por chatbot y dictado | Implementado para pruebas locales |
-
-El **Asistente HemoVida** aparece para ADMIN, DOC_TRIAJE, BIOQ_INTEGRAL y TEC_LOGISTICA. Admite texto o dictado en español cuando el navegador lo permite. Gemini interpreta la pregunta y propone una consulta del catálogo. Django verifica el rol activo de la sesión, ejecuta el reporte agregado en PostgreSQL y registra `CONSULTA_CHATBOT` en la bitácora. Los resultados se pueden descargar en CSV y PDF. La fuente de demanda lee solicitudes existentes y sus totales de unidades solicitadas y entregadas.
-
-Para habilitar Gemini, instala las dependencias de `backend/requirements.txt` y añade `GEMINI_API_KEY` a `backend/.env` o a las variables privadas de Render. `GEMINI_MODEL` permite seleccionar el modelo. Usa preguntas de reportes generales y evita incluir datos personales en el chat o el dictado. [Function calling de Gemini](https://ai.google.dev/gemini-api/docs/function-calling) · [Reconocimiento de voz](https://developer.mozilla.org/en-US/docs/Web/API/Web_Speech_API/Using_the_Web_Speech_API)
-
-## 🏛️ Arquitectura del Sistema
-
-```text
-HemoVida-Banco-De-Sangre/
-├── backend/                  # API REST modular en Django 5 + DRF
-│   ├── apps/
-│   │   ├── seguridad/        # CU01, CU02, CU03: Auth JWT, Roles RBAC, Auditoría Forense
-│   │   ├── donantes/         # CU05: Donantes, Carnet Digital, Cálculo Biológico
-│   │   └── inventario/       # CU04: Parámetros de Stock, Hemocomponentes, Alertas Críticas
-│   ├── hemovida_project/     # Configuración central (Settings, URLs, WSGI)
-│   ├── manage.py
-│   ├── requirements.txt
-│   └── .env.example
-├── frontend/                 # Aplicación Web React 19 + Tailwind CSS + Vite
-│   ├── src/                  # Componentes (DigitalCardModal, LoginModal, etc.)
-│   ├── package.json
-│   └── vite.config.ts        # Configurado con Proxy hacia el backend (:8000)
-├── database/                 # Scripts SQL para PostgreSQL 18
-│   ├── 00_hemovida_master.sql # Script maestro: Tablas + Triggers + SP + Inserts
-│   ├── 01_tablas_e_indices.sql
-│   ├── 02_triggers.sql
-│   ├── 03_procedimientos_almacenados.sql
-│   └── 04_datos_iniciales.sql
-├── iniciar_backend.bat       # Lanzador rápido en 1 clic para Windows
-├── iniciar_frontend.bat      # Lanzador rápido en 1 clic para Windows
-└── README.md
-```
-
----
-
-## 📋 Implementación de los 5 Casos de Uso (CU01 - CU05)
-
-### [CU01] Autenticar Usuario e Iniciar Sesión
-- **Endpoint:** `POST /api/auth/login/`
-- **Permisos:** Público (`AllowAny`)
-- **Lógica de Negocio:**
-  - Valida credenciales contra `Usuario` (soporta hashes `argon2id`, `pbkdf2` y texto plano validado).
-  - Bloquea cuentas cuyo `estado` sea diferente de `'Activo'`.
-  - Emite tokens JWT (`access` de 60 min y `refresh` de 24 hrs) con claims institucionales.
-  - Registra automáticamente el acceso exitoso en `BitacoraAuditoria` con la IP real del cliente.
-
-### [CU02] Gestionar Cuentas de Personal y Roles RBAC
-- **Endpoints:**
-  - `POST /api/usuarios/registrar/`: Creación de cuenta protegida por rol Administrador. Aplica `SecurePasswordValidator` antes de persistir y audita el alta.
-  - `GET /api/personal/`: **Consulta C4 / Consulta 6:** Matriz de usuarios del personal con cargo, rol institucional y registro profesional.
-  - `PATCH /api/usuarios/{id}/estado/`: Cambio de estado (`Activo`, `Inactivo`, `Bloqueado`) auditado en bitácora.
-
-### [CU03] Consultar y Auditar Bitácora de Eventos Forenses
-- **Endpoint:** `GET /api/auditoria/`
-- **Filtros:** `?fecha_inicio=YYYY-MM-DD`, `?fecha_fin=YYYY-MM-DD`, `?id_usuario=INT`, `?tabla_afectada=STR`.
-- **Filtro Forense Especial:** `?fuera_turno=true`
-  - Ejecuta la **Subconsulta B2 / Consulta 8**: Extrae transacciones ejecutadas entre las 19:00 y las 07:00 por personal de laboratorio (`Bioquímico Serólogo`, `Técnico de Fraccionamiento y Almacén`).
-
-### [CU04] Parametrizar Umbrales de Stock Mínimo y Alertas Críticas
-- **Endpoints:**
-  - `GET /api/stock/parametros/`: Listado de umbrales por componente y grupo sanguíneo ABO/Rh.
-  - `PUT /api/stock/parametros/{id}/`: Actualización de umbrales con validación `stockCriticoAlerta <= stockMinimoSeguridad` y auditoría en bitácora.
-  - `GET /api/stock/alertas/`: **Subconsulta B4 / Consulta 20:** Compara las bolsas en estado `'Disponible'` en `EjemplarBolsa` frente a `ParametroStockMinimo` y clasifica en `DEFICIT CRITICO` o `DEFICIT SEGURIDAD`.
-
-### [CU05] Consultar Carnet Digital e Historial Biológico del Donante
-- **Endpoint:** `GET /api/donantes/{ci}/carnet/`
-- **Lógica Biológica (Consulta C1):**
-  - Donantes Varones (`M`): Intervalo biológico de 90 días (`fechaHabilitacionProxima = fechaUltimaDonacion + 90 días`).
-  - Donantes Mujeres (`F`): Intervalo biológico de 120 días (`fechaHabilitacionProxima = fechaUltimaDonacion + 120 días`).
-  - Calcula `diasRestantesEspera = max(0, fechaHabilitacionProxima - hoy)`.
-  - Habilitación: `(estadoHabilitacion == 'Apto') and (diasRestantesEspera == 0)`.
-- **Acumulados Históricos (Consulta C3):** Suma total de donaciones y volumen en ml para el modal `DigitalCardModal`.
-
----
-
-## 🚀 Guía Rápida de Despliegue en Local (Presentación / Exposición)
-
-### Opción 1: Inicio Rápido en Windows (1 Clic)
-1. Haz doble clic en **`iniciar_backend.bat`** (iniciará el servidor en `http://127.0.0.1:8000`).
-2. Haz doble clic en **`iniciar_frontend.bat`** (iniciará la interfaz web en `http://localhost:3000`).
-
----
-
-### Opción 2: Ejecución Manual Paso a Paso
-
-#### 1. Configuración de la Base de Datos
-- **PostgreSQL 18:**
-  1. En pgAdmin o `psql`, crea la base de datos `Hemovida`.
-  2. Ejecuta el archivo maestro [`database/00_hemovida_master.sql`](database/00_hemovida_master.sql).
-  3. En `backend/.env`, configura tus credenciales:
-     ```ini
-     USE_SQLITE=False
-     DB_NAME=Hemovida
-     DB_USER=postgres
-     DB_PASSWORD=tu_password
-     DB_HOST=localhost
-     DB_PORT=5432
-     ```
-- **Modo Demostración Rápido (SQLite sin Postgres):**
-  - Si vas a exponer en una máquina sin PostgreSQL instalado, simplemente pon `USE_SQLITE=True` en `backend/.env` y ejecuta `python apps/seed_data.py`.
-
-#### 2. Iniciar el Backend
-```bash
-cd backend
-pip install -r requirements.txt
-python manage.py runserver 8000
-```
-API activa en: **`http://127.0.0.1:8000`**
-
-#### 3. Iniciar el Frontend
-```bash
-cd frontend
-npm install --legacy-peer-deps
-npm run dev
-```
-Aplicación web activa en: **`http://localhost:3000`**
-
----
-
-## 🔑 Credenciales Institucionales de Prueba
-
-| Rol | Usuario | Contraseña | Perfil Demostrativo |
-| :--- | :--- | :--- | :--- |
-| **Administrador del Sistema** | `admin.ezabala` | `HemoVida#2026!` | Acceso completo a Auditoría Forense y Stock. |
-| **Donante (Carnet Digital)** | `carlos.pimentel` | `Pimentel$Dev12` | C.I. `7894561 SC` (Carnet `HV-DON-2024-0491`). |
-| **Bioquímico Serólogo** | `serologia.cristhian` | `Cristhian$Vero88` | Pruebas de laboratorio y marcadores virales. |
-| **Médico de Triaje** | `triaje.trinidad` | `Doctora!Triaje99` | Evaluación de aptitud física y signos vitales. |
-| **Secretaría / Admisión** | `recepcion.patricia` | `Patricia@Pass123` | Recepción de postulantes y citas. |
-
----
-
-## 🧪 Pruebas Unitarias Automatizadas
-Para verificar la integridad de todos los endpoints y reglas de negocio:
-```bash
-cd backend
-python manage.py test
-```
-**Resultado:** **18/18 pruebas superadas (OK, 0 errores, 0 fallos)** cubriendo validadores regex de contraseña, reglas biológicas de donación por sexo y reportes de stock.
+El entorno de demostración utiliza datos sintéticos. Un eventual uso asistencial requiere validación institucional.

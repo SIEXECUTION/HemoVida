@@ -1,0 +1,167 @@
+@startuml
+' Catálogo PostgreSQL public de HemoVida verificado el 22-11-2026
+hide circle
+hide empty members
+skinparam shadowing false
+skinparam backgroundColor white
+skinparam defaultFontName Arial
+skinparam defaultFontSize 15
+skinparam classAttributeIconSize 0
+skinparam classBackgroundColor #FAF1E4
+skinparam classBorderColor #6E6359
+skinparam classFontColor #202020
+skinparam ArrowColor #615850
+skinparam packageStyle rectangle
+skinparam packageBackgroundColor #F6F7F8
+skinparam packageBorderColor #A6A6A6
+skinparam linetype polyline
+skinparam nodesep 23
+skinparam ranksep 30
+left to right direction
+title HemoVida · Modelo de dominio
+package "Personas, acceso y auditoría" {
+class "Persona" as T_persona
+class "Usuario" as T_usuario
+class "Rol" as T_rol
+class "UsuarioRol" as T_usuariorol
+class "PersonalSalud" as T_personalsalud
+class "BitacoraAuditoria" as T_bitacoraauditoria
+}
+package "Donantes y receptores" {
+class "PosibleDonador" as T_posibledonador
+class "Donante" as T_donante
+class "Receptor" as T_receptor
+class "CategoriaEtariaDonante" as T_categoriaetariadonante
+}
+package "Agenda, prefiltro y programación autóloga" {
+class "AgendaTurno" as T_agendaturno
+class "CierreAgenda" as T_cierreagenda
+class "CitaDonacion" as T_citadonacion
+class "RequisitoDonacion" as T_requisitodonacion
+class "DetalleCitaRequisito" as T_detallecitarequisito
+class "PrefiltroBorrador" as T_prefiltroborrador
+class "PrefiltroCita" as T_prefiltrocita
+class "ProgramacionAutologa" as T_programacionautologa
+class "ProgramacionAutologaHistorial" as T_programacionautologahistorial
+class "ColectaAutologa" as T_colectaautologa
+}
+package "Evaluación y colecta" {
+class "TriajeClinico" as T_triajeclinico
+class "Diferimiento" as T_diferimiento
+class "ConsentimientoInformado" as T_consentimientoinformado
+class "ExtraccionDonacion" as T_extracciondonacion
+class "IncidenciaColecta" as T_incidenciacolecta
+class "IncentivoEntrega" as T_incentivoentrega
+}
+package "Laboratorio y unidades" {
+class "UnidadSangreTotal" as T_unidadsangretotal
+class "AnalisisInmunoserologico" as T_analisisinmunoserologico
+class "AnalisisInmunohematologico" as T_analisisinmunohematologico
+class "CitaLaboratorio" as T_citalaboratorio
+class "PruebaCompatibilidad" as T_pruebacompatibilidad
+}
+package "Inventario y conservación" {
+class "GrupoSanguineo" as T_gruposanguineo
+class "ParametroStockMinimo" as T_parametrostockminimo
+class "EjemplarBolsa" as T_ejemplarbolsa
+class "UbicacionAlmacen" as T_ubicacionalmacen
+class "ProtocoloConservacion" as T_protocoloconservacion
+class "BajaInventario" as T_bajainventario
+}
+package "Demanda hospitalaria y reposición" {
+class "InstitucionSalud" as T_institucionsalud
+class "SolicitudHospitalaria" as T_solicitudhospitalaria
+class "DetalleSolicitud" as T_detallesolicitud
+class "ReservaSangre" as T_reservasangre
+class "ComprobanteDespacho" as T_comprobantedespacho
+class "DetalleDespacho" as T_detalledespacho
+class "ReposicionPendiente" as T_reposicionpendiente
+class "CompromisoDonacion" as T_compromisodonacion
+}
+package "Finanzas y Stripe" {
+class "DeudaFinanciera" as T_deudafinanciera
+class "PagoFinanciero" as T_pagofinanciero
+class "ComprobantePago" as T_comprobantepago
+class "CheckoutStripe" as T_checkoutstripe
+class "EventoStripe" as T_eventostripe
+}
+T_agendaturno "0..*" -- "1" T_usuario
+T_analisisinmunoserologico "0..*" -- "1" T_personalsalud
+T_analisisinmunoserologico "0..1" -- "1" T_unidadsangretotal
+T_bajainventario "0..*" -- "0..1" T_ejemplarbolsa
+T_bajainventario "0..*" -- "0..1" T_unidadsangretotal
+T_bajainventario "0..*" -- "1" T_personalsalud
+T_bitacoraauditoria "0..*" -- "0..1" T_usuario
+T_checkoutstripe "0..1" -- "1" T_pagofinanciero
+T_checkoutstripe "0..*" -- "1" T_usuario
+T_cierreagenda "0..*" -- "1" T_usuario
+T_citadonacion "0..*" -- "0..1" T_programacionautologa
+T_citadonacion "0..*" -- "0..1" T_agendaturno
+T_citadonacion "0..*" -- "1" T_persona
+T_citalaboratorio "0..*" -- "0..1" T_institucionsalud
+T_citalaboratorio "0..*" -- "1" T_receptor
+T_colectaautologa "0..*" -- "1" T_personalsalud
+T_colectaautologa "0..*" -- "0..1" T_programacionautologa
+T_colectaautologa "0..*" -- "1" T_receptor
+T_colectaautologa "0..1" -- "1" T_unidadsangretotal
+T_comprobantedespacho "0..*" -- "1" T_solicitudhospitalaria
+T_comprobantepago "0..*" -- "0..1" T_deudafinanciera
+T_comprobantepago "0..1" -- "1" T_solicitudhospitalaria
+T_compromisodonacion "0..*" -- "0..1" T_donante
+T_compromisodonacion "0..*" -- "0..1" T_extracciondonacion
+T_compromisodonacion "0..*" -- "1" T_persona
+T_compromisodonacion "0..*" -- "1" T_reposicionpendiente
+T_detallecitarequisito "0..*" -- "1" T_citadonacion
+T_detallecitarequisito "0..*" -- "1" T_requisitodonacion
+T_detalledespacho "0..*" -- "1" T_comprobantedespacho
+T_detalledespacho "0..1" -- "1" T_ejemplarbolsa
+T_deudafinanciera "0..1" -- "1" T_solicitudhospitalaria
+T_diferimiento "0..*" -- "0..1" T_personalsalud
+T_diferimiento "0..*" -- "0..1" T_analisisinmunohematologico
+T_diferimiento "0..*" -- "0..1" T_analisisinmunoserologico
+T_diferimiento "0..*" -- "1" T_posibledonador
+T_diferimiento "0..1" -- "0..1" T_triajeclinico
+T_donante "0..1" -- "1" T_persona
+T_ejemplarbolsa "0..*" -- "1" T_gruposanguineo
+T_ejemplarbolsa "0..*" -- "0..1" T_unidadsangretotal
+T_ejemplarbolsa "0..*" -- "0..1" T_ubicacionalmacen
+T_eventostripe "0..*" -- "0..1" T_pagofinanciero
+T_extracciondonacion "0..*" -- "1" T_personalsalud
+T_extracciondonacion "0..*" -- "1" T_persona
+T_extracciondonacion "0..*" -- "0..1" T_triajeclinico
+T_incentivoentrega "0..1" -- "1" T_extracciondonacion
+T_incidenciacolecta "0..*" -- "1" T_personalsalud
+T_incidenciacolecta "0..*" -- "1" T_triajeclinico
+T_pagofinanciero "0..*" -- "1" T_deudafinanciera
+T_parametrostockminimo "0..*" -- "1" T_gruposanguineo
+T_personalsalud "0..1" -- "1" T_persona
+T_posibledonador "0..1" -- "1" T_persona
+T_prefiltroborrador "0..1" -- "1" T_posibledonador
+T_prefiltroborrador "0..*" -- "0..1" T_programacionautologa
+T_prefiltroborrador "0..*" -- "0..1" T_agendaturno
+T_prefiltroborrador "0..*" -- "1" T_usuario
+T_prefiltrocita "0..1" -- "1" T_citadonacion
+T_prefiltrocita "0..*" -- "1" T_usuario
+T_programacionautologa "0..*" -- "1" T_personalsalud : idmedico
+T_programacionautologa "0..*" -- "1" T_receptor
+T_programacionautologa "0..*" -- "0..1" T_personalsalud : revisadopor
+T_programacionautologahistorial "0..*" -- "1" T_programacionautologa
+T_programacionautologahistorial "0..*" -- "1" T_usuario
+T_protocoloconservacion "0..*" -- "1" T_personalsalud
+T_pruebacompatibilidad "0..*" -- "1" T_ejemplarbolsa
+T_pruebacompatibilidad "0..*" -- "1" T_personalsalud
+T_pruebacompatibilidad "0..*" -- "1" T_solicitudhospitalaria
+T_receptor "0..*" -- "0..1" T_gruposanguineo
+T_receptor "0..1" -- "1" T_persona
+T_reposicionpendiente "0..1" -- "1" T_solicitudhospitalaria
+T_reservasangre "0..*" -- "0..1" T_detallesolicitud
+T_solicitudhospitalaria "0..*" -- "1" T_institucionsalud
+T_solicitudhospitalaria "0..*" -- "1" T_receptor
+T_triajeclinico "0..*" -- "1" T_personalsalud
+T_triajeclinico "0..*" -- "1" T_posibledonador
+T_unidadsangretotal "0..1" -- "1" T_extracciondonacion
+T_unidadsangretotal "0..*" -- "1" T_gruposanguineo
+T_usuario "0..1" -- "1" T_persona
+T_usuariorol "0..*" -- "1" T_rol
+T_usuariorol "0..*" -- "1" T_usuario
+@enduml

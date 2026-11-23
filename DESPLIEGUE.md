@@ -36,6 +36,8 @@ Variables de Render:
 - `BREVO_API_KEY`, `BREVO_SENDER_EMAIL`: clave API y remitente verificado.
 - `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_MODE=test`: misma cuenta y entorno.
 
+- `GEMINI_API_KEY`, `GEMINI_MODEL`: clave privada y modelo admitido por la cuenta para el asistente CU25.
+
 Webhook: `https://hemovida-backend.onrender.com/api/finanzas/stripe/webhook/`. Usa el secreto del destino público de Stripe; el del listener CLI es únicamente local.
 
 El build no aplica SQL ni puebla datos. Las migraciones de `database/` se administran por separado en Supabase. No ejecutes nuevamente el esquema maestro sobre la base existente.
